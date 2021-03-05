@@ -50,3 +50,8 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Mandatory do not import the dataset folder
+data
+cmake-build-debug
+.idea
