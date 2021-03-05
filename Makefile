@@ -1,6 +1,6 @@
-OBJS = main.o vrp.o mip_utilities.o chrono.o            
-HEADERS = vrp.h 
-EXE = vrp
+OBJS = main.o tsp.o #mip_utilities.o chrono.o
+HEADERS = tsp.h
+EXE = tsp
 all: $(EXE) 
 setting = -1   
 OS := $(shell uname)
