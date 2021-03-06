@@ -8,6 +8,7 @@ int main(int argc, char **argv) {
 
     parse_command_line(argc, argv, &inst);
     parse_instance(&inst);
+    print_instance(&inst);
 
     start = time(NULL);
 

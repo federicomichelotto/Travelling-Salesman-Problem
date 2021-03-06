@@ -8,7 +8,7 @@ void parse_command_line(int argc, char **argv, instance *inst) {
     inst->time_limit = CPX_INFBOUND;
 
     if (argc < 2) {
-        fprintf(stderr,"Usage: %s -h for help\n", argv[0]);
+        fprintf(stderr, "Usage: %s -h for help\n", argv[0]);
         exit(1);
 
     } else if (argc == 2 && strcmp(argv[1], "-h") == 0) {
@@ -68,9 +68,126 @@ void parse_command_line(int argc, char **argv, instance *inst) {
 
 void parse_instance(instance *inst) {
 
+    FILE *fp = NULL;
+    char *filename = inst->param.input_file;
+
+    fp = fopen(filename, "r");
+    if (fp == NULL) print_error("Could not open the file");
+
+    inst->nodes = -1;
+
+    char line[180];
+    int section;
+
+    // Read each line from the input file:
+    // - compare the first token of the line to check the section
+    // - split the line using strtok and consider the generated tokens
+    while (fgets(line, sizeof(line), fp) != NULL) {
+
+        if (verbose > VERBOSE) printf("%s\n", line);
+        line[strcspn(line, "\n")] = 0; // removing trailing \n
+
+        char delimiters[] = " :\n\r\t";
+        char *parameter;
+        char *value;
+
+        parameter = strtok(line, delimiters);
+
+        // Check the current section
+        if (strncmp(parameter, "NODE_COORD_SECTION", 18) == 0) {
+            section = NODE_COORD;
+        } else if (strncmp(parameter, "EDGE_WEIGHT_SECTION", 19) == 0) {
+            section = EDGE_WEIGHT;
+        } else {
+            section = PARAMETERS;
+        }
+
+        if (strncmp(parameter, "EOF", 3) == 0) {
+            if (verbose > NORMAL) printf("(EOF) found, instance parsing complete\n");
+            break;
+        }
+
+        if (section == PARAMETERS) {
+            if (strncmp(parameter, "NAME", 4) == 0) {
+                value = strtok(NULL, delimiters);
+                strcpy(inst->param.name, value);
+                if (verbose == DEBUG) printf("NAME %s\n\n", inst->param.name);
+            } else if (strncmp(parameter, "COMMENT", 7) == 0) {
+                value = strtok(NULL, ":");
+                strcpy(inst->param.comment, value);
+                if (verbose > NORMAL)
+                    printf("Solving instance %s with model %d\n\n", inst->param.comment, inst->model_type);
+            } else if (strncmp(parameter, "TYPE", 4) == 0) {
+                value = strtok(NULL, delimiters);
+                if (strncmp(value, "TSP", 3) != 0 && strncmp(value, "ATSP", 4) != 0)
+                    print_error("(TYPE) only TSP and ATSP implemented so far");
+                else {
+                    strcpy(inst->param.type, value);
+                    if (verbose == DEBUG) printf("TYPE %s\n\n", inst->param.type);
+                }
+            } else if (strncmp(parameter, "DIMENSION", 9) == 0) {
+                value = strtok(NULL, delimiters);
+                inst->nodes = strtol(value, NULL, 10);
+                if (verbose == DEBUG) printf("NODES %d\n", inst->nodes);
+                inst->x = (double *) calloc(inst->nodes, sizeof(double));
+                inst->y = (double *) calloc(inst->nodes, sizeof(double));
+            } else if (strncmp(parameter, "EDGE_WEIGHT_TYPE", 16) == 0) {
+                value = strtok(NULL, delimiters);
+                strcpy(inst->param.weight_type, value);
+
+                if (strncmp(inst->param.type, "TSP", 3) == 0) {
+                    if (strncmp(inst->param.weight_type, "CEIL_2D", 7) != 0 &&
+                        strncmp(inst->param.weight_type, "EUC_2D", 6) != 0 &&
+                        strncmp(inst->param.weight_type, "MAN_2D", 6) != 0 &&
+                        strncmp(inst->param.weight_type, "MAX_2D", 6) != 0 &&
+                        strncmp(inst->param.weight_type, "ATT", 3) != 0 &&
+                        strncmp(inst->param.weight_type, "GEO", 3) != 0) {
+                        print_error("(EDGE_WEIGHT_TYPE) only EUC_2D, ATT, MAN_2D, MAX_2D, CEIL_2D, GEO implemented so far");
+                    }
+                } else if (strncmp(inst->param.type, "ATSP", 4) == 0) {
+                    if (strncmp(inst->param.weight_type, "EXPLICIT", 8) != 0) {
+                        print_error("(EDGE_WEIGHT_TYPE) only EXPLICIT implemented so far");
+                    }
+                }
+            } else if (strncmp(parameter, "EDGE_WEIGHT_FORMAT", 18) == 0) {
+                value = strtok(NULL, delimiters);
+                strcpy(inst->param.weight_format, value);
+                if (strncmp(inst->param.weight_format, "FULL_MATRIX", 11) != 0 &&
+                    strncmp(inst->param.weight_format, "FUNCTION", 8) != 0) {
+                    print_error("(EDGE_WEIGHT_FORMAT) only FULL_MATRIX and FUNCTION implemented so far");
+                }
+            } else if (strncmp(parameter, "DISPLAY_DATA_TYPE", 17) == 0) {
+                value = strtok(NULL, delimiters);
+                strcpy(inst->param.data_type, value);
+                if (strncmp(inst->param.data_type, "COORD_DISPLAY", 13) != 0)
+                    print_error("(DISPLAY_DATA_TYPE) only COORD_DISPLAY implemented so far");
+            }
+        } else if (section == NODE_COORD){
+
+            for (int i = 0; i < inst->nodes; i++) {
+
+                fgets(line, sizeof(line), fp);
+
+                value = strtok(line, delimiters);
+                int k = strtol(value, NULL, 10);
+                inst->x[i] = strtof(strtok(NULL, delimiters), NULL);
+                inst->y[i] = strtof(strtok(NULL, delimiters), NULL);
+                if (verbose == DEBUG) printf("NODES %d at coordinates (%15.7lf , %15.7lf)\n", i, inst->x[i], inst->y[i]);
+
+            }
+
+        } else if (section == EDGE_WEIGHT) {
+
+            // TODO implementing the parsing of the EDGE WEIGHT SECTION
+        }
+
+    }
+
+    fclose(fp);
+
 }
 
-void free_instance(instance *inst){
+void free_instance(instance *inst) {
 
     // todo write the code to free the allocated memory within the instance (bottom-up approach)
 
@@ -84,6 +201,23 @@ void print_command_line(instance *inst) {
     printf("-v %s\n", verbose_name[verbose]);
     printf("--------------------------------------------------------\n\n");
 }
+
+void print_instance(instance *inst){
+    printf("\nINSTANCE -----------------------------------------------\n");
+    printf("Name: %s\n", inst->param.name);
+    printf("Comment: %s\n", inst->param.comment);
+    printf("Type: %s\n", inst->param.type);
+    printf("Edge weight type: %s\n", inst->param.weight_type);
+    printf("Edge weight type: %s\n", inst->param.weight_format);
+    printf("Model type: %d\n", inst->model_type);
+    printf("Input file path: %s\n", inst->param.input_file);
+    printf("Dimensions: %d \n", inst->nodes);
+    if (verbose >= NORMAL) {
+        for (int i=0; i < inst->nodes; i++) printf("%d\t(%15.7lf, %15.7lf)\n", i, inst->x[i], inst->y[i]);
+    }
+    printf("--------------------------------------------------------\n\n");
+}
+
 
 void print_help() {
     printf("\nHELP ---------------------------------------------------\n");

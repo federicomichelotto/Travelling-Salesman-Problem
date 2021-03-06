@@ -63,6 +63,12 @@ enum verbose_level {
     DEBUG = 4
 };
 
+enum sections {
+    PARAMETERS = 0,
+    NODE_COORD = 1,
+    EDGE_WEIGHT = 2
+};
+
 static int verbose = NORMAL;
 
 #endif //TSP_H
