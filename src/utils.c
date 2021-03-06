@@ -1,11 +1,11 @@
 #include "../include/utils.h"
 
-void parse_command_line(int argc, char **argv, instance inst) {
+void parse_command_line(int argc, char **argv, instance *inst) {
 
     // Setting default values
-    inst.model_type = 0;
-    strcpy(inst.input_file, "NOT DEFINED YET");
-    inst.time_limit = CPX_INFBOUND;
+    inst->model_type = 0;
+    strcpy(inst->param.input_file, "NOT DEFINED YET");
+    inst->time_limit = CPX_INFBOUND;
 
     if (argc < 2) {
         fprintf(stderr,"Usage: %s -h for help\n", argv[0]);
@@ -20,22 +20,25 @@ void parse_command_line(int argc, char **argv, instance inst) {
         for (int i = 1; i < argc; i++) {
 
             if (strcmp(argv[i], "-f") == 0) {   // Input file
-                strcpy(inst.input_file, argv[++i]);
+                strcpy(inst->param.input_file, argv[++i]);
                 continue;
             }
 
             if (strcmp(argv[i], "-t") == 0) {   // Time limit
-                inst.time_limit = strtof(argv[++i], NULL);
+                inst->time_limit = strtof(argv[++i], NULL);
                 continue;
             }
 
             if (strcmp(argv[i], "-m") == 0) {   // Model type
-                inst.model_type = strtol(argv[++i], NULL, 10);
+                inst->model_type = strtol(argv[++i], NULL, 10);
                 continue;
             }
 
             if (strcmp(argv[i], "-v") == 0) {   // Verbosity
                 switch (strtol(argv[++i], NULL, 10)) {
+                    case QUIET:
+                        verbose = QUIET;
+                        break;
                     case NORMAL:
                         verbose = NORMAL;
                         break;
@@ -63,17 +66,21 @@ void parse_command_line(int argc, char **argv, instance inst) {
 
 }
 
-void parse_instance(instance inst) {
-
-//    TODO write the read_input function
+void parse_instance(instance *inst) {
 
 }
 
-void print_command_line(instance inst) {
+void free_instance(instance *inst){
+
+    // todo write the code to free the allocated memory within the instance (bottom-up approach)
+
+}
+
+void print_command_line(instance *inst) {
     printf("\nPARAMETERS ---------------------------------------------\n");
-    printf("-f %s\n", inst.input_file);
-    printf("-t %f\n", inst.time_limit);
-    printf("-m %d\n", inst.model_type);
+    printf("-f %s\n", inst->param.input_file);
+    printf("-t %f\n", inst->time_limit);
+    printf("-m %d\n", inst->model_type);
     printf("-v %s\n", verbose_name[verbose]);
     printf("--------------------------------------------------------\n\n");
 }
@@ -83,7 +90,7 @@ void print_help() {
     printf("-f <path>  : used to pass the relative instance path \n");
     printf("-t <time>  : used to pass the total running time allowed\n");
     printf("-m <model> : used to set up the model type\n");
-    printf("-v <value> : used to set up the verbosity, from NORMAL (0) up to DEBUG (3)\n");
+    printf("-v <value> : used to set up the verbosity, from QUIET (0) up to DEBUG (4)\n");
     printf("--------------------------------------------------------\n\n");
     exit(1);
 }

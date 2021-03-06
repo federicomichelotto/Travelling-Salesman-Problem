@@ -6,9 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 // Data Structures
 typedef struct {
+    char input_file[100];		// Path of the file
     char name[100];				// Identifies the data file
     char type[10];				// Specifies the type of data (TSP or ATSP)
     char comment[1000];			// Comment of the problem
@@ -26,7 +28,6 @@ typedef struct {
 
     parameter param;            // Parameters of the instance
 
-    char input_file[100];		// Path of the file
     double time_limit;          // Specifies the maximum time allowed within the execution
     int model_type;				// Specifies the type of the model
 
@@ -52,13 +53,14 @@ typedef struct {			    // Edge in the circuit
 
 } edge;
 
-static const char* verbose_name[] = {"NORMAL", "VERBOSE", "NERD", "DEBUG"};
+static const char* verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBUG"};
 
 enum verbose_level {
-    NORMAL = 0,
-    VERBOSE = 1,
-    NERD = 2,
-    DEBUG = 3
+    QUIET = 0,
+    NORMAL = 1,
+    VERBOSE = 2,
+    NERD = 3,
+    DEBUG = 4
 };
 
 static int verbose = NORMAL;
