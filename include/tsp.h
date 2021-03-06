@@ -1,68 +1,66 @@
 #ifndef TSP_H
 #define TSP_H
 
-#include <stdio.h>
+#include <cplex.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
-#include <cplex.h>
-#include <pthread.h>
-
-#define VERBOSE				    50		// printing level  (=10 only incumbent, =20 little output, =50-60 good, =70 verbose, >=100 cplex log)
-
-//hard-wired parameters
-#define XSMALL		  		  1e-5 		// 1e-4*	// tolerance used to decide ingerality of 0-1 var.s
-#define EPSILON		  		  1e-9		// 1e-9		// very small numerical tolerance
-#define TICKS_PER_SECOND 	  1000.0  	// cplex's ticks on Intel Core i7 quadcore @2.3GHZ
-
-//data structures
+// Data Structures
+typedef struct {
+    char name[100];				// Identifies the data file
+    char type[10];				// Specifies the type of data (TSP or ATSP)
+    char comment[1000];			// Comment of the problem
+    char weight_type[10];		// Specifies how the edge weights (or distances) are given
+    char weight_format[20];     // Specifies how the edge weights (or distances) are formatted
+    char data_type[20];         // Specifies how the data are displayed
+} parameter;
 
 typedef struct {
 
-    //input data
-    int nnodes;
-    double *demand;
-    double *xcoord;
-    double *ycoord;
+    // Input data
+    int nodes;                  // Number of nodes of the problem
+    double *x;                  // x coordinate
+    double *y;                  // y coordinate
 
-    // parameters
-    int model_type;
-    int old_benders;
-    int randomseed;
-    int num_threads;
-    double timelimit;						// overall time limit, in sec.s
-    char input_file[1000];		  			// input file
-    char node_file[1000];		  			// cplex node file
-    int available_memory;
-    int max_nodes; 							// max n. of branching nodes in the final run (-1 unlimited)
-    double cutoff; 							// cutoff (upper bound) for master
-    int integer_costs;
+    parameter param;            // Parameters of the instance
 
-    //global data
-    double	tstart;
-    double zbest;							// best sol. available
-    double tbest;							// time for the best sol. available
-    double *best_sol;						// best sol. available
-    double	best_lb;						// best lower bound available
-    double *load_min;						// minimum load when leaving a node
-    double *load_max;						// maximum load when leaving a node
+    char input_file[100];		// Path of the file
+    double time_limit;          // Specifies the maximum time allowed within the execution
+    int model_type;				// Specifies the type of the model
 
-    // model;
-    int xstart;
-    int qstart;
-    int bigqstart;
-    int sstart;
-    int bigsstart;
-    int ystart;
-    int fstart;
-    int zstart;
 } instance;
 
-//inline
-inline int imax(int i1, int i2) { return ( i1 > i2 ) ? i1 : i2; }
-inline double dmin(double d1, double d2) { return ( d1 < d2 ) ? d1 : d2; }
-inline double dmax(double d1, double d2) { return ( d1 > d2 ) ? d1 : d2; }
+// Other possible structures
+
+typedef struct {			    // Node
+
+    _Bool flag;			        // = TRUE (1) if inside the circuit, = FALSE (0) otherwise
+    int id;                     // number of the node (e.g. 1, 2, 3, ..., n)
+    double x;			        // x coordinate
+    double y;                   // y coordinate
+
+} node;
+
+typedef struct {			    // Edge in the circuit
+
+    _Bool flag;			        // = TRUE (1) if inside the circuit, = FALSE (0) otherwise
+    double dist;			    // Weight of the edge
+    node prev;                  // Starting node
+    node next;                  // Ending node
+
+} edge;
+
+static const char* verbose_name[] = {"NORMAL", "VERBOSE", "NERD", "DEBUG"};
+
+enum verbose_level {
+    NORMAL = 0,
+    VERBOSE = 1,
+    NERD = 2,
+    DEBUG = 3
+};
+
+static int verbose = NORMAL;
 
 #endif //TSP_H

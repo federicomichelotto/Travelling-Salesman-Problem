@@ -54,4 +54,5 @@ dkms.conf
 # Mandatory do not import the dataset folder
 data
 cmake-build-debug
+build
 .idea
