@@ -25,6 +25,7 @@ typedef struct {
     int nodes;                  // Number of nodes of the problem
     double *x;                  // x coordinate
     double *y;                  // y coordinate
+    double *weights;            // weights
 
     parameter param;            // Parameters of the instance
 
@@ -66,7 +67,8 @@ enum verbose_level {
 enum sections {
     PARAMETERS = 0,
     NODE_COORD = 1,
-    EDGE_WEIGHT = 2
+    EDGE_WEIGHT = 2,
+    DISPLAY_DATA = 3
 };
 
 static int verbose = NORMAL;

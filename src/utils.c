@@ -2,11 +2,6 @@
 
 void parse_command_line(int argc, char **argv, instance *inst) {
 
-    // Setting default values
-    inst->model_type = 0;
-    strcpy(inst->param.input_file, "NOT DEFINED YET");
-    inst->time_limit = CPX_INFBOUND;
-
     if (argc < 2) {
         fprintf(stderr, "Usage: %s -h for help\n", argv[0]);
         exit(1);
@@ -98,6 +93,8 @@ void parse_instance(instance *inst) {
             section = NODE_COORD;
         } else if (strncmp(parameter, "EDGE_WEIGHT_SECTION", 19) == 0) {
             section = EDGE_WEIGHT;
+        } else if (strncmp(parameter, "DISPLAY_DATA_SECTION", 20) == 0) {
+            section = DISPLAY_DATA;
         } else {
             section = PARAMETERS;
         }
@@ -136,7 +133,8 @@ void parse_instance(instance *inst) {
                 strcpy(inst->param.weight_type, value);
 
                 if (strncmp(inst->param.type, "TSP", 3) == 0) {
-                    if (strncmp(inst->param.weight_type, "CEIL_2D", 7) != 0 &&
+                    if (strncmp(inst->param.weight_type, "EXPLICIT", 8) != 0 &&
+                        strncmp(inst->param.weight_type, "CEIL_2D", 7) != 0 &&
                         strncmp(inst->param.weight_type, "EUC_2D", 6) != 0 &&
                         strncmp(inst->param.weight_type, "MAN_2D", 6) != 0 &&
                         strncmp(inst->param.weight_type, "MAX_2D", 6) != 0 &&
@@ -179,11 +177,35 @@ void parse_instance(instance *inst) {
         } else if (section == EDGE_WEIGHT) {
 
             // TODO implementing the parsing of the EDGE WEIGHT SECTION
+
+        } else if (section == DISPLAY_DATA){
+
+            // TODO implementing the parsing of the DISPLAY DATA SECTION
         }
 
     }
 
     fclose(fp);
+
+}
+
+void initialize_instance(instance *inst){
+
+    inst->model_type = 0;
+    inst->time_limit = CPX_INFBOUND;
+
+    inst->nodes = -1;
+    inst->x = NULL;
+    inst->y = NULL;
+    inst->weights = NULL;
+
+    strcpy(inst->param.input_file, "NULL");
+    strcpy(inst->param.name, "NULL");
+    strcpy(inst->param.type, "NULL");
+    strcpy(inst->param.comment, "NULL");
+    strcpy(inst->param.weight_type, "NULL");
+    strcpy(inst->param.weight_format, "NULL");
+    strcpy(inst->param.data_type, "NULL");
 
 }
 
@@ -205,14 +227,21 @@ void print_command_line(instance *inst) {
 void print_instance(instance *inst){
     printf("\nINSTANCE -----------------------------------------------\n");
     printf("Name: %s\n", inst->param.name);
-    printf("Comment: %s\n", inst->param.comment);
     printf("Type: %s\n", inst->param.type);
+    printf("Comment: %s\n", inst->param.comment);
+    printf("Dimensions: %d \n", inst->nodes);
     printf("Edge weight type: %s\n", inst->param.weight_type);
-    printf("Edge weight type: %s\n", inst->param.weight_format);
+    printf("Edge weight format: %s\n", inst->param.weight_format);
     printf("Model type: %d\n", inst->model_type);
     printf("Input file path: %s\n", inst->param.input_file);
-    printf("Dimensions: %d \n", inst->nodes);
-    if (verbose >= NORMAL) {
+    printf("Data type: %s\n", inst->param.data_type);
+    if (inst->weights != NULL) {
+        printf("EDGE WEIGHT SECTION\n");
+        // TODO print the EDGE WEIGHT SECTION
+    }
+    // TODO implement the DISPLAY DATA SECTION
+    if(inst->x != NULL && inst->y != NULL) {
+        printf("NODE COORD SECTION\n");
         for (int i=0; i < inst->nodes; i++) printf("%d\t(%15.7lf, %15.7lf)\n", i, inst->x[i], inst->y[i]);
     }
     printf("--------------------------------------------------------\n\n");

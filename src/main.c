@@ -6,7 +6,10 @@ int main(int argc, char **argv) {
     time_t start, end;
     instance inst;          // current instance of the problem
 
+    initialize_instance(&inst);
+    print_instance(&inst); // TODO remove after check
     parse_command_line(argc, argv, &inst);
+
     parse_instance(&inst);
     print_instance(&inst);
 
