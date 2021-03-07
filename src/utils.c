@@ -19,7 +19,7 @@ void parse_command_line(int argc, char **argv, instance *inst) {
                 continue;
             }
 
-            if (strcmp(argv[i], "-t") == 0) {   // Time limit
+            if (strcmp(argv[i], "-t") == 0) {   // Time limit (seconds)
                 inst->time_limit = strtof(argv[++i], NULL);
                 continue;
             }
@@ -218,7 +218,7 @@ void free_instance(instance *inst) {
 void print_command_line(instance *inst) {
     printf("\nPARAMETERS ---------------------------------------------\n");
     printf("-f %s\n", inst->param.input_file);
-    printf("-t %f\n", inst->time_limit);
+    printf("-t %f seconds\n", inst->time_limit);
     printf("-m %d\n", inst->model_type);
     printf("-v %s\n", verbose_name[verbose]);
     printf("--------------------------------------------------------\n\n");
@@ -229,7 +229,7 @@ void print_instance(instance *inst){
     printf("Name: %s\n", inst->param.name);
     printf("Type: %s\n", inst->param.type);
     printf("Comment: %s\n", inst->param.comment);
-    printf("Dimensions: %d \n", inst->nodes);
+    printf("Dimension: %d \n", inst->nodes);
     printf("Edge weight type: %s\n", inst->param.weight_type);
     printf("Edge weight format: %s\n", inst->param.weight_format);
     printf("Model type: %d\n", inst->model_type);
@@ -251,7 +251,7 @@ void print_instance(instance *inst){
 void print_help() {
     printf("\nHELP ---------------------------------------------------\n");
     printf("-f <path>  : used to pass the relative instance path \n");
-    printf("-t <time>  : used to pass the total running time allowed\n");
+    printf("-t <time>  : used to pass the total running time allowed in seconds\n");
     printf("-m <model> : used to set up the model type\n");
     printf("-v <value> : used to set up the verbosity, from QUIET (0) up to DEBUG (4)\n");
     printf("--------------------------------------------------------\n\n");
