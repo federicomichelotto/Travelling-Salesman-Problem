@@ -1,0 +1,1 @@
+/usr/bin/cc   -rdynamic CMakeFiles/travelling-salesman-problem.dir/src/main.c.o CMakeFiles/travelling-salesman-problem.dir/src/tsp.c.o CMakeFiles/travelling-salesman-problem.dir/src/utils.c.o  -o travelling-salesman-problem -lcplex -lm -lpthread -ldl -L/opt/ibm/ILOG/CPLEX_Studio201/cplex/lib/x86-64_linux/static_pic 
