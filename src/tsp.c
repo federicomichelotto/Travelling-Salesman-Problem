@@ -18,7 +18,7 @@ int TSPopt(instance *inst) {
     build_model(env, lp, inst);
 
     // CPLEX's parameter setting
-    CPXsetlogfilename(env, "output/model_opt.txt", "w");    // Save log
+    CPXsetlogfilename(env, "../output/model_opt.txt", "w");    // Save log
     CPXsetintparam(env, CPX_PARAM_RANDOMSEED, 1234);            // Use different seed
     CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit);
 
@@ -81,7 +81,10 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst) {
         }
     }
 
-    if (verbose >= QUIET) CPXwriteprob(env, lp, "tsp_model.lp", NULL);
+//    if (verbose >= QUIET) {
+//        printf("vgfaa");
+        CPXwriteprob(env, lp, "../output/tsp_model.lp", "RLP" );
+//    }
 
     free(cname[0]);
     free(cname);
