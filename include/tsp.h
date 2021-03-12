@@ -10,7 +10,7 @@
 
 // Data Structures
 typedef struct {
-    char input_file[100];		// Path of the file
+    char input_file[1000];		// Path of the file
     char name[100];				// Identifies the data file
     char type[10];				// Specifies the type of data (TSP or ATSP)
     char comment[1000];			// Comment of the problem
@@ -26,11 +26,13 @@ typedef struct {
     double *x;                  // x coordinate
     double *y;                  // y coordinate
     double *weights;            // weights
+    _Bool integer_costs;        // = TRUE (1) for integer costs (rounded distances), = FALSE (0) otherwise
 
     parameter param;            // Parameters of the instance
 
     double time_limit;          // Specifies the maximum time allowed within the execution
     int model_type;				// Specifies the type of the model
+    double z_best;              // Value of the best solution available
 
 } instance;
 
@@ -54,8 +56,6 @@ typedef struct {			    // Edge in the circuit
 
 } edge;
 
-static const char* verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBUG"};
-
 enum verbose_level {
     QUIET = 0,
     NORMAL = 1,
@@ -71,6 +71,16 @@ enum sections {
     DISPLAY_DATA = 3
 };
 
+static const char* verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBUG"};
 static int verbose = NORMAL;
+
+int TSPopt(instance *inst);
+
+void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
+
+
+double dist(int i, int j, instance *inst);
+int position(int i, int j, instance *inst);
+
 
 #endif //TSP_H

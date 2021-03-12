@@ -9,11 +9,12 @@ void parse_instance(instance *inst);
 void print_command_line(instance *inst);
 void print_instance(instance *inst);
 
+void check_format(char *param);
 void initialize_instance(instance *inst);
 void free_instance(instance *inst);
 
 void print_help();
 void print_error(const char *err);
-
+void print_message(const char *msg);
 
 #endif //UTILS_H

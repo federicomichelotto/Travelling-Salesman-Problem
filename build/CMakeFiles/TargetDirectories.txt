@@ -1,3 +1,0 @@
-/media/federico/Volume/FEDERICO/UNI/MAGISTRALE/S4/RICERCA OPERATIVA 2/progetto/travelling-salesman-problem/build/CMakeFiles/rebuild_cache.dir
-/media/federico/Volume/FEDERICO/UNI/MAGISTRALE/S4/RICERCA OPERATIVA 2/progetto/travelling-salesman-problem/build/CMakeFiles/travelling-salesman-problem.dir
-/media/federico/Volume/FEDERICO/UNI/MAGISTRALE/S4/RICERCA OPERATIVA 2/progetto/travelling-salesman-problem/build/CMakeFiles/edit_cache.dir

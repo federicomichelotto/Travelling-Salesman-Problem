@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 # Setting the project name
-project(travelling-salesman-problem)
+project(tsp)
 
 # Create a sources variable with a link to all cpp files to compile
 set(SOURCE_FILES

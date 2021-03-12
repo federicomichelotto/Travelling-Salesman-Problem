@@ -69,8 +69,6 @@ void parse_instance(instance *inst) {
     fp = fopen(filename, "r");
     if (fp == NULL) print_error("Could not open the file");
 
-    inst->nodes = -1;
-
     char line[180];
     int section;
 
@@ -106,15 +104,19 @@ void parse_instance(instance *inst) {
 
         if (section == PARAMETERS) {
             if (strncmp(parameter, "NAME", 4) == 0) {
+                check_format(inst->param.name);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.name, value);
                 if (verbose == DEBUG) printf("NAME %s\n\n", inst->param.name);
-            } else if (strncmp(parameter, "COMMENT", 7) == 0) {
+            }
+            else if (strncmp(parameter, "COMMENT", 7) == 0) {
                 value = strtok(NULL, ":");
-                strcpy(inst->param.comment, value);
-                if (verbose > NORMAL)
-                    printf("Solving instance %s with model %d\n\n", inst->param.comment, inst->model_type);
-            } else if (strncmp(parameter, "TYPE", 4) == 0) {
+                if (strncmp(inst->param.comment, "NULL", 4) != 0) strcat(inst->param.comment, value); // if more than one comment, append
+                else strcpy(inst->param.comment, value);
+                if (verbose > NORMAL) printf("Solving instance %s with model %d\n\n", inst->param.comment, inst->model_type);
+            }
+            else if (strncmp(parameter, "TYPE", 4) == 0) {
+                check_format(inst->param.type);
                 value = strtok(NULL, delimiters);
                 if (strncmp(value, "TSP", 3) != 0 && strncmp(value, "ATSP", 4) != 0)
                     print_error("(TYPE) only TSP and ATSP implemented so far");
@@ -123,15 +125,16 @@ void parse_instance(instance *inst) {
                     if (verbose == DEBUG) printf("TYPE %s\n\n", inst->param.type);
                 }
             } else if (strncmp(parameter, "DIMENSION", 9) == 0) {
+                if (inst->nodes != -1) print_error("Bad input format");
                 value = strtok(NULL, delimiters);
                 inst->nodes = strtol(value, NULL, 10);
                 if (verbose == DEBUG) printf("NODES %d\n", inst->nodes);
                 inst->x = (double *) calloc(inst->nodes, sizeof(double));
                 inst->y = (double *) calloc(inst->nodes, sizeof(double));
             } else if (strncmp(parameter, "EDGE_WEIGHT_TYPE", 16) == 0) {
+                check_format(inst->param.weight_type);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.weight_type, value);
-
                 if (strncmp(inst->param.type, "TSP", 3) == 0) {
                     if (strncmp(inst->param.weight_type, "EXPLICIT", 8) != 0 &&
                         strncmp(inst->param.weight_type, "CEIL_2D", 7) != 0 &&
@@ -148,6 +151,7 @@ void parse_instance(instance *inst) {
                     }
                 }
             } else if (strncmp(parameter, "EDGE_WEIGHT_FORMAT", 18) == 0) {
+                check_format(inst->param.weight_format);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.weight_format, value);
                 if (strncmp(inst->param.weight_format, "FULL_MATRIX", 11) != 0 &&
@@ -155,6 +159,7 @@ void parse_instance(instance *inst) {
                     print_error("(EDGE_WEIGHT_FORMAT) only FULL_MATRIX and FUNCTION implemented so far");
                 }
             } else if (strncmp(parameter, "DISPLAY_DATA_TYPE", 17) == 0) {
+                check_format(inst->param.data_type);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.data_type, value);
                 if (strncmp(inst->param.data_type, "COORD_DISPLAY", 13) != 0)
@@ -165,7 +170,6 @@ void parse_instance(instance *inst) {
             for (int i = 0; i < inst->nodes; i++) {
 
                 fgets(line, sizeof(line), fp);
-
                 value = strtok(line, delimiters);
                 int k = strtol(value, NULL, 10);
                 inst->x[i] = strtof(strtok(NULL, delimiters), NULL);
@@ -198,6 +202,8 @@ void initialize_instance(instance *inst){
     inst->x = NULL;
     inst->y = NULL;
     inst->weights = NULL;
+    inst->integer_costs = 0;
+    inst->z_best = -1.0;
 
     strcpy(inst->param.input_file, "NULL");
     strcpy(inst->param.name, "NULL");
@@ -207,6 +213,12 @@ void initialize_instance(instance *inst){
     strcpy(inst->param.weight_format, "NULL");
     strcpy(inst->param.data_type, "NULL");
 
+}
+
+void check_format(char *param){
+    if (strncmp(param, "NULL", 4) != 0){
+        print_error("Bad input format");
+    }
 }
 
 void free_instance(instance *inst) {
@@ -247,7 +259,6 @@ void print_instance(instance *inst){
     printf("--------------------------------------------------------\n\n");
 }
 
-
 void print_help() {
     printf("\nHELP ---------------------------------------------------\n");
     printf("-f <path>  : used to pass the relative instance path \n");
@@ -262,4 +273,9 @@ void print_error(const char *err) {
     fprintf(stderr, "\nERROR: %s \n\n", err);
     fflush(NULL);
     exit(1);
+}
+
+void print_message(const char *msg) {
+    fprintf(stdout, "\nMESSAGE: %s \n\n", msg);
+    fflush(NULL);
 }

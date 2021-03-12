@@ -1,5 +1,4 @@
 #include "../include/utils.h"
-#include "../include/tsp.h"
 
 int main(int argc, char **argv) {
 
@@ -15,11 +14,11 @@ int main(int argc, char **argv) {
 
     start = time(NULL);
 
-    // todo solve the input instance
+    TSPopt(&inst) ? print_error("TSPopt() ") : print_message("All went good inside TSPopt()");
 
     end = time(NULL);
 
-    if (verbose) printf("... TSP solved in %ld sec\n", end - start);
+    if (verbose >= QUIET) printf("... TSP solved in %ld sec\n", end - start);
 
     // Free the memory used by the instance
     free_instance(&inst);
