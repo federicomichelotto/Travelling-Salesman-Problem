@@ -28,6 +28,10 @@ typedef struct {
     double *weights;            // weights
     _Bool integer_costs;        // = TRUE (1) for integer costs (rounded distances), = FALSE (0) otherwise
 
+    // refined list of the edges (u,v) returned by cplex
+    int n_edges;
+    int *u;                     
+    int *v;
     parameter param;            // Parameters of the instance
 
     double time_limit;          // Specifies the maximum time allowed within the execution
