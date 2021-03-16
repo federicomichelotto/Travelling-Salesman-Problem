@@ -19,32 +19,8 @@ typedef struct {
     char data_type[20];         // Specifies how the data are displayed
 } parameter;
 
-typedef struct {
-
-    // Input data
-    int nodes;                  // Number of nodes of the problem
-    double *x;                  // x coordinate
-    double *y;                  // y coordinate
-    double *weights;            // weights
-    _Bool integer_costs;        // = TRUE (1) for integer costs (rounded distances), = FALSE (0) otherwise
-
-    // refined list of the edges (u,v) returned by cplex
-    int n_edges;
-    int *u;                     
-    int *v;
-    parameter param;            // Parameters of the instance
-
-    double time_limit;          // Specifies the maximum time allowed within the execution
-    int model_type;				// Specifies the type of the model
-    double z_best;              // Value of the best solution available
-
-} instance;
-
-// Other possible structures
-
 typedef struct {			    // Node
 
-    _Bool flag;			        // = TRUE (1) if inside the circuit, = FALSE (0) otherwise
     int id;                     // number of the node (e.g. 1, 2, 3, ..., n)
     double x;			        // x coordinate
     double y;                   // y coordinate
@@ -53,13 +29,33 @@ typedef struct {			    // Node
 
 typedef struct {			    // Edge in the circuit
 
-    _Bool flag;			        // = TRUE (1) if inside the circuit, = FALSE (0) otherwise
+//    _Bool flag;			        // = TRUE (1) if inside the circuit, = FALSE (0) otherwise
     double dist;			    // Weight of the edge
-    node prev;                  // Starting node
-    node next;                  // Ending node
+    int prev;                  // Starting node
+    int next;                  // Ending node
 
 } edge;
 
+typedef struct {
+
+    // Input data
+    int dimension;              // Number of nodes of the problem
+    node *nodes;                // List of nodes
+    edge *edges;                // Refined list of edges (u,v) returned by CPLEX
+    int n_edges;                // Total number of edges inside the best solution
+
+    double *weights;            // weights
+    _Bool integer_costs;        // = TRUE (1) for integer costs (rounded distances), = FALSE (0) otherwise
+
+    parameter param;            // Parameters of the instance
+
+    double time_limit;          // Specifies the maximum time allowed within the execution
+    int model_type;				// Specifies the type of the model
+    double z_best;              // Value of the best solution available
+
+} instance;
+
+// Enumerations
 enum verbose_level {
     QUIET = 0,
     NORMAL = 1,
@@ -79,12 +75,10 @@ static const char* verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBU
 static int verbose = NORMAL;
 
 int TSPopt(instance *inst);
-
 void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
 
-
 double dist(int i, int j, instance *inst);
-int position(int i, int j, instance *inst);
+int position(int i, int j, instance *inst);  // xpos
 
 
 #endif //TSP_H

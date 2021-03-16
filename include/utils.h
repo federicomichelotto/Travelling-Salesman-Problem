@@ -16,6 +16,8 @@ void free_instance(instance *inst);
 void print_help();
 void print_error(const char *err);
 void print_message(const char *msg);
-int plot_solution(int num_nodes, double *x, double *y, int num_edges, int *u, int *v);
+int plot_solution(instance *inst);
+
+void generate_path(char* path, char *folder, char *type, char *filename, char *extension);
 
 #endif //UTILS_H

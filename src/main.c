@@ -7,7 +7,6 @@ int main(int argc, char **argv)
     instance inst; // current instance of the problem
 
     initialize_instance(&inst);
-    //print_instance(&inst); // TODO remove after check
     parse_command_line(argc, argv, &inst);
 
     parse_instance(&inst);
@@ -22,7 +21,7 @@ int main(int argc, char **argv)
     if (verbose >= QUIET)
         printf("... TSP solved in %ld sec\n", end - start);
 
-    plot_solution(inst.nodes, inst.x, inst.y, inst.n_edges, inst.u, inst.v) ? print_error("plot_solution() error") : printf("... gnuplot ok\n");
+    plot_solution(&inst) ? print_error("plot_solution() error") : printf("... gnuplot ok\n");
 
     // Free the memory used by the instance
     free_instance(&inst);
