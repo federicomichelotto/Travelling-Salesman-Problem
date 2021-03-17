@@ -22,6 +22,7 @@ int main(int argc, char **argv)
         printf("... TSP solved in %ld sec\n", end - start);
 
     plot_solution(&inst) ? print_error("plot_solution() error") : printf("... gnuplot ok\n");
+    //plot_solution_edges(inst.n_edges, inst.nodes, inst.edges) ? print_error("plot_solution_edges() error") : printf("... gnuplot ok\n");
 
     // Free the memory used by the instance
     free_instance(&inst);

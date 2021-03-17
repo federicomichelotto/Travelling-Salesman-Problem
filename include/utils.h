@@ -17,6 +17,7 @@ void print_help();
 void print_error(const char *err);
 void print_message(const char *msg);
 int plot_solution(instance *inst);
+int plot_solution_edges(int n_edges, node *nodes, edge *edges);
 
 void generate_path(char* path, char *folder, char *type, char *filename, char *extension);
 
