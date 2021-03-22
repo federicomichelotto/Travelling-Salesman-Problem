@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 
     start = time(NULL);
 
-    TSPopt(&inst) ? print_error("TSPopt() ") : print_message("All went good inside TSPopt()");
+    TSPopt(&inst, 'D') ? print_error("TSPopt() ") : print_message("All went good inside TSPopt()");
 
     end = time(NULL);
 

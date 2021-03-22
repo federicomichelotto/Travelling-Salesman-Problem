@@ -349,7 +349,7 @@ int plot_solution(instance *inst)
                                   "set yrange [0 :*]",
                                   "set ylabel 'Y'",
                                   "set xlabel 'X",
-                                  "plot 'data.temp' using 1:2 with lines lc rgb 'blue' lw 1"};
+                                  "plot 'data.temp' using 1:2 with linespoints pt 7 lc rgb 'blue' lw 1"};
     FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
     FILE *temp = fopen("data.temp", "w");
 
@@ -384,7 +384,7 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
                                   "set yrange [0 :*]",
                                   "set ylabel 'Y'",
                                   "set xlabel 'X",
-                                  "plot 'data.temp' using 1:2 with lines lc rgb 'blue' lw 1"};
+                                  "plot 'data.temp' with lines lc rgb 'blue' lw 1"};
     FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
     FILE *temp = fopen("data.temp", "w");
 
