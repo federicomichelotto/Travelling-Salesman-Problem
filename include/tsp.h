@@ -9,8 +9,7 @@
 #include <time.h>
 
 // Data Structures
-typedef struct
-{
+typedef struct {
     char input_file[1000];  // Path of the file
     char name[100];         // Identifies the data file
     char type[10];          // Specifies the type of data (TSP or ATSP)
@@ -20,8 +19,7 @@ typedef struct
     char data_type[20];     // Specifies how the data are displayed
 } parameter;
 
-typedef struct
-{ // Node
+typedef struct { // Node
 
     int id;   // number of the node (e.g. 1, 2, 3, ..., n)
     double x; // x coordinate
@@ -29,8 +27,7 @@ typedef struct
 
 } node;
 
-typedef struct
-{ // Edge in the circuit
+typedef struct { // Edge in the circuit
 
     //    _Bool flag;			        // = TRUE (1) if inside the circuit, = FALSE (0) otherwise
     double dist; // Weight of the edge
@@ -39,8 +36,7 @@ typedef struct
 
 } edge;
 
-typedef struct
-{
+typedef struct {
 
     // Input data
     int dimension; // Number of nodes of the problem
@@ -61,8 +57,7 @@ typedef struct
 } instance;
 
 // Enumerations
-enum verbose_level
-{
+enum verbose_level {
     QUIET = 0,
     NORMAL = 1,
     VERBOSE = 2,
@@ -70,8 +65,7 @@ enum verbose_level
     DEBUG = 4
 };
 
-enum sections
-{
+enum sections {
     PARAMETERS = 0,
     NODE_COORD = 1,
     EDGE_WEIGHT = 2,
@@ -79,25 +73,32 @@ enum sections
 };
 
 static const char *verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBUG"};
+static const char *model_name[] = {"STD", "MTZ", "MTZL", "MTZLS", "GG"};
 static int verbose = NORMAL;
 
 int TSPopt(instance *inst);
+
 void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // *** models' implementation ***
 // model 0: basic model (no SEC) for undirected graphs
 void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
+
 // model 1: TMZ_static
 void TMZ_static(CPXENVptr env, CPXLPptr lp, instance *inst);
+
 // model 2: TMZ_lazy
 void TMZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst);
-// model 3: _ 
+
+// model 3: MTZ_lazy_sec
+void TMZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 4: GG
 void GG(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 
 double dist(int i, int j, instance *inst);
+
 int xpos(int i, int j, instance *inst);     // position in the model for undirected graphs
 int xpos_dir(int i, int j, instance *inst); // position in the model for directed graphs
 int upos(int i, instance *inst);            // position in the model of i-th u-variable
