@@ -343,7 +343,7 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges) {
 
 void generate_path(char *path, char *folder, char *type, const char *model, char *filename, char *extension) {
 
-    snprintf(path, 1000, "../%s/%s_%s_%s.%s", folder, type, model, filename, extension);
+    snprintf(path, 1000, "../%s/%s/%s_%s_%s.%s", folder, extension, type, model, filename, extension);
     if (verbose == DEBUG)
         printf("%s", path);
 }

@@ -1,0 +1,59 @@
+Version identifier: 20.1.0.0 | 2020-11-10 | 9bedb6d68
+CPXPARAM_RandomSeed                              1234
+CPXPARAM_TimeLimit                               3600
+Lazy constraint(s) or lazy constraint/branch callback is present.
+    Disabling dual reductions (CPX_PARAM_REDUCE) in presolve.
+    Disabling presolve reductions that prevent crushing forms (CPX_PARAM_PREREFORM).
+Tried aggregator 1 time.
+MIP Presolve eliminated 0 rows and 15 columns.
+Reduced MIP has 28 rows, 195 columns, and 364 nonzeros.
+Reduced MIP has 182 binaries, 13 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.00 sec. (0.13 ticks)
+Probing time = 0.00 sec. (0.25 ticks)
+Tried aggregator 1 time.
+Reduced MIP has 28 rows, 195 columns, and 364 nonzeros.
+Reduced MIP has 182 binaries, 13 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.00 sec. (0.12 ticks)
+Probing time = 0.00 sec. (0.25 ticks)
+Clique table members: 28.
+Problem contains 247 lazy constraints.
+MIP emphasis: balance optimality and feasibility.
+MIP search method: dynamic search.
+Parallel mode: deterministic, using up to 8 threads.
+Root relaxation solution time = 0.00 sec. (0.09 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+      0     0     3001.0000     6                   2747.0000       10         
+      0     0     3001.0000    16                     Cuts: 8       12         
+      0     0     3006.5962    36                    Cuts: 18       16         
+      0     0     3006.5962    16                 ZeroHalf: 2       18         
+      0     0     3019.1429    14                 ZeroHalf: 1       20         
+      0     0     3049.5000    10                 ZeroHalf: 1       23         
+      0     0     3049.5000    11                    Cuts: 28       33         
+      0     2     3049.5000    31                   3049.5000       33         
+Elapsed time = 0.02 sec. (8.95 ticks, tree = 0.02 MB, solutions = 0)
+*    84    38      integral     0     3869.0000     3049.5000      294   21.18%
+*   116    60      integral     0     3835.0000     3087.4000      500   19.49%
+*   159    78      integral     0     3709.0000     3098.0000      743   16.47%
+*   167    94      integral     0     3560.0000     3098.0000      863   12.98%
+*   211    77      integral     0     3390.0000     3098.0000      675    8.61%
+*   354   117      integral     0     3381.0000     3116.0220     1909    7.84%
+*   389    93      integral     0     3346.0000     3120.0220     1463    6.75%
+*   521    97      integral     0     3336.0000     3120.0220     1461    6.47%
+*   646   149      integral     0     3323.0000     3153.7179     3549    5.09%
+
+Mixed integer rounding cuts applied:  1
+Zero-half cuts applied:  8
+Gomory fractional cuts applied:  1
+Lazy constraints applied:  120
+
+Root node processing (before b&c):
+  Real time             =    0.01 sec. (8.92 ticks)
+Parallel b&c, 8 threads:
+  Real time             =    0.04 sec. (16.47 ticks)
+  Sync time (average)   =    0.01 sec.
+  Wait time (average)   =    0.00 sec.
+                          ------------
+Total (root+branch&cut) =    0.06 sec. (25.38 ticks)
