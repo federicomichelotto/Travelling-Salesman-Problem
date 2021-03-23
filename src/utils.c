@@ -345,11 +345,10 @@ int plot_solution(instance *inst)
 {
     char *commandsForGnuplot[] = {"set title 'Solution plot'",
                                   "unset key",
-                                  "set xrange [0:*]",
-                                  "set yrange [0 :*]",
+                                  "set autoscale",
                                   "set ylabel 'Y'",
                                   "set xlabel 'X",
-                                  "plot 'data.temp' using 1:2 with linespoints pt 7 lc rgb 'blue' lw 1"};
+                                  "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
     FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
     FILE *temp = fopen("data.temp", "w");
 
@@ -359,7 +358,7 @@ int plot_solution(instance *inst)
         int next = inst->edges[i].next;
         //Write the coordinates of the two nodes inside a temporary file
         fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[prev].x, inst->nodes[prev].y, inst->nodes[next].x, inst->nodes[next].y);
-        // double '\n' to create a new block of coordinates 
+        // double '\n' to create a new block of coordinates
     }
     fclose(temp);
 
@@ -380,11 +379,10 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
 {
     char *commandsForGnuplot[] = {"set title 'Solution plot'",
                                   "unset key",
-                                  "set xrange [0:*]",
-                                  "set yrange [0 :*]",
+                                  "set autoscale",
                                   "set ylabel 'Y'",
                                   "set xlabel 'X",
-                                  "plot 'data.temp' with lines lc rgb 'blue' lw 1"};
+                                  "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
     FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
     FILE *temp = fopen("data.temp", "w");
 
@@ -393,7 +391,7 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
         //Write the coordinates of the two nodes inside a temporary file
         fprintf(temp, "%lf %lf \n", nodes[edges[i].prev].x, nodes[edges[i].prev].y);   // first node
         fprintf(temp, "%lf %lf \n\n", nodes[edges[i].next].x, nodes[edges[i].next].y); // second node
-        // double '\n' to create a new block of coordinates 
+        // double '\n' to create a new block of coordinates
     }
     fclose(temp);
 
@@ -409,7 +407,6 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
     }
     return 0;
 }
-
 
 void generate_path(char *path, char *folder, char *type, char *filename, char *extension)
 {

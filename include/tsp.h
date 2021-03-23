@@ -80,13 +80,26 @@ enum sections
 static const char *verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBUG"};
 static int verbose = NORMAL;
 
-// graph type = 'U' for an undirected graph and 'D' for a directed graph
-int TSPopt(instance *inst, char graph_type);
-void build_model(CPXENVptr env, CPXLPptr lp, instance *inst, char graph_type);
+int TSPopt(instance *inst);
+void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
+
+// *** models' implementation ***
+// model 0: basic model (no SEC) for undirected graphs
+void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
+// model 1: TMZ_static
+void TMZ_static(CPXENVptr env, CPXLPptr lp, instance *inst);
+// model 2: TMZ_lazy
+void TMZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst);
+// model 3: _ 
+
+// model 4: GG
+void GG(CPXENVptr env, CPXLPptr lp, instance *inst);
+
 
 double dist(int i, int j, instance *inst);
 int xpos(int i, int j, instance *inst);     // position in the model for undirected graphs
 int xpos_dir(int i, int j, instance *inst); // position in the model for directed graphs
 int upos(int i, instance *inst);            // position in the model of i-th u-variable
+int ypos(int i, int j, instance *inst);     // position in the model of y-variable for the arc (i,j)
 
 #endif //TSP_H
