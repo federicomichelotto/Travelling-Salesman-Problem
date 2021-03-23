@@ -65,7 +65,7 @@ int TSPopt(instance *inst)
     build_model(env, lp, inst);
 
     char path[1000];
-    generate_path(path, "output", "log", inst->param.name, "txt");
+    generate_path(path, "output", "log", inst->model_type, inst->param.name, "txt");
 
     // CPLEX's parameter setting
     CPXsetlogfilename(env, path, "w");               // Save log
@@ -122,7 +122,11 @@ int TSPopt(instance *inst)
 
     if (inst->n_edges != inst->dimension)
         print_error("not a tour.");
+    CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
+    CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
 
+    printf("Best objective value: %lf\n", inst->z_best);
+    printf("Best lower bound: %lf\n", inst->best_lb);
     free(xstar);
 
     // Free and close CPLEX model
@@ -156,8 +160,9 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
         print_error("Model type.");
     }
     char path[1000];
-    generate_path(path, "output", "model", inst->param.name, "lp");
+    generate_path(path, "output", "model", inst->model_type, inst->param.name, "lp");
     // path = "../output/model_[name].lp"
+
     CPXwriteprob(env, lp, path, NULL);
 }
 
@@ -190,7 +195,7 @@ int upos(int i, instance *inst)
 {
 
     if (i < 0)
-        print_error("Negative indexe is not valid!");
+        print_error("Negative index is not valid!");
     return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i;
 }
 
@@ -198,7 +203,7 @@ int ypos(int i, int j, instance *inst)
 {
 
     if (i < 0)
-        print_error("Negative indexe is not valid!");
+        print_error("Negative index is not valid!");
     return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i * inst->dimension + j;
 }
 
@@ -448,7 +453,7 @@ void TMZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst)
     double rhs = big_M - 1.0;
     char sense = 'L';
     int nnz = 3;
-    for (int i = 0; i < inst->dimension; i++) // excluding node 0
+    for (int i = 1; i < inst->dimension; i++) // excluding node 0
     {
         for (int j = 1; j < inst->dimension; j++) // excluding node 0
         {

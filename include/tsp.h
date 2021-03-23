@@ -56,6 +56,7 @@ typedef struct
     double time_limit; // Specifies the maximum time allowed within the execution
     int model_type;    // Specifies the type of the model
     double z_best;     // Value of the best solution available
+    double best_lb;
 
 } instance;
 
