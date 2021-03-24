@@ -207,7 +207,7 @@ void initialize_instance(instance *inst) {
     inst->n_edges = -1;
 
     inst->weights = NULL;
-    inst->integer_costs = 0;
+    inst->integer_costs = 1;
     inst->z_best = -1.0;
 
     strcpy(inst->param.input_file, "NULL");

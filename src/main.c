@@ -1,4 +1,5 @@
 #include "../include/utils.h"
+#include <sys/time.h>
 
 int main(int argc, char **argv)
 {
@@ -12,14 +13,19 @@ int main(int argc, char **argv)
     parse_instance(&inst);
     print_instance(&inst);
 
-    start = time(NULL);
+    struct timeval tval_before, tval_after, tval_result;
+
+    gettimeofday(&tval_before, NULL);
 
     TSPopt(&inst) ? print_error("TSPopt() ") : print_message("All went good inside TSPopt()");
 
-    end = time(NULL);
+    gettimeofday(&tval_after, NULL);
 
+    timersub(&tval_after, &tval_before, &tval_result);
+
+    
     if (verbose >= QUIET)
-        printf("... TSP solved in %ld sec\n", end - start);
+        printf("TSP solved in %ld.%06ld\n", (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
 
     plot_solution(&inst) ? print_error("plot_solution() error") : printf("... gnuplot ok\n");
     //plot_solution_edges(inst.n_edges, inst.nodes, inst.edges) ? print_error("plot_solution_edges() error") : printf("... gnuplot ok\n");
