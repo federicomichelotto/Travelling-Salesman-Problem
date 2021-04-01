@@ -17,6 +17,7 @@ typedef struct {
     char weight_type[10];   // Specifies how the edge weights (or distances) are given
     char weight_format[20]; // Specifies how the edge weights (or distances) are formatted
     char data_type[20];     // Specifies how the data are displayed
+    int seed;               // Seed given to cplex
 } parameter;
 
 typedef struct { // Node
@@ -106,5 +107,7 @@ int xpos(int i, int j, instance *inst);     // position in the model for undirec
 int xpos_dir(int i, int j, instance *inst); // position in the model for directed graphs
 int upos(int i, instance *inst);            // position in the model of i-th u-variable
 int ypos(int i, int j, instance *inst);     // position in the model of y-variable for the arc (i,j)
+
+void print_time_csv();
 
 #endif //TSP_H

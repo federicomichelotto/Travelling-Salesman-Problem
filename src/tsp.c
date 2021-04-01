@@ -46,10 +46,6 @@ double dist(int i, int j, instance *inst)
     {
         double dx = inst->nodes[i].x - inst->nodes[j].x;
         double dy = inst->nodes[i].y - inst->nodes[j].y;
-        /*
-        int dis = sqrt((dx * dx + dy * dy) / 10.0) + 0.499999999;
-        distance = dis + 0.0;
-        */
         double dis1 = sqrt((dx * dx + dy * dy) / 10.0);
         int dis2 = (int)(dis1 + 0.5);
         if (dis2 < dis1)
@@ -72,12 +68,16 @@ int TSPopt(instance *inst)
     build_model(env, lp, inst);
 
     char path[1000];
-    generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, "log");
+    generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "log");
 
     // CPLEX's parameter setting
-    CPXsetlogfilename(env, path, "w");               // Save log
-    CPXsetintparam(env, CPX_PARAM_RANDOMSEED, 1234); // Use different seed
+    CPXsetlogfilename(env, path, "w");                           // Save log
+    CPXsetintparam(env, CPX_PARAM_RANDOMSEED, inst->param.seed); // Set seed
     CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit);
+
+    // precision
+    CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0);
+    CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
 
     if (CPXmipopt(env, lp))
         print_error("CPXmipopt() error");
@@ -134,8 +134,8 @@ int TSPopt(instance *inst)
 
     printf("Best objective value: %lf\n", inst->z_best);
     printf("Best lower bound: %lf\n", inst->best_lb);
-    free(xstar);
 
+    free(xstar);
     // Free and close CPLEX model
     CPXfreeprob(env, &lp);
     CPXcloseCPLEX(&env);
@@ -176,8 +176,8 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
     }
 
     char path[1000];
-    generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, "lp");
-    // path = "../output/model_[type]_[name].lp"
+    generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp");
+    // path : "../output/model_[type]_[name].lp"
 
     CPXwriteprob(env, lp, path, NULL);
 }
@@ -705,8 +705,33 @@ void TMZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
         }
     }
 
+    // Add static 2-SEC contraints: x(i, j) + x(j, i) <= 1 for every i < j
     for (int i = 0; i < inst->dimension; i++)
-    { // y(i, j) + y(j, i) <= 1 for every i < j
+    {
+        for (int j = i + 1; j < inst->dimension; j++)
+        {
+
+            int lastrow = CPXgetnumrows(env, lp);
+            double rhs = 1.0;
+            char sense = 'L';
+
+            sprintf(cname[0], "2-SEC(%d, %d)", i + 1, j + 1);
+            int *beg = (int *)calloc(2, sizeof(int));
+            int *ind = (int *)calloc(2, sizeof(int));
+            double *val = (double *)calloc(2, sizeof(double));
+
+            int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
+            if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
+                print_error("wrong CPXnewrows [degree]");
+            if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 1.0)) // 1.0 * x_ij
+                print_error("wrong CPXchgcoef [degree]");
+            if (CPXchgcoef(env, lp, row, xpos_dir(j, i, inst), 1.0)) // 1.0 * x_ji
+                print_error("wrong CPXchgcoef [degree]");
+        }
+    }
+    /*
+    for (int i = 0; i < inst->dimension; i++)
+    { // x(i, j) + x(j, i) <= 1 for every i < j
         for (int j = i + 1; j < inst->dimension; j++)
         {
 
@@ -731,7 +756,7 @@ void TMZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
             }
         }
     }
-
+*/
     free(cname[0]);
     free(cname);
     free(rname[0]);
@@ -884,4 +909,8 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst)
     free(cname);
     free(rname[0]);
     free(rname);
+}
+
+void print_time_csv()
+{
 }
