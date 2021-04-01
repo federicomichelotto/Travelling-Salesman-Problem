@@ -29,7 +29,7 @@ int main(int argc, char **argv)
     plot_solution(&inst) ? print_error("plot_solution() error") : printf("... gnuplot ok\n");
     //plot_solution_edges(inst.n_edges, inst.nodes, inst.edges) ? print_error("plot_solution_edges() error") : printf("... gnuplot ok\n");
 
-    generate_csv_record(inst.param.input_file, inst.param.seed, inst.model_type, inst.z_best, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
+    generate_csv_record(inst.param.name, inst.param.seed, inst.model_type, inst.z_best, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
 
     // Free the memory used by the instance
     free_instance(&inst);

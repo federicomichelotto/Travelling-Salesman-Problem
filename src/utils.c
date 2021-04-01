@@ -426,14 +426,14 @@ void generate_path(char *path, char *folder, char *type, const char *model, char
         printf("%s", path);
 }
 
-void generate_csv_record(char *record_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec)
+void generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec)
 {
     FILE *csv;
-    if ((csv = fopen("scores.csv", "a")) == NULL)
+    if ((csv = fopen("../output/scores.csv", "a")) == NULL)
     {
         print_error("generate_csv_record fopen error");
     }
-    fprintf(csv, "%s, %d, %s, %f, %ld.%ld\n", record_name, seed, model_name[model_type], z_best,time_sec, time_usec);
+    fprintf(csv, "%s, %d, %s, %f, %ld.%ld\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec);
     if (fclose(csv))
     {
         print_error("generate_csv_record fclose error");
