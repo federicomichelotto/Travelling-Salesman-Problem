@@ -55,4 +55,5 @@ dkms.conf
 data
 cmake-build-debug
 build
+output
 .idea

@@ -74,6 +74,7 @@ int TSPopt(instance *inst)
     CPXsetlogfilename(env, path, "w");                           // Save log
     CPXsetintparam(env, CPX_PARAM_RANDOMSEED, inst->param.seed); // Set seed
     CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit);
+    CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC); // Set opportunistic mode
 
     // precision
     CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0);

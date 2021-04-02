@@ -421,7 +421,7 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
 void generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension)
 {
 
-    snprintf(path, 1000, "../%s/%s/%s_%s_%s_%d.%s", folder, extension, type, model, filename, seed, extension);
+    snprintf(path, 1000, "../%s/%s/%s_%s_%s_%d.%s", folder, extension, filename, type, model, seed, extension);
     if (verbose == DEBUG)
         printf("%s", path);
 }
@@ -429,15 +429,24 @@ void generate_path(char *path, char *folder, char *type, const char *model, char
 void generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec)
 {
     FILE *csv;
-    if ((csv = fopen("../output/scores.csv", "a")) == NULL)
-    {
-        print_error("generate_csv_record fopen error");
+    char *filename = "../output/scores.csv";
+
+    if (access(filename, F_OK) == 0){
+        print_message("scores.csv exists, adding the results");
+        csv = fopen(filename, "a");
+        fprintf(csv, "%s, %d, %s, %f, %ld.%ld\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec);
+    } else {
+        print_message("scores.csv does not exists yet, creating file and adding the results");
+        csv = fopen(filename, "w");
+        fprintf(csv, "%s, %d, %s, %f, %ld.%ld\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec);
     }
-    fprintf(csv, "%s, %d, %s, %f, %ld.%ld\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec);
+
+
     if (fclose(csv))
     {
         print_error("generate_csv_record fclose error");
     }
+
     if (verbose == DEBUG)
         printf("csv record added");
 }
