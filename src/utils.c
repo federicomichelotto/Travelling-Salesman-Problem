@@ -353,6 +353,8 @@ void print_message(const char *msg)
 int plot_solution(instance *inst)
 {
     char *commandsForGnuplot[] = {"set title 'Solution plot'",
+                                  "set terminal svg size 350,262",
+                                  "set output '../output/plot/test.svg", // TODO : find a way to modify the nama of the output file
                                   "unset key",
                                   "set autoscale",
                                   "set ylabel 'Y'",

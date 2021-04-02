@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd build || exit
+cd cmake-build-debug || exit
 
 for file in ../data/compact/*; do
   nodes=$(echo "$file" | grep -o -E '[0-9]+')
