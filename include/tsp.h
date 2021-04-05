@@ -76,17 +76,25 @@ enum sections {
 };
 
 static const char *verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBUG"};
-static const char *model_name[] = {"STD", "MTZ", "MTZMOD", "MTZL", "MTZLS", "GG"};
+static const char *model_name[] = {"STD", "MTZ", "MTZMOD", "MTZL", "MTZLS", "GG", "LOOP"};
 static int verbose = NORMAL;
 
+// TSP solver
 int TSPopt(instance *inst);
 
+// Exact model builder
 void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
 
-// *** models' implementation ***
-// model 0: basic model (no SEC) for undirected graphs
+// Exact model prototypes
+
+// Basic model (undirected graphs)
+// model 0: basic model (no SEC)
 void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
+// model 6: benders model (SEC)
+void bender(CPXENVptr env, CPXLPptr lp, instance *inst);
+
+// Compact model (directed graphs)
 // model 1: TMZ_static
 void TMZ_static(CPXENVptr env, CPXLPptr lp, instance *inst);
 

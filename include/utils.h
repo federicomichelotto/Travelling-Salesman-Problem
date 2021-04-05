@@ -15,6 +15,7 @@ void free_instance(instance *inst);
 
 void print_help();
 void print_error(const char *err);
+void print_error_status(const char *err, int e);
 void print_message(const char *msg);
 int plot_solution(instance *inst);
 int plot_solution_edges(int n_edges, node *nodes, edge *edges);

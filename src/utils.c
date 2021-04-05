@@ -351,6 +351,12 @@ void print_error(const char *err)
     exit(1);
 }
 
+void print_error_status(const char *err, int e) {
+    printf("\n\n ERROR: exit with status %d. %s. \n\n", e, err);
+    fflush(NULL);
+    exit(1);
+}
+
 void print_message(const char *msg)
 {
     fprintf(stdout, "\nMESSAGE: %s \n\n", msg);
@@ -432,7 +438,7 @@ void generate_path(char *path, char *folder, char *type, const char *model, char
 
     snprintf(path, 1000, "../%s/%s/%s_%s_%s_%d.%s", folder, extension, filename, type, model, seed, extension);
     if (verbose == DEBUG)
-        printf("%s", path);
+        printf("%s\n", path);
 }
 
 void generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec, int run)
