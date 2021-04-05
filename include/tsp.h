@@ -94,6 +94,7 @@ void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 // model 6: benders model (SEC)
 void bender(CPXENVptr env, CPXLPptr lp, instance *inst);
 
+
 // Compact model (directed graphs)
 // model 1: TMZ_static
 void TMZ_static(CPXENVptr env, CPXLPptr lp, instance *inst);
@@ -110,9 +111,15 @@ void TMZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 // model 5: GG
 void GG(CPXENVptr env, CPXLPptr lp, instance *inst);
 
+// Some useful functions
 
+// Retrieve the distance among each node of the instance
 double dist(int i, int j, instance *inst);
 
+// Find the connected components inside a solution
+int findConnectedComponents(instance *inst, int* components, int* successors, const double *xstar);
+
+// Retrieve the position of the variable
 int xpos(int i, int j, instance *inst);     // position in the model for undirected graphs
 int xpos_dir(int i, int j, instance *inst); // position in the model for directed graphs
 int upos(int i, instance *inst);            // position in the model of i-th u-variable
