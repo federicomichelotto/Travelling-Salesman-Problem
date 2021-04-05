@@ -19,6 +19,7 @@ typedef struct {
     char weight_format[20]; // Specifies how the edge weights (or distances) are formatted
     char data_type[20];     // Specifies how the data are displayed
     int seed;               // Seed given to cplex
+    int run;               // Number of current run
 } parameter;
 
 typedef struct { // Node
@@ -90,7 +91,7 @@ void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 void TMZ_static(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 2: TMZ_static_mod
-void TMZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst);
+//void TMZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 3: TMZ_lazy
 void TMZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst);

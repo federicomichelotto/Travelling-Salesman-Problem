@@ -43,6 +43,12 @@ void parse_command_line(int argc, char **argv, instance *inst)
                 continue;
             }
 
+            if (strcmp(argv[i], "-r") == 0)
+            { // run
+                inst->param.run = atoi(argv[++i]);
+                continue;
+            }
+
             if (strcmp(argv[i], "-v") == 0)
             { // Verbosity
                 switch (strtol(argv[++i], NULL, 10))
@@ -258,6 +264,7 @@ void initialize_instance(instance *inst)
     inst->model_type = 0;
     inst->time_limit = CPX_INFBOUND;
     inst->param.seed = 1;
+    inst->param.run = -1;
 
     inst->dimension = -1;
     inst->nodes = NULL;
@@ -428,7 +435,7 @@ void generate_path(char *path, char *folder, char *type, const char *model, char
         printf("%s", path);
 }
 
-void generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec)
+void generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec, int run)
 {
     FILE *csv;
     char *filename = "../output/scores.csv";
@@ -436,11 +443,11 @@ void generate_csv_record(char *instance_name, int seed, int model_type, double z
     if (access(filename, F_OK) == 0){
         print_message("scores.csv exists, adding the results");
         csv = fopen(filename, "a");
-        fprintf(csv, "%s, %d, %s, %f, %ld.%ld\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec);
+        fprintf(csv, "%s, %d, %s, %f, %ld.%ld, run-%d\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec, run);
     } else {
         print_message("scores.csv does not exists yet, creating file and adding the results");
         csv = fopen(filename, "w");
-        fprintf(csv, "%s, %d, %s, %f, %ld.%ld\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec);
+        fprintf(csv, "%s, %d, %s, %f, %ld.%ld, run-%d\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec, run);
     }
 
 

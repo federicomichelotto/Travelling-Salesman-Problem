@@ -20,6 +20,6 @@ int plot_solution(instance *inst);
 int plot_solution_edges(int n_edges, node *nodes, edge *edges);
 
 void generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension);
-void generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec);
+void generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec, int run);
 
 #endif //UTILS_H

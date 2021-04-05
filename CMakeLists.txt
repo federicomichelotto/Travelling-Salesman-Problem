@@ -21,14 +21,24 @@ if (WIN32)
 
 elseif (UNIX AND NOT APPLE)
 
-    set(CPLEX_HOME /opt/ibm/ILOG/CPLEX_Studio201/cplex)     # mandatory, if you're using Linux set the right path to CPLEX
+    # To link CPLEX libraries and directories stored inside Blade, you must uncomment the following line
+    # the latest version installed in the cluster is 12.10 (but obviously you can choose another one)
+    #    set(CPLEX_HOME /nfsd/opt/CPLEX12.10/cplex)
+
+    # To link CPLEX libraries and directories stored inside your personal Linux distro just set the right path
+    set(CPLEX_HOME /opt/ibm/ILOG/CPLEX_Studio201/cplex)
+
+    # To link and include useful CPLEX libraries and directories, play with the following lines
     target_link_libraries(${PROJECT_NAME} -lcplex -lm -lpthread -ldl)
     target_link_libraries(${PROJECT_NAME} -L${CPLEX_HOME}/lib/x86-64_linux/static_pic)
     target_include_directories(${PROJECT_NAME} PRIVATE ${CPLEX_HOME}/include/ilcplex)
 
 else (APPLE)
 
-    set(CPLEX_HOME /Applications/CPLEX_Studio201/cplex)     # mandatory, if you're using MacOS set the right path to CPLEX
+    # To link CPLEX libraries and directories stored inside your personal MacOS distro just set the right path
+    set(CPLEX_HOME /Applications/CPLEX_Studio201/cplex)
+
+    # To link and include useful CPLEX libraries and directories, play with the following lines
     target_link_libraries(${PROJECT_NAME} -lcplex -lm -lpthread -ldl)
     target_link_libraries(${PROJECT_NAME} -L${CPLEX_HOME}/lib/x86-64_osx/static_pic)
     target_include_directories(${PROJECT_NAME} PRIVATE ${CPLEX_HOME}/include/ilcplex)
