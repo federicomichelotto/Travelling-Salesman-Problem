@@ -8,21 +8,7 @@ import matplotlib.pyplot as plt
 import sys
 import csv
 
-
 from optparse import OptionParser
-
-# parameters
-defLW = 1.2  # default line width
-defMS = 7  # default marker size
-dashes = ['-',  # solid line
-	'--',  # dashed line
-	'-.',  # dash-dot line
-	':',  # dotted line
-	'-',
-	'--']
-
-markers = ['+', 'x', 's', '^', 'o', 'd']
-colors = ['r', 'b', 'y', 'g', 'm', 'c']
 
 
 class CmdLineParser(object):
