@@ -295,7 +295,11 @@ void check_format(char *param)
 void free_instance(instance *inst)
 {
 
-    // todo write the code to free the allocated memory within the instance (bottom-up approach)
+    free(inst->nodes);
+    free(inst->edges);
+    free(inst->weights);
+//    free(inst);
+
 }
 
 void print_command_line(instance *inst)
