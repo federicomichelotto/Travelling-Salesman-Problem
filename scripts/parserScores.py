@@ -37,7 +37,7 @@ def parseScores(fp, outputfile):
 
 
 	for row in fp:
-		row = row.strip().split(',')
+		row = row.strip().split(', ')
 		instance = row[0] + "_" + row[5]
 		model = row[2]
 		time = row[4]
