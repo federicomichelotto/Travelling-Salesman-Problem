@@ -1,76 +1,61 @@
 #include "../include/utils.h"
 
-void parse_command_line(int argc, char **argv, instance *inst)
-{
+void parse_command_line(int argc, char **argv, instance *inst) {
 
-    if (argc < 2)
-    {
+    if (argc < 2) {
         fprintf(stderr, "Usage: %s -h for help\n", argv[0]);
         exit(1);
-    }
-    else if (argc == 2 && strcmp(argv[1], "-h") == 0)
-    {
-
+    } else if (argc == 2 && strcmp(argv[1], "-h") == 0) {
         print_help();
-    }
-    else
-    {
+    } else {
 
-        for (int i = 1; i < argc; i++)
-        {
+        for (int i = 1; i < argc; i++) {
 
-            if (strcmp(argv[i], "-f") == 0)
-            { // Input file
+            if (strcmp(argv[i], "-f") == 0) { // Input file
                 strcpy(inst->param.input_file, argv[++i]);
                 continue;
             }
 
-            if (strcmp(argv[i], "-t") == 0)
-            { // Time limit (seconds)
+            if (strcmp(argv[i], "-t") == 0) { // Time limit (seconds)
                 inst->time_limit = strtof(argv[++i], NULL);
                 continue;
             }
 
-            if (strcmp(argv[i], "-m") == 0)
-            { // Model type
+            if (strcmp(argv[i], "-m") == 0) { // Model type
                 inst->model_type = strtol(argv[++i], NULL, 10);
                 continue;
             }
 
-            if (strcmp(argv[i], "-s") == 0)
-            { // seed
+            if (strcmp(argv[i], "-s") == 0) { // seed
                 inst->param.seed = atoi(argv[++i]);
                 continue;
             }
 
-            if (strcmp(argv[i], "-r") == 0)
-            { // run
+            if (strcmp(argv[i], "-r") == 0) { // run
                 inst->param.run = atoi(argv[++i]);
                 continue;
             }
 
-            if (strcmp(argv[i], "-v") == 0)
-            { // Verbosity
-                switch (strtol(argv[++i], NULL, 10))
-                {
-                case QUIET:
-                    verbose = QUIET;
-                    break;
-                case NORMAL:
-                    verbose = NORMAL;
-                    break;
-                case VERBOSE:
-                    verbose = VERBOSE;
-                    break;
-                case NERD:
-                    verbose = NERD;
-                    break;
-                case DEBUG:
-                    verbose = DEBUG;
-                    break;
-                default:
-                    verbose = NORMAL;
-                    break;
+            if (strcmp(argv[i], "-v") == 0) { // Verbosity
+                switch (strtol(argv[++i], NULL, 10)) {
+                    case QUIET:
+                        verbose = QUIET;
+                        break;
+                    case NORMAL:
+                        verbose = NORMAL;
+                        break;
+                    case VERBOSE:
+                        verbose = VERBOSE;
+                        break;
+                    case NERD:
+                        verbose = NERD;
+                        break;
+                    case DEBUG:
+                        verbose = DEBUG;
+                        break;
+                    default:
+                        verbose = NORMAL;
+                        break;
                 }
                 continue;
             }
@@ -80,8 +65,7 @@ void parse_command_line(int argc, char **argv, instance *inst)
     }
 }
 
-void parse_instance(instance *inst)
-{
+void parse_instance(instance *inst) {
 
     FILE *fp = NULL;
     char *filename = inst->param.input_file;
@@ -96,8 +80,7 @@ void parse_instance(instance *inst)
     // Read each line from the input file:
     // - compare the first token of the line to check the section
     // - split the line using strtok and consider the generated tokens
-    while (fgets(line, sizeof(line), fp) != NULL)
-    {
+    while (fgets(line, sizeof(line), fp) != NULL) {
 
         if (verbose > VERBOSE)
             printf("%s\n", line);
@@ -110,42 +93,30 @@ void parse_instance(instance *inst)
         parameter = strtok(line, delimiters);
 
         // Check the current section
-        if (strncmp(parameter, "NODE_COORD_SECTION", 18) == 0)
-        {
+        if (strncmp(parameter, "NODE_COORD_SECTION", 18) == 0) {
             section = NODE_COORD;
-        }
-        else if (strncmp(parameter, "EDGE_WEIGHT_SECTION", 19) == 0)
-        {
+        } else if (strncmp(parameter, "EDGE_WEIGHT_SECTION", 19) == 0) {
             section = EDGE_WEIGHT;
-        }
-        else if (strncmp(parameter, "DISPLAY_DATA_SECTION", 20) == 0)
-        {
+        } else if (strncmp(parameter, "DISPLAY_DATA_SECTION", 20) == 0) {
             section = DISPLAY_DATA;
-        }
-        else
-        {
+        } else {
             section = PARAMETERS;
         }
 
-        if (strncmp(parameter, "EOF", 3) == 0)
-        {
+        if (strncmp(parameter, "EOF", 3) == 0) {
             if (verbose > NORMAL)
                 printf("(EOF) found, instance parsing complete\n");
             break;
         }
 
-        if (section == PARAMETERS)
-        {
-            if (strncmp(parameter, "NAME", 4) == 0)
-            {
+        if (section == PARAMETERS) {
+            if (strncmp(parameter, "NAME", 4) == 0) {
                 check_format(inst->param.name);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.name, value);
                 if (verbose == DEBUG)
                     printf("NAME %s\n\n", inst->param.name);
-            }
-            else if (strncmp(parameter, "COMMENT", 7) == 0)
-            {
+            } else if (strncmp(parameter, "COMMENT", 7) == 0) {
                 value = strtok(NULL, ":");
                 if (strncmp(inst->param.comment, "NULL", 4) != 0)
                     strcat(inst->param.comment, value); // if more than one comment, append
@@ -153,22 +124,17 @@ void parse_instance(instance *inst)
                     strcpy(inst->param.comment, value);
                 if (verbose > NORMAL)
                     printf("Solving instance %s with model %d\n\n", inst->param.comment, inst->model_type);
-            }
-            else if (strncmp(parameter, "TYPE", 4) == 0)
-            {
+            } else if (strncmp(parameter, "TYPE", 4) == 0) {
                 check_format(inst->param.type);
                 value = strtok(NULL, delimiters);
                 if (strncmp(value, "TSP", 3) != 0 && strncmp(value, "ATSP", 4) != 0)
                     print_error("(TYPE) only TSP and ATSP implemented so far");
-                else
-                {
+                else {
                     strcpy(inst->param.type, value);
                     if (verbose == DEBUG)
                         printf("TYPE %s\n\n", inst->param.type);
                 }
-            }
-            else if (strncmp(parameter, "DIMENSION", 9) == 0)
-            {
+            } else if (strncmp(parameter, "DIMENSION", 9) == 0) {
                 if (inst->dimension != -1)
                     print_error("Bad input format");
                 value = strtok(NULL, delimiters);
@@ -176,61 +142,46 @@ void parse_instance(instance *inst)
                 if (verbose == DEBUG)
                     printf("NODES %d\n", inst->dimension);
 
-                inst->nodes = (node *)calloc(inst->dimension, sizeof(node));
-                inst->edges = (edge *)calloc(inst->dimension, sizeof(edge));
-            }
-            else if (strncmp(parameter, "EDGE_WEIGHT_TYPE", 16) == 0)
-            {
+                inst->nodes = (node *) calloc(inst->dimension, sizeof(node));
+                inst->edges = (edge *) calloc(inst->dimension, sizeof(edge));
+            } else if (strncmp(parameter, "EDGE_WEIGHT_TYPE", 16) == 0) {
                 check_format(inst->param.weight_type);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.weight_type, value);
-                if (strncmp(inst->param.type, "TSP", 3) == 0)
-                {
+                if (strncmp(inst->param.type, "TSP", 3) == 0) {
                     if (strncmp(inst->param.weight_type, "EXPLICIT", 8) != 0 &&
                         strncmp(inst->param.weight_type, "CEIL_2D", 7) != 0 &&
                         strncmp(inst->param.weight_type, "EUC_2D", 6) != 0 &&
                         strncmp(inst->param.weight_type, "MAN_2D", 6) != 0 &&
                         strncmp(inst->param.weight_type, "MAX_2D", 6) != 0 &&
                         strncmp(inst->param.weight_type, "ATT", 3) != 0 &&
-                        strncmp(inst->param.weight_type, "GEO", 3) != 0)
-                    {
+                        strncmp(inst->param.weight_type, "GEO", 3) != 0) {
                         print_error(
-                            "(EDGE_WEIGHT_TYPE) only EUC_2D, ATT, MAN_2D, MAX_2D, CEIL_2D, GEO implemented so far");
+                                "(EDGE_WEIGHT_TYPE) only EUC_2D, ATT, MAN_2D, MAX_2D, CEIL_2D, GEO implemented so far");
                     }
-                }
-                else if (strncmp(inst->param.type, "ATSP", 4) == 0)
-                {
-                    if (strncmp(inst->param.weight_type, "EXPLICIT", 8) != 0)
-                    {
+                } else if (strncmp(inst->param.type, "ATSP", 4) == 0) {
+                    if (strncmp(inst->param.weight_type, "EXPLICIT", 8) != 0) {
                         print_error("(EDGE_WEIGHT_TYPE) only EXPLICIT implemented so far");
                     }
                 }
-            }
-            else if (strncmp(parameter, "EDGE_WEIGHT_FORMAT", 18) == 0)
-            {
+            } else if (strncmp(parameter, "EDGE_WEIGHT_FORMAT", 18) == 0) {
                 check_format(inst->param.weight_format);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.weight_format, value);
                 if (strncmp(inst->param.weight_format, "FULL_MATRIX", 11) != 0 &&
-                    strncmp(inst->param.weight_format, "FUNCTION", 8) != 0)
-                {
+                    strncmp(inst->param.weight_format, "FUNCTION", 8) != 0) {
                     print_error("(EDGE_WEIGHT_FORMAT) only FULL_MATRIX and FUNCTION implemented so far");
                 }
-            }
-            else if (strncmp(parameter, "DISPLAY_DATA_TYPE", 17) == 0)
-            {
+            } else if (strncmp(parameter, "DISPLAY_DATA_TYPE", 17) == 0) {
                 check_format(inst->param.data_type);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.data_type, value);
                 if (strncmp(inst->param.data_type, "COORD_DISPLAY", 13) != 0)
                     print_error("(DISPLAY_DATA_TYPE) only COORD_DISPLAY implemented so far");
             }
-        }
-        else if (section == NODE_COORD)
-        {
+        } else if (section == NODE_COORD) {
 
-            for (int i = 0; i < inst->dimension; i++)
-            {
+            for (int i = 0; i < inst->dimension; i++) {
 
                 fgets(line, sizeof(line), fp);
                 value = strtok(line, delimiters);
@@ -242,14 +193,10 @@ void parse_instance(instance *inst)
                     printf("NODES %d at coordinates (%15.7lf , %15.7lf)\n", inst->nodes[i].id, inst->nodes[i].x,
                            inst->nodes[i].y);
             }
-        }
-        else if (section == EDGE_WEIGHT)
-        {
+        } else if (section == EDGE_WEIGHT) {
 
             // TODO implementing the parsing of the EDGE WEIGHT SECTION
-        }
-        else if (section == DISPLAY_DATA)
-        {
+        } else if (section == DISPLAY_DATA) {
 
             // TODO implementing the parsing of the DISPLAY DATA SECTION
         }
@@ -258,8 +205,7 @@ void parse_instance(instance *inst)
     fclose(fp);
 }
 
-void initialize_instance(instance *inst)
-{
+void initialize_instance(instance *inst) {
 
     inst->model_type = 0;
     inst->time_limit = CPX_INFBOUND;
@@ -284,22 +230,18 @@ void initialize_instance(instance *inst)
     strcpy(inst->param.data_type, "NULL");
 }
 
-void check_format(char *param)
-{
-    if (strncmp(param, "NULL", 4) != 0)
-    {
+void check_format(char *param) {
+    if (strncmp(param, "NULL", 4) != 0) {
         print_error("Bad input format");
     }
 }
 
-void free_instance(instance *inst)
-{
+void free_instance(instance *inst) {
 
     // todo write the code to free the allocated memory within the instance (bottom-up approach)
 }
 
-void print_command_line(instance *inst)
-{
+void print_command_line(instance *inst) {
     printf("\nPARAMETERS ---------------------------------------------\n");
     printf("-f %s\n", inst->param.input_file);
     printf("-t %f seconds\n", inst->time_limit);
@@ -309,8 +251,7 @@ void print_command_line(instance *inst)
     printf("--------------------------------------------------------\n\n");
 }
 
-void print_instance(instance *inst)
-{
+void print_instance(instance *inst) {
     printf("\nINSTANCE -----------------------------------------------\n");
     printf("Name: %s\n", inst->param.name);
     printf("Type: %s\n", inst->param.type);
@@ -318,13 +259,12 @@ void print_instance(instance *inst)
     printf("Dimension: %d \n", inst->dimension);
     printf("Edge weight type: %s\n", inst->param.weight_type);
     printf("Edge weight format: %s\n", inst->param.weight_format);
-    printf("Model type: %d\n", inst->model_type);
+    printf("Model type: %d (%s)\n", inst->model_type, model_name[inst->model_type]);
     printf("Input file path: %s\n", inst->param.input_file);
     printf("Data type: %s\n", inst->param.data_type);
     // TODO implement the EDGE WEIGHT SECTION
     // TODO implement the DISPLAY DATA SECTION
-    if (inst->nodes != NULL)
-    {
+    if (inst->nodes != NULL) {
         printf("NODE COORD SECTION\n");
         for (int i = 0; i < inst->dimension; i++)
             printf("%d\t(%15.7lf, %15.7lf)\n", inst->nodes[i].id, inst->nodes[i].x, inst->nodes[i].y);
@@ -332,8 +272,7 @@ void print_instance(instance *inst)
     printf("--------------------------------------------------------\n\n");
 }
 
-void print_help()
-{
+void print_help() {
     printf("\nHELP ---------------------------------------------------\n");
     printf("-f <path>  : used to pass the relative instance path \n");
     printf("-t <time>  : used to pass the total running time allowed in seconds\n");
@@ -344,8 +283,7 @@ void print_help()
     exit(1);
 }
 
-void print_error(const char *err)
-{
+void print_error(const char *err) {
     fprintf(stderr, "\nERROR: %s \n\n", err);
     fflush(NULL);
     exit(1);
@@ -357,17 +295,15 @@ void print_error_status(const char *err, int e) {
     exit(1);
 }
 
-void print_message(const char *msg)
-{
+void print_message(const char *msg) {
     fprintf(stdout, "\nMESSAGE: %s \n\n", msg);
     fflush(NULL);
 }
 
-int plot_solution(instance *inst)
-{
+int plot_solution(instance *inst) {
     char *commandsForGnuplot[] = {"set title 'Solution plot'",
-                                  //"set terminal svg size 350,262",
-                                  //"set output '../output/plot/test.svg", // TODO : find a way to modify the nama of the output file
+            //"set terminal svg size 350,262",
+            //"set output '../output/plot/test.svg", // TODO : find a way to modify the nama of the output file
                                   "unset key",
                                   "set autoscale",
                                   "set ylabel 'Y'",
@@ -376,8 +312,7 @@ int plot_solution(instance *inst)
     FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
     FILE *temp = fopen("data.temp", "w");
 
-    for (int i = 0; i < inst->n_edges; i++)
-    {
+    for (int i = 0; i < inst->n_edges; i++) {
         int prev = inst->edges[i].prev;
         int next = inst->edges[i].next;
         //Write the coordinates of the two nodes inside a temporary file
@@ -388,20 +323,17 @@ int plot_solution(instance *inst)
     fclose(temp);
 
     int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
-    for (int i = 0; i < commands; i++)
-    {
+    for (int i = 0; i < commands; i++) {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
-    if (pclose(gnuplotPipe) == -1)
-    {
+    if (pclose(gnuplotPipe) == -1) {
         print_error("pclose error");
         return -1;
     }
     return 0;
 }
 
-int plot_solution_edges(int n_edges, node *nodes, edge *edges)
-{
+int plot_solution_edges(int n_edges, node *nodes, edge *edges) {
     char *commandsForGnuplot[] = {"set title 'Solution plot'",
                                   "unset key",
                                   "set autoscale",
@@ -411,8 +343,7 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
     FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
     FILE *temp = fopen("data.temp", "w");
 
-    for (int i = 0; i < n_edges; i++)
-    {
+    for (int i = 0; i < n_edges; i++) {
         //Write the coordinates of the two nodes inside a temporary file
         fprintf(temp, "%lf %lf \n", nodes[edges[i].prev].x, nodes[edges[i].prev].y);   // first node
         fprintf(temp, "%lf %lf \n\n", nodes[edges[i].next].x, nodes[edges[i].next].y); // second node
@@ -421,43 +352,42 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
     fclose(temp);
 
     int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
-    for (int i = 0; i < commands; i++)
-    {
+    for (int i = 0; i < commands; i++) {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
-    if (pclose(gnuplotPipe) == -1)
-    {
+    if (pclose(gnuplotPipe) == -1) {
         print_error("pclose error");
         return -1;
     }
     return 0;
 }
 
-void generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension)
-{
+void generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension) {
     snprintf(path, 1000, "../%s/%s/%s_%s_%s_%d.%s", folder, extension, filename, type, model, seed, extension);
     if (verbose == DEBUG)
         printf("%s\n", path);
 }
 
-void generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec, int run)
-{
+void
+generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec,
+                    int run) {
     FILE *csv;
     char *filename = "../output/scores.csv";
 
-    if (access(filename, F_OK) == 0){
+    if (access(filename, F_OK) == 0) {
         print_message("scores.csv exists, adding the results");
         csv = fopen(filename, "a");
-        fprintf(csv, "%s, %d, %s, %f, %ld.%ld, run-%d\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec, run);
+        fprintf(csv, "%s, %d, %s, %f, %ld.%ld, run-%d\n", instance_name, seed, model_name[model_type], z_best, time_sec,
+                time_usec, run);
     } else {
         print_message("scores.csv does not exists yet, creating file and adding the results");
         csv = fopen(filename, "w");
-        fprintf(csv, "%s, %d, %s, %f, %ld.%ld, run-%d\n", instance_name, seed, model_name[model_type], z_best,time_sec, time_usec, run);
+        fprintf(csv, "%s, %d, %s, %f, %ld.%ld, run-%d\n", instance_name, seed, model_name[model_type], z_best, time_sec,
+                time_usec, run);
     }
 
 
-    if (fclose(csv))
-    {
+    if (fclose(csv)) {
         print_error("generate_csv_record fclose error");
     }
 

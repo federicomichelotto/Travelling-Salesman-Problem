@@ -76,7 +76,7 @@ enum sections {
 };
 
 static const char *verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBUG"};
-static const char *model_name[] = {"STD", "MTZ", "MTZMOD", "MTZL", "MTZLS", "GG", "LOOP"};
+static const char *model_name[] = {"STD", "MTZ", "MTZMOD", "MTZL", "MTZLS", "GG", "GGL", "GGLS", "BENDERS [LOOP]"};
 static int verbose = NORMAL;
 
 // TSP solver
@@ -91,25 +91,31 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
 // model 0: basic model (no SEC)
 void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
-// model 6: benders model (SEC)
+// model 8: benders model (SEC)
 void benders(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 
 // Compact model (directed graphs)
 // model 1: TMZ_static
-void TMZ_static(CPXENVptr env, CPXLPptr lp, instance *inst);
+void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 2: TMZ_static_mod
-//void TMZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst);
+void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 3: TMZ_lazy
-void TMZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst);
+void MTZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 4: MTZ_lazy_sec
-void TMZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
+void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 5: GG
 void GG(CPXENVptr env, CPXLPptr lp, instance *inst);
+
+// model 6: GGL
+void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst);
+
+// model 7: GGLS
+void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // Some useful functions
 
