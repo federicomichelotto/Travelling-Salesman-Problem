@@ -57,47 +57,57 @@ double dist(int i, int j, instance *inst)
     return distance;
 }
 
-void build_sol(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp) // build succ() and comp() wrt xstar()...
+void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp) // build succ() and comp() wrt xstar()...
 {
-
+    // initialization
     *ncomp = 0;
-    for ( int i = 0; i < inst->dimension; i++ )
+    for (int i = 0; i < inst->dimension; i++)
     {
         succ[i] = -1;
         comp[i] = -1;
     }
 
-    for ( int start = 0; start < inst->dimension; start++ )
+    for (int start = 0; start < inst->dimension; start++)
     {
-        if ( comp[start] >= 0 ) continue;  // node "start" was already visited, just skip it
+        if (comp[start] >= 0)
+            continue; // node "start" was already visited, just skip it
 
         // a new component is found
         (*ncomp)++;
+        if ((*ncomp) == 1)
+            (*length_comp) = (int *)calloc(1, sizeof(int));
+        else
+            (*length_comp) = (int *)realloc(*length_comp, (*ncomp)*sizeof(int));
         int i = start;
+        int length = 1;
         int done = 0;
-        while ( !done )  // go and visit the current component
+        while (!done) // go and visit the current component
         {
-            comp[i] = *ncomp;
+            comp[i] = (*ncomp) - 1;
             done = 1;
-            for ( int j = 0; j < inst->dimension; j++ )
+            for (int j = 0; j < inst->dimension; j++)
             {
-                if ( i != j && xstar[xpos(i,j,inst)] > 0.5 && comp[j] == -1 ) // the edge [i,j] is selected in xstar and j was not visited before
+                if (i == j)
+                    continue;
+                if (xstar[xpos(i, j, inst)] > 0.5 && comp[j] == -1) // the edge [i,j] is selected in xstar and j was not visited before
                 {
                     succ[i] = j;
+                    length++;
                     i = j;
                     done = 0;
                     break;
                 }
             }
         }
-        succ[i] = start;  // last arc to close the cycle
+        succ[i] = start;                    // last arc to close the cycle
+        (*length_comp)[(*ncomp) - 1] = length; // save length of the cycle
 
         // go to the next component...
     }
 }
 
 // Kruskal algorithm to find connected components
-int findConnectedComponents(instance *inst, int* components, int* successors, const double *xstar) {
+int findConnectedComponents_kruskal(instance *inst, int* components, int* successors, const double *xstar) {
 
     int counter = 0;
 
@@ -141,7 +151,6 @@ int findConnectedComponents(instance *inst, int* components, int* successors, co
     }
 
     return  counter;
-
 }
 
 int TSPopt(instance *inst)
@@ -178,8 +187,34 @@ int TSPopt(instance *inst)
 
     inst->n_edges = 0;
 
-    if (inst->model_type == 0 || inst->model_type == 6) // undirected graph
+    if (inst->model_type == 0) // undirected graph
     {
+        printf("Printing selected arcs...\n");
+        for (int i = 0; i < inst->dimension; i++)
+        {
+            for (int j = i + 1; j < inst->dimension; j++)
+            {
+                if (xstar[xpos(i, j, inst)] > 0.5)
+                {
+                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
+                    inst->edges[inst->n_edges].prev = i;
+                    inst->edges[inst->n_edges].next = j;
+                    if (++inst->n_edges > inst->dimension)
+                        print_error("more edges than nodes, not a hamiltonian tour.");
+                }
+            }
+        }
+    }
+    else if (inst->model_type == 6) // Benders
+    {
+        printf("Benders' method is running...\n");
+        benders(env, lp, inst);
+        int cols = CPXgetnumcols(env, lp);
+        double *xstar = (double *)calloc(cols, sizeof(double));
+        if (CPXgetx(env, lp, xstar, 0, cols - 1))
+            print_error("CPXgetx() error");
+        printf("\nPrinting selected arcs...\n");
         for (int i = 0; i < inst->dimension; i++)
         {
             for (int j = i + 1; j < inst->dimension; j++)
@@ -198,6 +233,7 @@ int TSPopt(instance *inst)
     }
     else
     {
+        printf("\nPrinting selected arcs...\n");
         for (int i = 0; i < inst->dimension; i++)
         {
             for (int j = 0; j < inst->dimension; j++)
@@ -244,7 +280,7 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
     }
     else if (inst->model_type == 2) // TMZ with static constraints
     {
-//        TMZ_static_mod(env, lp, inst);
+        //        TMZ_static_mod(env, lp, inst);
     }
     else if (inst->model_type == 3) // TMZ with lazy constraints
     {
@@ -258,9 +294,10 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
     {
         GG(env, lp, inst);
     }
-    else if (inst->model_type == 6) // Bender
+    else if (inst->model_type == 6) // Benders
     {
-        bender(env, lp, inst);
+        // First iteration of the Benders method applies only the degree constraints
+        basic_model_no_sec(env, lp, inst);
     }
     else
     {
@@ -271,7 +308,7 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
     char path[1000];
     generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp");
     // path : "../output/model_[type]_[name].lp"
-
+    //TODO: check that "model" folder exists
     CPXwriteprob(env, lp, path, NULL);
 }
 
@@ -821,6 +858,8 @@ void TMZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
                 print_error("wrong CPXchgcoef [degree]");
             if (CPXchgcoef(env, lp, row, xpos_dir(j, i, inst), 1.0)) // 1.0 * x_ji
                 print_error("wrong CPXchgcoef [degree]");
+            free(beg);
+            free(ind);
         }
     }
     /*
@@ -1005,118 +1044,92 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst)
     free(rname);
 }
 
-void bender(CPXENVptr env, CPXLPptr lp, instance *inst) {
-    char binary = 'B'; // B => binary variable flag
-    // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
-
-    // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
-    // Add binary variables x(i,j) for i < j
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = i + 1; j < inst->dimension; j++) {
-            sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
-            double obj = dist(i, j, inst); // cost == distance
-            double lb = 0.0;
-            double ub = 1.0;
-            if (CPXnewcols(env, lp, 1, &obj, &lb, &ub, &binary, cname))
-                print_error(" wrong CPXnewcols on x var.s");
-            if (CPXgetnumcols(env, lp) - 1 != xpos(i, j, inst))
-                print_error(" wrong position for x var.s");
-        }
-    }
-
-    // Add the degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
-
-        int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
-        double rhs = 2.0;
-        char sense = 'E'; // E stands for equality constraint
-
-        sprintf(rname[0], "degree(%d)", h + 1);
-        if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
-            print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
-            if (i == h)
-                continue;
-            if (CPXchgcoef(env, lp, row, xpos(i, h, inst), 1.0))
-                print_error("[position_u] wrong CPXchgcoef [degree]");
-        }
-    }
+void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
 
     // Application of Benders method
 
     int done = 0;
-    int i = 0;      // number of iteration
-    int c = 0;      // number of connected components
-
-    while (!done) {
-
-        CPXmipopt(env, lp);
-
+    int it = 0; // iteration number
+    while (!done)
+    {
         int ncols = CPXgetnumcols(env, lp);
-        double *xstar = (double *) calloc(ncols, sizeof(double));
+        double *xstar = (double *)calloc(ncols, sizeof(double));
 
         int status = CPXgetx(env, lp, xstar, 0, ncols - 1);
-        if (status) { print_error_status("Failed to obtain the values in LOOP method", status); }
+        if (status)
+        {
+            print_error_status("Failed to obtain the values in LOOP method", status);
+        }
 
-        int *comp = (int *) calloc(inst->dimension, sizeof(int));
-        int *succ = (int *) calloc(inst->dimension, sizeof(int));
-
+        int *comp = (int *)calloc(inst->dimension, sizeof(int));
+        int *succ = (int *)calloc(inst->dimension, sizeof(int));
+        int c = 0; // number of connected components
+        int *length_comp;
         // Retrieve the number of connected components so far
-        c = findConnectedComponents(inst, comp, succ, xstar);
-//        build_sol(xstar,inst, succ, comp, &c);
+        findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
 
-        printf("ITERATION: %d\tCONNECTED COMPONENTS FOUND: %d\n", i++, c);
+        printf("ITERATION: %d\tCONNECTED COMPONENTS FOUND: %d\n", ++it, c);
 
-        if (c == 1) {
-            // If exactly one component is found end the loop
+        if (c == 1)
+        {
+            // If exactly one component is found, end the loop and exit
             done = 1;
-        } else {
+        }
+        else
+        {
             // If more than one component is found add SEC to each component
-            char sense = 'L';
-            for (int k = 0; k < c; k++) {
 
-                int nnz = 0;
-                double rhs = -1.0;
+            // rname: rows' names (row = constraint)
+            char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+            rname[0] = (char *)calloc(100, sizeof(char));
 
-                int *index = (int *) calloc(ncols, sizeof(int));
-                for (int h = 0; h < inst->dimension; h++) {
+            {
+                printf("Lenghts iteration %d:\n", it);
+                for (int n = 0; n < c; n++)
+                {
+                    printf(" %d\n", length_comp[n]);
+                }
+            }
 
-                    if (comp[h] != succ[k]) continue;
-                    else rhs++;
+            for (int mycomp = 0; mycomp < c; mycomp++)
+            {
 
-                    for (int j = h + 1; j < inst->dimension; j++) {
-                        if (comp[j] == succ[k]) index[nnz++] = xpos(h, j, inst);
+                double rhs = length_comp[mycomp] - 1.0;
+                char sense = 'L';
+                int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
+                sprintf(rname[0], "SEC(%d,%d)", mycomp, it);
+                if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
+                    print_error("wrong CPXnewrows");
+
+                for (int i = 0; i < inst->dimension; i++)
+                {
+                    if (comp[i] != mycomp)
+                        continue;
+                    for (int j = i + 1; j < inst->dimension; j++)
+                    {
+                        if (comp[j] != mycomp)
+                            continue;
+                        // add (i,j) to SEC
+                        if (CPXchgcoef(env, lp, row, xpos(i, j, inst), 1.0)) // 1.0 * x_ij
+                            print_error("wrong CPXchgcoef");
                     }
                 }
-
-                sprintf(cname[0], "SEC(%d)", k + 1);
-                int lastrow = CPXgetnumrows(env, lp);
-
-                status = CPXnewrows(env, lp, 1, &rhs, &sense, NULL, cname);
-                if (status) print_error_status(" wrong CPXnewrows SEC", status);
-
-                for (int z = 0; z < nnz; z++) {
-                    status = CPXchgcoef(env, lp, lastrow, index[z], 1.0);
-                    if (status) print_error_status(" wrong CPXchgcoef in SEC", status);
-                }
-                free(index);
             }
+
+            // solve with the new constraints
+            if (CPXmipopt(env, lp))
+                print_error("CPXmipopt() error");
+            free(rname[0]);
+            free(rname);
         }
+
         free(comp);
         free(succ);
         free(xstar);
+        free(length_comp);
     }
-
-    free(cname[0]);
-    free(cname);
-    free(rname[0]);
-    free(rname);
 }
-
 
 void print_time_csv()
 {

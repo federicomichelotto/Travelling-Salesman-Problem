@@ -92,7 +92,7 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
 void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 6: benders model (SEC)
-void bender(CPXENVptr env, CPXLPptr lp, instance *inst);
+void benders(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 
 // Compact model (directed graphs)
@@ -117,7 +117,8 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst);
 double dist(int i, int j, instance *inst);
 
 // Find the connected components inside a solution
-int findConnectedComponents(instance *inst, int* components, int* successors, const double *xstar);
+void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp);
+int findConnectedComponents_kruskal(instance *inst, int* components, int* successors, const double *xstar);
 
 // Retrieve the position of the variable
 int xpos(int i, int j, instance *inst);     // position in the model for undirected graphs

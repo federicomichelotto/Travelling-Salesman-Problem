@@ -295,11 +295,7 @@ void check_format(char *param)
 void free_instance(instance *inst)
 {
 
-    free(inst->nodes);
-    free(inst->edges);
-    free(inst->weights);
-//    free(inst);
-
+    // todo write the code to free the allocated memory within the instance (bottom-up approach)
 }
 
 void print_command_line(instance *inst)
@@ -370,8 +366,8 @@ void print_message(const char *msg)
 int plot_solution(instance *inst)
 {
     char *commandsForGnuplot[] = {"set title 'Solution plot'",
-                                  "set terminal svg size 350,262",
-                                  "set output '../output/plot/test.svg", // TODO : find a way to modify the nama of the output file
+                                  //"set terminal svg size 350,262",
+                                  //"set output '../output/plot/test.svg", // TODO : find a way to modify the nama of the output file
                                   "unset key",
                                   "set autoscale",
                                   "set ylabel 'Y'",
@@ -439,7 +435,6 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
 
 void generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension)
 {
-
     snprintf(path, 1000, "../%s/%s/%s_%s_%s_%d.%s", folder, extension, filename, type, model, seed, extension);
     if (verbose == DEBUG)
         printf("%s\n", path);
@@ -467,5 +462,5 @@ void generate_csv_record(char *instance_name, int seed, int model_type, double z
     }
 
     if (verbose == DEBUG)
-        printf("csv record added");
+        printf("csv record added\n");
 }
