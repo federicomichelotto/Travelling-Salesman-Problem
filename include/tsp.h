@@ -115,10 +115,11 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // Retrieve the distance among each node of the instance
 double dist(int i, int j, instance *inst);
+double compute_edges( instance *inst, const double *xstar, int type);
 
 // Find the connected components inside a solution
 void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp);
-int findConnectedComponents_kruskal(instance *inst, int* components, int* successors, const double *xstar);
+void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp);
 
 // Retrieve the position of the variable
 int xpos(int i, int j, instance *inst);     // position in the model for undirected graphs

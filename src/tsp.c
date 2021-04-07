@@ -57,6 +57,44 @@ double dist(int i, int j, instance *inst)
     return distance;
 }
 
+double gather_solution_path( instance *inst, const double *xstar, int type){
+        if (type == 0) {
+            if (verbose == DEBUG)
+                printf("Printing selected edges...\n");
+            for (int i = 0; i < inst->dimension; i++) {
+                for (int j = i + 1; j < inst->dimension; j++) {
+                    if (xstar[xpos(i, j, inst)] > 0.5) {
+                        if (verbose == DEBUG)
+                            printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+                        inst->edges[inst->n_edges].dist = dist(i, j, inst);
+                        inst->edges[inst->n_edges].prev = i;
+                        inst->edges[inst->n_edges].next = j;
+                        if (++inst->n_edges > inst->dimension)
+                            print_error("more edges than nodes, not a hamiltonian tour.");
+                    }
+                }
+            }
+        } else if (type == 1){
+            if (verbose == DEBUG)
+                printf("Printing selected arcs...\n");
+            for (int i = 0; i < inst->dimension; i++) {
+                for (int j = 0; j < inst->dimension; j++) {
+                    if (xstar[xpos(i, j, inst)] > 0.5) {
+                        if (verbose == DEBUG)
+                            printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+                        inst->edges[inst->n_edges].dist = dist(i, j, inst);
+                        inst->edges[inst->n_edges].prev = i;
+                        inst->edges[inst->n_edges].next = j;
+                        if (++inst->n_edges > inst->dimension)
+                            print_error("more arcs than nodes, not a hamiltonian tour.");
+                    }
+                }
+            }
+        }
+    }
+
+
+
 void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp) // build succ() and comp() wrt xstar()...
 {
     // initialization
@@ -107,19 +145,19 @@ void findConnectedComponents(const double *xstar, instance *inst, int *succ, int
 }
 
 // Kruskal algorithm to find connected components
-int findConnectedComponents_kruskal(instance *inst, int *components, int *successors, const double *xstar)
+void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp)
 {
 
-    int counter = 0;
+    *ncomp = 0;
 
-    // Initialize components and successors
+    // Initialize components and succ
     for (int i = 0; i < inst->dimension; i++)
     {
-        components[i] = i;
-        successors[i] = -1;
+        comp[i] = i;
+        succ[i] = -1;
     }
 
-    // Found connected components
+    // Found connected comp
     for (int i = 0; i < inst->dimension; i++)
     {
         for (int j = i + 1; j < inst->dimension; j++)
@@ -127,17 +165,19 @@ int findConnectedComponents_kruskal(instance *inst, int *components, int *succes
             int pos = xpos(i, j, inst);
             if (xstar[pos] == 1)
             {
-                if (components[i] != components[j])
+                if (comp[i] != comp[j])
                 {
-                    int c1 = components[i];
-                    int c2 = components[j];
+                    int c1 = comp[i];
+                    int c2 = comp[j];
                     for (int v = 0; v < inst->dimension; v++)
-                        if (components[v] == c2)
-                            components[v] = c1;
+                        if (comp[v] == c2)
+                            comp[v] = c1;
                 }
             }
         }
     }
+
+    int length = 1;
 
     // Count how many components are
     for (int i = 0; i < inst->dimension; i++)
@@ -145,9 +185,9 @@ int findConnectedComponents_kruskal(instance *inst, int *components, int *succes
 
         int inside = 0;
 
-        for (int j = 0; j < counter + 1; j++)
+        for (int j = 0; j < (*ncomp) + 1; j++)
         {
-            if (successors[j] == components[i])
+            if (succ[j] == comp[i])
             {
                 inside = 1;
                 break;
@@ -156,12 +196,14 @@ int findConnectedComponents_kruskal(instance *inst, int *components, int *succes
 
         if (!inside)
         {
-            successors[counter] = components[i];
-            counter++;
+            succ[(*ncomp)] = comp[i];
+            (*ncomp)++;
+            length++;
         }
     }
 
-    return counter;
+    (*length_comp)[(*ncomp) - 1] = length; // save length of the cycle
+
 }
 
 int TSPopt(instance *inst)
@@ -200,66 +242,73 @@ int TSPopt(instance *inst)
 
     if (inst->model_type == 0) // undirected graph
     {
-        printf("Printing selected arcs...\n");
-        for (int i = 0; i < inst->dimension; i++)
-        {
-            for (int j = i + 1; j < inst->dimension; j++)
-            {
-                if (xstar[xpos(i, j, inst)] > 0.5)
-                {
-                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
-                    inst->edges[inst->n_edges].prev = i;
-                    inst->edges[inst->n_edges].next = j;
-                    if (++inst->n_edges > inst->dimension)
-                        print_error("more edges than nodes, not a hamiltonian tour.");
-                }
-            }
-        }
+//        printf("Printing selected arcs...\n");
+//        for (int i = 0; i < inst->dimension; i++)
+//        {
+//            for (int j = i + 1; j < inst->dimension; j++)
+//            {
+//                if (xstar[xpos(i, j, inst)] > 0.5)
+//                {
+//                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+//                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
+//                    inst->edges[inst->n_edges].prev = i;
+//                    inst->edges[inst->n_edges].next = j;
+//                    if (++inst->n_edges > inst->dimension)
+//                        print_error("more edges than nodes, not a hamiltonian tour.");
+//                }
+//            }
+//        }
+gather_solution_path(inst, xstar, 0);
     }
     else if (inst->model_type == 6) // Benders
     {
         printf("Benders' method is running...\n");
         benders(env, lp, inst);
+
         int cols = CPXgetnumcols(env, lp);
         double *xstar = (double *)calloc(cols, sizeof(double));
         if (CPXgetx(env, lp, xstar, 0, cols - 1))
             print_error("CPXgetx() error");
-        printf("\nPrinting selected arcs...\n");
-        for (int i = 0; i < inst->dimension; i++)
-        {
-            for (int j = i + 1; j < inst->dimension; j++)
-            {
-                if (xstar[xpos(i, j, inst)] > 0.5)
-                {
-                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
-                    inst->edges[inst->n_edges].prev = i;
-                    inst->edges[inst->n_edges].next = j;
-                    if (++inst->n_edges > inst->dimension)
-                        print_error("more edges than nodes, not a hamiltonian tour.");
-                }
-            }
-        }
+
+        gather_solution_path(inst, xstar, 0);
+
+//        printf("\nPrinting selected arcs...\n");
+//        for (int i = 0; i < inst->dimension; i++)
+//        {
+//            for (int j = i + 1; j < inst->dimension; j++)
+//            {
+//                if (xstar[xpos(i, j, inst)] > 0.5)
+//                {
+//                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+//                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
+//                    inst->edges[inst->n_edges].prev = i;
+//                    inst->edges[inst->n_edges].next = j;
+//                    if (++inst->n_edges > inst->dimension)
+//                        print_error("more edges than nodes, not a hamiltonian tour.");
+//                }
+//            }
+//        }
     }
     else
     {
-        printf("\nPrinting selected arcs...\n");
-        for (int i = 0; i < inst->dimension; i++)
-        {
-            for (int j = 0; j < inst->dimension; j++)
-            {
-                if (xstar[xpos_dir(i, j, inst)] > 0.5)
-                {
-                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
-                    inst->edges[inst->n_edges].prev = i;
-                    inst->edges[inst->n_edges].next = j;
-                    if (++inst->n_edges > inst->dimension)
-                        print_error("more edges than nodes, not a hamiltonian tour.");
-                }
-            }
-        }
+//        printf("\nPrinting selected arcs...\n");
+//        for (int i = 0; i < inst->dimension; i++)
+//        {
+//            for (int j = 0; j < inst->dimension; j++)
+//            {
+//                if (xstar[xpos_dir(i, j, inst)] > 0.5)
+//                {
+//                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+//                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
+//                    inst->edges[inst->n_edges].prev = i;
+//                    inst->edges[inst->n_edges].next = j;
+//                    if (++inst->n_edges > inst->dimension)
+//                        print_error("more edges than nodes, not a hamiltonian tour.");
+//                }
+//            }
+//        }
+        gather_solution_path(inst, xstar, 1);
+
     }
 
     if (inst->n_edges != inst->dimension)
@@ -1080,7 +1129,7 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
         // Retrieve the number of connected components so far
         findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
 
-        printf("ITERATION: %d\tCONNECTED COMPONENTS FOUND: %d\n", ++it, c);
+        printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d\n", ++it, c);
 
         if (c == 1)
         {
@@ -1090,15 +1139,32 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
         else
         {
             // If more than one component is found add SEC to each component
+//            for (int i = 0; i < inst->dimension; i++)
+//            {
+//                for (int j = i + 1; j < inst->dimension; j++)
+//                {
+//                    if (xstar[xpos(i, j, inst)] > 0.5)
+//                    {
+//                        inst->edges[inst->n_edges].dist = dist(i, j, inst);
+//                        inst->edges[inst->n_edges].prev = i;
+//                        inst->edges[inst->n_edges].next = j;
+//                        if (++inst->n_edges > inst->dimension)
+//                            print_error("more edges than nodes, not a hamiltonian tour.");
+//                    }
+//                }
+//            }
+            gather_solution_path(inst, xstar, 0);
+            plot_solution(inst) ? print_error("plot_solution() error") : printf("\n... gnuplot ok\n");
+            inst->n_edges = 0;
 
             // rname: rows' names (row = constraint)
             char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
             rname[0] = (char *)calloc(100, sizeof(char));
 
-            printf("Loop lenghts at iteration %d:\n", it);
-            for (int n = 0; n < c; n++)
-            {
-                printf(" %d\n", length_comp[n]);
+            if (verbose == VERBOSE) {
+                for (int n = 0; n < c; n++) {
+                    printf("\t -- COMPONENT %d : %d NODES\n", n + 1, length_comp[n]);
+                }
             }
 
             for (int mycomp = 0; mycomp < c; mycomp++)
