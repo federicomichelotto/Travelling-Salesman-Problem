@@ -77,7 +77,7 @@ void findConnectedComponents(const double *xstar, instance *inst, int *succ, int
         if ((*ncomp) == 1)
             (*length_comp) = (int *)calloc(1, sizeof(int));
         else
-            (*length_comp) = (int *)realloc(*length_comp, (*ncomp)*sizeof(int));
+            (*length_comp) = (int *)realloc(*length_comp, (*ncomp) * sizeof(int));
         int i = start;
         int length = 1;
         int done = 0;
@@ -99,7 +99,7 @@ void findConnectedComponents(const double *xstar, instance *inst, int *succ, int
                 }
             }
         }
-        succ[i] = start;                    // last arc to close the cycle
+        succ[i] = start;                       // last arc to close the cycle
         (*length_comp)[(*ncomp) - 1] = length; // save length of the cycle
 
         // go to the next component...
@@ -107,50 +107,61 @@ void findConnectedComponents(const double *xstar, instance *inst, int *succ, int
 }
 
 // Kruskal algorithm to find connected components
-int findConnectedComponents_kruskal(instance *inst, int* components, int* successors, const double *xstar) {
+int findConnectedComponents_kruskal(instance *inst, int *components, int *successors, const double *xstar)
+{
 
     int counter = 0;
 
     // Initialize components and successors
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
         components[i] = i;
         successors[i] = -1;
     }
 
     // Found connected components
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = i+1; j < inst->dimension; j++) {
-            int pos = xpos(i,j,inst);
-            if (xstar[pos] == 1) {
-                if (components[i] != components[j]) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = i + 1; j < inst->dimension; j++)
+        {
+            int pos = xpos(i, j, inst);
+            if (xstar[pos] == 1)
+            {
+                if (components[i] != components[j])
+                {
                     int c1 = components[i];
                     int c2 = components[j];
-                    for (int v = 0; v < inst->dimension; v++) if (components[v] == c2) components[v] = c1;
+                    for (int v = 0; v < inst->dimension; v++)
+                        if (components[v] == c2)
+                            components[v] = c1;
                 }
             }
         }
     }
 
     // Count how many components are
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
 
         int inside = 0;
 
-        for (int j = 0; j < counter +1 ; j++) {
-            if (successors[j] == components[i]) {
+        for (int j = 0; j < counter + 1; j++)
+        {
+            if (successors[j] == components[i])
+            {
                 inside = 1;
                 break;
             }
         }
 
-        if (!inside) {
+        if (!inside)
+        {
             successors[counter] = components[i];
             counter++;
         }
-
     }
 
-    return  counter;
+    return counter;
 }
 
 int TSPopt(instance *inst)
@@ -1084,12 +1095,10 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
             char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
             rname[0] = (char *)calloc(100, sizeof(char));
 
+            printf("Loop lenghts at iteration %d:\n", it);
+            for (int n = 0; n < c; n++)
             {
-                printf("Lenghts iteration %d:\n", it);
-                for (int n = 0; n < c; n++)
-                {
-                    printf(" %d\n", length_comp[n]);
-                }
+                printf(" %d\n", length_comp[n]);
             }
 
             for (int mycomp = 0; mycomp < c; mycomp++)
