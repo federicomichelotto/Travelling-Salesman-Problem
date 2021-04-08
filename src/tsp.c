@@ -73,7 +73,7 @@ double gather_solution_path(instance *inst, const double *xstar, int type) {
             printf("Printing selected arcs...\n");
         for (int i = 0; i < inst->dimension; i++) {
             for (int j = 0; j < inst->dimension; j++) {
-                if (xstar[xpos(i, j, inst)] > 0.5) {
+                if (xstar[xpos_dir(i, j, inst)] > 0.5) {
                     if (verbose == DEBUG)
                         printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
                     inst->edges[inst->n_edges].dist = dist(i, j, inst);
@@ -1012,7 +1012,7 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
 
             if (CPXchgcoef(env, lp, row, ypos(i, j, inst), 1.0)) // 1.0 * y_ij
                 print_error("wrong CPXchgcoef [degree]");
-            if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 2 - inst->dimension)) // (2 - nnodes) * y_ij
+            if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 2 - inst->dimension)) // - (2 - nnodes) * x_ij
                 print_error("wrong CPXchgcoef [degree]");
         }
     }
@@ -1134,27 +1134,29 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
             print_error("wrong CPXchgcoef [degree]");
     }
 
-    // linking constraints: y_ij <= (n-2)x_ij for each i,j > 0 and i!=j
-    for (int i = 1; i < inst->dimension; i++) // exludes node 0
+    int izero = 0;
+    int index[2];
+    double value[2];
+
+    // add lazy linking constraints  y_ij <= (n-2)x_ij for each i,j > 0 and i!=j
+    double rhs = 0.0;
+    char sense = 'L';
+    int nnz = 2;
+    for (int i = 1; i < inst->dimension; i++) // excluding node 0
     {
-        for (int j = 1; j < inst->dimension; j++) {
+        for (int j = 1; j < inst->dimension; j++) // excluding node 0
+        {
             if (i == j)
                 continue;
-            double rhs = 0.0;
-            char sense = 'L';                 // E stands for equal
-            int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
-            sprintf(rname[0], "linking constraints (%d,%d)", i + 1, j + 1);
-            if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
-                print_error("wrong CPXnewrows [degree]");
-
-            if (CPXchgcoef(env, lp, row, ypos(i, j, inst), 1.0)) // 1.0 * y_ij
-                print_error("wrong CPXchgcoef [degree]");
-            if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 2 - inst->dimension)) // (2 - nnodes) * y_ij
-                print_error("wrong CPXchgcoef [degree]");
+            sprintf(rname[0], "lazy linking constraints (%d,%d)", i + 1, j + 1);
+            index[0] = ypos(i, j, inst);
+            value[0] = 1.0;
+            index[1] = xpos_dir(i, j, inst);
+            value[1] = 2 - inst->dimension;
+            if (CPXaddlazyconstraints(env, lp, 1, nnz, &rhs, &sense, &izero, index, value, rname))
+                print_error("wrong CPXlazyconstraints() for u-consistency");
         }
     }
-
-    // TODO ADD LAZY CONSTRAINTS
 
     free(cname[0]);
     free(cname);
@@ -1273,29 +1275,54 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
             print_error("wrong CPXchgcoef [degree]");
     }
 
-    // linking constraints: y_ij <= (n-2)x_ij for each i,j > 0 and i!=j
-    for (int i = 1; i < inst->dimension; i++) // exludes node 0
+    int izero = 0;
+    int index[2];
+    double value[2];
+
+    // add lazy linking constraints  y_ij <= (n-2)x_ij for each i,j > 0 and i!=j
+    double rhs = 0.0;
+    char sense = 'L';
+    int nnz = 2;
+    for (int i = 1; i < inst->dimension; i++) // excluding node 0
     {
-        for (int j = 1; j < inst->dimension; j++) {
+        for (int j = 1; j < inst->dimension; j++) // excluding node 0
+        {
             if (i == j)
                 continue;
-            double rhs = 0.0;
-            char sense = 'L';                 // E stands for equal
-            int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
-            sprintf(rname[0], "linking constraints (%d,%d)", i + 1, j + 1);
-            if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
-                print_error("wrong CPXnewrows [degree]");
-
-            if (CPXchgcoef(env, lp, row, ypos(i, j, inst), 1.0)) // 1.0 * y_ij
-                print_error("wrong CPXchgcoef [degree]");
-            if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 2 - inst->dimension)) // (2 - nnodes) * y_ij
-                print_error("wrong CPXchgcoef [degree]");
+            sprintf(rname[0], "lazy linking constraints (%d,%d)", i + 1, j + 1);
+            index[0] = ypos(i, j, inst);
+            value[0] = 1.0;
+            index[1] = xpos_dir(i, j, inst);
+            value[1] = 2 - inst->dimension;
+            if (CPXaddlazyconstraints(env, lp, 1, nnz, &rhs, &sense, &izero, index, value, rname))
+                print_error("wrong CPXlazyconstraints() for u-consistency");
         }
     }
 
-    // TODO ADD LAZY CONSTRAINTS
+    // Add static 2-SEC contraints: x(i, j) + x(j, i) <= 1 for every i < j
+    for (int i = 0; i < inst->dimension; i++) {
+        for (int j = i + 1; j < inst->dimension; j++) {
 
-    // TODO ADD SEC2 CONSTRAINTS
+            int lastrow = CPXgetnumrows(env, lp);
+            double rhs = 1.0;
+            char sense = 'L';
+
+            sprintf(cname[0], "2-SEC(%d, %d)", i + 1, j + 1);
+            int *beg = (int *) calloc(2, sizeof(int));
+            int *ind = (int *) calloc(2, sizeof(int));
+            double *val = (double *) calloc(2, sizeof(double));
+
+            int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
+            if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
+                print_error("wrong CPXnewrows [degree]");
+            if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 1.0)) // 1.0 * x_ij
+                print_error("wrong CPXchgcoef [degree]");
+            if (CPXchgcoef(env, lp, row, xpos_dir(j, i, inst), 1.0)) // 1.0 * x_ji
+                print_error("wrong CPXchgcoef [degree]");
+            free(beg);
+            free(ind);
+        }
+    }
 
     free(cname[0]);
     free(cname);
