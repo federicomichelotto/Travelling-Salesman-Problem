@@ -194,36 +194,50 @@ void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *s
 
 static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle) {
 
-//    instance *inst = (instance *) userhandle;
-//    double *xstar = (double *) malloc(inst->dimension * sizeof(double));
-//    double objval = CPX_INFBOUND;
-//    if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->dimension - 1, &objval))
-//        print_error("CPXcallbackgetcandidatepoint error");
-//
-//    // get some random information at the node (as an example for the students)
-//    int mythread = -1;
-//    CPXcallbackgetinfoint(context, CPXCALLBACKINFO_THREADID, &mythread);
-//    double zbest;
-//    CPXcallbackgetinfodbl(context, CPXCALLBACKINFO_BEST_SOL, &zbest);
-//    int mynode = -1;
-//    CPXcallbackgetinfoint(context, CPXCALLBACKINFO_NODECOUNT, &mynode);
-//    double incumbent = CPX_INFBOUND;
-//    CPXcallbackgetinfodbl(context, CPXCALLBACKINFO_BEST_SOL, &incumbent);
-////        ...
-//
-//    int nnz = 0;
-////        ... if xstart is infeasible, find a violated cut and store it in the usual Cplex's data structute (rhs, sense, nnz, index and value)
-//
-//    if (nnz > 0) // means that the solution is infeasible and a violated cut has been found
-//    {
-//        int izero = 0;
-//        if (CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value))
-//            print_error("CPXcallbackrejectcandidate() error"); // reject the solution and adds one cut
-//
-//        //if ( CPXcallbackrejectcandidate(context, 0, NULL, NULL, NULL, NULL, NULL, NULL) ) print_error("CPXcallbackrejectcandidate() error"); // just reject the solution without adding cuts (less effective)
-//    }
-//
-//    free(xstar);
+    instance *inst = (instance *) userhandle;
+    double *xstar = (double *) malloc(inst->dimension * sizeof(double));
+    double objval = CPX_INFBOUND;
+
+    if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->dimension - 1, &objval)) print_error("CPXcallbackgetcandidatepoint error");
+
+    int *comp = (int *) calloc(inst->dimension, sizeof(int));
+    int *succ = (int *) calloc(inst->dimension, sizeof(int));
+    int c = 0; // number of connected components
+    int *length_comp;
+
+    // Retrieve the number of connected components so far
+    findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
+
+    if (c > 1) {
+        for (int k = 0; k < c; k++) {
+            int nnz = 0;
+            int izero = 0;
+            char sense = 'L';
+            double rhs = length_comp[k] -1.0;	// in order to have |S|-1 in the end
+            int *index = (int *) calloc(inst->cols, sizeof(int));
+            double *value = (double *) calloc(inst->cols, sizeof(double));
+
+            for (int i = 0; i < inst->dimension; i++) {
+                if (comp[i] != k) continue;
+                for (int j = i + 1; j < inst->dimension; j++) {
+                    if (comp[j] != k) continue;
+
+                    index[nnz] = xpos(i, j, inst);
+                    value[nnz++] = 1.0;
+
+                }
+            }
+            if (CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value))
+                print_error("CPXcallbackrejectcandidate() error"); // reject the solution and adds one cut
+
+            free(index);
+            free(value);
+        }
+    }
+    free(comp);
+    free(succ);
+
+    free(xstar);
     return 0;
 
 }
@@ -253,10 +267,12 @@ int TSPopt(instance *inst) {
     CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0);
     CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
 
-    if (inst->model_type == 9) {
+    if (inst->model_type == 10) {
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE;
         if (CPXcallbacksetfunc(env, lp, contextid, callback, inst)) print_error("CPXcallbacksetfunc() error");
     }
+
+    inst->cols = CPXgetnumcols(env, lp);
 
     if (CPXmipopt(env, lp))
         print_error("CPXmipopt() error");
@@ -313,7 +329,8 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst) {
     switch (inst->model_type) {
         case 0: // basic model (no SEC)
         case 8: // benders model (SEC)
-        case 9: // callbacks model (SEC)
+        case 9: // benders model (SEC) - kruskal
+        case 10: // callbacks model (SEC)
             basic_model_no_sec(env, lp, inst);
             break;
         case 1: // MTZ with static constraints
@@ -338,15 +355,12 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst) {
             GG_lazy_sec(env, lp, inst);
             break;
         default:
-            printf("ERROR: Model type %d not available.\n", inst->model_type);
-            print_error("Model type.");
+            fprintf(stderr, "ERROR: Model type %d not available.\n", inst->model_type);
             break;
     }
 
     char path[1000];
-    if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed,
-                      "lp"))
-        print_error("Unable to generate path");
+    if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp")) print_error("Unable to generate path");
     // path : "../output/model_[type]_[name].lp"
     //TODO: check that "model" folder exists
     CPXwriteprob(env, lp, path, NULL);

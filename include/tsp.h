@@ -57,6 +57,7 @@ typedef struct {
     int model_type;    // Specifies the type of the model
     double z_best;     // Value of the best solution available
     double best_lb;
+    int cols;
 
 } instance;
 
