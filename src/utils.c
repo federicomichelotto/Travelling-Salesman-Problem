@@ -39,22 +39,22 @@ void parse_command_line(int argc, char **argv, instance *inst) {
             if (strcmp(argv[i], "-v") == 0) { // Verbosity
                 switch (strtol(argv[++i], NULL, 10)) {
                     case QUIET:
-                        verbose = QUIET;
+                        inst->param.verbose = QUIET;
                         break;
                     case NORMAL:
-                        verbose = NORMAL;
+                        inst->param.verbose = NORMAL;
                         break;
                     case VERBOSE:
-                        verbose = VERBOSE;
+                        inst->param.verbose = VERBOSE;
                         break;
                     case NERD:
-                        verbose = NERD;
+                        inst->param.verbose = NERD;
                         break;
                     case DEBUG:
-                        verbose = DEBUG;
+                        inst->param.verbose = DEBUG;
                         break;
                     default:
-                        verbose = NORMAL;
+                        inst->param.verbose = NORMAL;
                         break;
                 }
                 continue;
@@ -82,8 +82,7 @@ void parse_instance(instance *inst) {
     // - split the line using strtok and consider the generated tokens
     while (fgets(line, sizeof(line), fp) != NULL) {
 
-        if (verbose > VERBOSE)
-            printf("%s\n", line);
+        if (inst->param.verbose > DEBUG) printf("%s\n", line);
         line[strcspn(line, "\n")] = 0; // removing trailing \n
 
         char delimiters[] = " :\n\r\t";
@@ -104,7 +103,7 @@ void parse_instance(instance *inst) {
         }
 
         if (strncmp(parameter, "EOF", 3) == 0) {
-            if (verbose > NORMAL)
+            if (inst->param.verbose > DEBUG)
                 printf("(EOF) found, instance parsing complete\n");
             break;
         }
@@ -114,15 +113,14 @@ void parse_instance(instance *inst) {
                 check_format(inst->param.name);
                 value = strtok(NULL, delimiters);
                 strcpy(inst->param.name, value);
-                if (verbose == DEBUG)
-                    printf("NAME %s\n\n", inst->param.name);
+                if (inst->param.verbose > DEBUG) printf("NAME %s\n\n", inst->param.name);
             } else if (strncmp(parameter, "COMMENT", 7) == 0) {
                 value = strtok(NULL, ":");
                 if (strncmp(inst->param.comment, "NULL", 4) != 0)
                     strcat(inst->param.comment, value); // if more than one comment, append
                 else
                     strcpy(inst->param.comment, value);
-                if (verbose > NORMAL)
+                if (inst->param.verbose > DEBUG)
                     printf("Solving instance %s with model %d\n\n", inst->param.comment, inst->model_type);
             } else if (strncmp(parameter, "TYPE", 4) == 0) {
                 check_format(inst->param.type);
@@ -131,16 +129,13 @@ void parse_instance(instance *inst) {
                     print_error("(TYPE) only TSP and ATSP implemented so far");
                 else {
                     strcpy(inst->param.type, value);
-                    if (verbose == DEBUG)
-                        printf("TYPE %s\n\n", inst->param.type);
+                    if (inst->param.verbose > DEBUG) printf("TYPE %s\n\n", inst->param.type);
                 }
             } else if (strncmp(parameter, "DIMENSION", 9) == 0) {
-                if (inst->dimension != -1)
-                    print_error("Bad input format");
+                if (inst->dimension != -1) print_error("Bad input format");
                 value = strtok(NULL, delimiters);
                 inst->dimension = strtol(value, NULL, 10);
-                if (verbose == DEBUG)
-                    printf("NODES %d\n", inst->dimension);
+                if (inst->param.verbose > DEBUG) printf("NODES %d\n", inst->dimension);
 
                 inst->nodes = (node *) calloc(inst->dimension, sizeof(node));
                 inst->edges = (edge *) calloc(inst->dimension, sizeof(edge));
@@ -156,8 +151,7 @@ void parse_instance(instance *inst) {
                         strncmp(inst->param.weight_type, "MAX_2D", 6) != 0 &&
                         strncmp(inst->param.weight_type, "ATT", 3) != 0 &&
                         strncmp(inst->param.weight_type, "GEO", 3) != 0) {
-                        print_error(
-                                "(EDGE_WEIGHT_TYPE) only EUC_2D, ATT, MAN_2D, MAX_2D, CEIL_2D, GEO implemented so far");
+                        print_error("(EDGE_WEIGHT_TYPE) only EUC_2D, ATT, MAN_2D, MAX_2D, CEIL_2D, GEO implemented so far");
                     }
                 } else if (strncmp(inst->param.type, "ATSP", 4) == 0) {
                     if (strncmp(inst->param.weight_type, "EXPLICIT", 8) != 0) {
@@ -189,15 +183,11 @@ void parse_instance(instance *inst) {
                 inst->nodes[i].id = strtol(value, NULL, 10);
                 inst->nodes[i].x = strtof(strtok(NULL, delimiters), NULL);
                 inst->nodes[i].y = strtof(strtok(NULL, delimiters), NULL);
-                if (verbose == DEBUG)
-                    printf("NODES %d at coordinates (%15.7lf , %15.7lf)\n", inst->nodes[i].id, inst->nodes[i].x,
-                           inst->nodes[i].y);
+                if (inst->param.verbose > DEBUG) printf("NODES %d at coordinates (%15.7lf , %15.7lf)\n", inst->nodes[i].id, inst->nodes[i].x, inst->nodes[i].y);
             }
         } else if (section == EDGE_WEIGHT) {
-
             // TODO implementing the parsing of the EDGE WEIGHT SECTION
         } else if (section == DISPLAY_DATA) {
-
             // TODO implementing the parsing of the DISPLAY DATA SECTION
         }
     }
@@ -211,6 +201,7 @@ void initialize_instance(instance *inst) {
     inst->time_limit = CPX_INFBOUND;
     inst->param.seed = 1;
     inst->param.run = -1;
+    inst->param.verbose = NORMAL;
 
     inst->dimension = -1;
     inst->nodes = NULL;
@@ -245,9 +236,9 @@ void print_command_line(instance *inst) {
     printf("\nPARAMETERS ---------------------------------------------\n");
     printf("-f %s\n", inst->param.input_file);
     printf("-t %f seconds\n", inst->time_limit);
-    printf("-m %d\n", inst->model_type);
+    printf("-m %d (%s)\n", inst->model_type, model_name[inst->model_type]);
     printf("-s %d\n", inst->param.seed);
-    printf("-v %s\n", verbose_name[verbose]);
+    printf("-v %d (%s)\n", inst->param.verbose, verbose_name[inst->param.verbose]);
     printf("--------------------------------------------------------\n\n");
 }
 
@@ -276,9 +267,9 @@ void print_help() {
     printf("\nHELP ---------------------------------------------------\n");
     printf("-f <path>  : used to pass the relative instance path \n");
     printf("-t <time>  : used to pass the total running time allowed in seconds\n");
-    printf("-m <model> : used to set up the model type\n");
+    printf("-m <model> : used to set the model type\n");
     printf("-s <seed>  : used to set the seed\n");
-    printf("-v <value> : used to set up the verbosity, from QUIET (0) up to DEBUG (4)\n");
+    printf("-v <value> : used to set the verbosity, from QUIET (0) up to DEBUG (4)\n");
     printf("--------------------------------------------------------\n\n");
     exit(1);
 }
@@ -362,15 +353,13 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges) {
     return 0;
 }
 
-void generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension) {
+int generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension) {
     snprintf(path, 1000, "../%s/%s/%s_%s_%s_%d.%s", folder, extension, filename, type, model, seed, extension);
-    if (verbose == DEBUG)
-        printf("%s\n", path);
+    return 0;
 }
 
-void
-generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec,
-                    int run) {
+int
+generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec, int run) {
     FILE *csv;
     char *filename = "../output/scores.csv";
 
@@ -391,6 +380,5 @@ generate_csv_record(char *instance_name, int seed, int model_type, double z_best
         print_error("generate_csv_record fclose error");
     }
 
-    if (verbose == DEBUG)
-        printf("csv record added\n");
+    return 0;
 }

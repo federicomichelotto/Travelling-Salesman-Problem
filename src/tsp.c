@@ -53,13 +53,11 @@ double dist(int i, int j, instance *inst) {
 
 double gather_solution_path(instance *inst, const double *xstar, int type) {
     if (type == 0) {
-        if (verbose == DEBUG)
-            printf("Printing selected edges...\n");
+        if (inst->param.verbose >= DEBUG) printf("Printing selected edges...\n");
         for (int i = 0; i < inst->dimension; i++) {
             for (int j = i + 1; j < inst->dimension; j++) {
                 if (xstar[xpos(i, j, inst)] > 0.5) {
-                    if (verbose == DEBUG)
-                        printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+                    if (inst->param.verbose >= DEBUG) printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
                     inst->edges[inst->n_edges].dist = dist(i, j, inst);
                     inst->edges[inst->n_edges].prev = i;
                     inst->edges[inst->n_edges].next = j;
@@ -69,13 +67,11 @@ double gather_solution_path(instance *inst, const double *xstar, int type) {
             }
         }
     } else if (type == 1) {
-        if (verbose == DEBUG)
-            printf("Printing selected arcs...\n");
+        if (inst->param.verbose >= DEBUG) printf("Printing selected arcs...\n");
         for (int i = 0; i < inst->dimension; i++) {
             for (int j = 0; j < inst->dimension; j++) {
                 if (xstar[xpos_dir(i, j, inst)] > 0.5) {
-                    if (verbose == DEBUG)
-                        printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+                    if (inst->param.verbose >= DEBUG) printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
                     inst->edges[inst->n_edges].dist = dist(i, j, inst);
                     inst->edges[inst->n_edges].prev = i;
                     inst->edges[inst->n_edges].next = j;
@@ -139,33 +135,29 @@ void findConnectedComponents(const double *xstar, instance *inst, int *succ, int
 void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp,
                                      int **length_comp) {
 
-    *ncomp = 0;
-
-    // Initialize components and succ
+    // Some initialization
     for (int i = 0; i < inst->dimension; i++) {
         comp[i] = i;
         succ[i] = -1;
     }
 
-    // Found connected comp
+    // There are no components so far
+    *ncomp = 0;
+
+    // Found connected components
     for (int i = 0; i < inst->dimension; i++) {
         for (int j = i + 1; j < inst->dimension; j++) {
-            int pos = xpos(i, j, inst);
-            if (xstar[pos] == 1) {
-                if (comp[i] != comp[j]) {
-                    int c1 = comp[i];
-                    int c2 = comp[j];
-                    for (int v = 0; v < inst->dimension; v++)
-                        if (comp[v] == c2)
-                            comp[v] = c1;
+            if (xstar[xpos(i, j, inst)] == 1) {
+                int c1 = comp[i];
+                int c2 = comp[j];
+                if (c1 != c2) {
+                    for (int k = 0; k < inst->dimension; k++) if (comp[k] == c2) comp[k] = c1;
                 }
             }
         }
     }
 
-    int length = 1;
-
-    // Count how many components are
+    // Count how many components are present
     for (int i = 0; i < inst->dimension; i++) {
 
         int inside = 0;
@@ -180,13 +172,62 @@ void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *s
         if (!inside) {
             succ[(*ncomp)] = comp[i];
             (*ncomp)++;
-            length++;
         }
+
     }
 
-    (*length_comp)[(*ncomp) - 1] = length; // save length of the cycle
+    (*length_comp) = (int *) calloc((*ncomp), sizeof(int));
+
+    for (int k = 0; k < (*ncomp); k++) {
+        int length = 0;
+        for (int h = 0; h < inst->dimension; h++) {
+
+            if (comp[h] != succ[k]) continue;
+            else length++;
+        }
+
+        (*length_comp)[k] = length;
+
+    }
 
 }
+
+static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle) {
+
+//    instance *inst = (instance *) userhandle;
+//    double *xstar = (double *) malloc(inst->dimension * sizeof(double));
+//    double objval = CPX_INFBOUND;
+//    if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->dimension - 1, &objval))
+//        print_error("CPXcallbackgetcandidatepoint error");
+//
+//    // get some random information at the node (as an example for the students)
+//    int mythread = -1;
+//    CPXcallbackgetinfoint(context, CPXCALLBACKINFO_THREADID, &mythread);
+//    double zbest;
+//    CPXcallbackgetinfodbl(context, CPXCALLBACKINFO_BEST_SOL, &zbest);
+//    int mynode = -1;
+//    CPXcallbackgetinfoint(context, CPXCALLBACKINFO_NODECOUNT, &mynode);
+//    double incumbent = CPX_INFBOUND;
+//    CPXcallbackgetinfodbl(context, CPXCALLBACKINFO_BEST_SOL, &incumbent);
+////        ...
+//
+//    int nnz = 0;
+////        ... if xstart is infeasible, find a violated cut and store it in the usual Cplex's data structute (rhs, sense, nnz, index and value)
+//
+//    if (nnz > 0) // means that the solution is infeasible and a violated cut has been found
+//    {
+//        int izero = 0;
+//        if (CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value))
+//            print_error("CPXcallbackrejectcandidate() error"); // reject the solution and adds one cut
+//
+//        //if ( CPXcallbackrejectcandidate(context, 0, NULL, NULL, NULL, NULL, NULL, NULL) ) print_error("CPXcallbackrejectcandidate() error"); // just reject the solution without adding cuts (less effective)
+//    }
+//
+//    free(xstar);
+    return 0;
+
+}
+
 
 int TSPopt(instance *inst) {
 
@@ -198,7 +239,9 @@ int TSPopt(instance *inst) {
     build_model(env, lp, inst);
 
     char path[1000];
-    generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "log");
+    if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed,
+                      "log"))
+        print_error("Unable to generate path");
 
     // CPLEX's parameter setting
     CPXsetlogfilename(env, path, "w");                           // Save log
@@ -210,9 +253,16 @@ int TSPopt(instance *inst) {
     CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0);
     CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
 
+    if (inst->model_type == 9) {
+        CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE;
+        if (CPXcallbacksetfunc(env, lp, contextid, callback, inst)) print_error("CPXcallbacksetfunc() error");
+    }
+
     if (CPXmipopt(env, lp))
         print_error("CPXmipopt() error");
 
+    printf("\nSOLUTION -----------------------------------------------\n");
+    printf("\nRUNNING : %s\n", model_full_name[inst->model_type]);
     // Use the optimal solution found by CPLEX
     int cols = CPXgetnumcols(env, lp);
     double *xstar = (double *) calloc(cols, sizeof(double));
@@ -221,28 +271,12 @@ int TSPopt(instance *inst) {
 
     inst->n_edges = 0;
 
-    if (inst->model_type == 0) // undirected graph
+    if (inst->model_type == 0 || inst->model_type == 10) // undirected graph
     {
-//        printf("Printing selected arcs...\n");
-//        for (int i = 0; i < inst->dimension; i++)
-//        {
-//            for (int j = i + 1; j < inst->dimension; j++)
-//            {
-//                if (xstar[xpos(i, j, inst)] > 0.5)
-//                {
-//                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-//                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
-//                    inst->edges[inst->n_edges].prev = i;
-//                    inst->edges[inst->n_edges].next = j;
-//                    if (++inst->n_edges > inst->dimension)
-//                        print_error("more edges than nodes, not a hamiltonian tour.");
-//                }
-//            }
-//        }
         gather_solution_path(inst, xstar, 0);
-    } else if (inst->model_type == 8) // Benders
+    } else if (inst->model_type == 8 || inst->model_type == 9) // Benders
     {
-        printf("Benders' method is running...\n");
+//        printf("Benders' method is running...\n");
         benders(env, lp, inst);
 
         int cols = CPXgetnumcols(env, lp);
@@ -251,51 +285,19 @@ int TSPopt(instance *inst) {
             print_error("CPXgetx() error");
 
         gather_solution_path(inst, xstar, 0);
-
-//        printf("\nPrinting selected arcs...\n");
-//        for (int i = 0; i < inst->dimension; i++)
-//        {
-//            for (int j = i + 1; j < inst->dimension; j++)
-//            {
-//                if (xstar[xpos(i, j, inst)] > 0.5)
-//                {
-//                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-//                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
-//                    inst->edges[inst->n_edges].prev = i;
-//                    inst->edges[inst->n_edges].next = j;
-//                    if (++inst->n_edges > inst->dimension)
-//                        print_error("more edges than nodes, not a hamiltonian tour.");
-//                }
-//            }
-//        }
     } else {
-//        printf("\nPrinting selected arcs...\n");
-//        for (int i = 0; i < inst->dimension; i++)
-//        {
-//            for (int j = 0; j < inst->dimension; j++)
-//            {
-//                if (xstar[xpos_dir(i, j, inst)] > 0.5)
-//                {
-//                    printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-//                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
-//                    inst->edges[inst->n_edges].prev = i;
-//                    inst->edges[inst->n_edges].next = j;
-//                    if (++inst->n_edges > inst->dimension)
-//                        print_error("more edges than nodes, not a hamiltonian tour.");
-//                }
-//            }
-//        }
         gather_solution_path(inst, xstar, 1);
 
     }
 
     if (inst->n_edges != inst->dimension)
         print_error("not a tour.");
+
     CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
     CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
 
-    printf("Best objective value: %lf\n", inst->z_best);
-    printf("Best lower bound: %lf\n", inst->best_lb);
+    printf("\nObjective value: %lf\n", inst->z_best);
+    printf("Lower bound: %lf\n", inst->best_lb);
 
     free(xstar);
 
@@ -311,6 +313,7 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst) {
     switch (inst->model_type) {
         case 0: // basic model (no SEC)
         case 8: // benders model (SEC)
+        case 9: // callbacks model (SEC)
             basic_model_no_sec(env, lp, inst);
             break;
         case 1: // MTZ with static constraints
@@ -341,7 +344,9 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     char path[1000];
-    generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp");
+    if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed,
+                      "lp"))
+        print_error("Unable to generate path");
     // path : "../output/model_[type]_[name].lp"
     //TODO: check that "model" folder exists
     CPXwriteprob(env, lp, path, NULL);
@@ -1349,43 +1354,40 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst) {
         int *succ = (int *) calloc(inst->dimension, sizeof(int));
         int c = 0; // number of connected components
         int *length_comp;
+
         // Retrieve the number of connected components so far
-        findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
+        if (inst->model_type == 8) findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
+        else if (inst->model_type == 9) findConnectedComponents_kruskal(xstar, inst, succ, comp, &c, &length_comp);
 
         printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d\n", ++it, c);
 
         if (c == 1) {
             // If exactly one component is found, end the loop and exit
-            done = 1;
-        } else {
-            // If more than one component is found add SEC to each component
-//            for (int i = 0; i < inst->dimension; i++)
-//            {
-//                for (int j = i + 1; j < inst->dimension; j++)
-//                {
-//                    if (xstar[xpos(i, j, inst)] > 0.5)
-//                    {
-//                        inst->edges[inst->n_edges].dist = dist(i, j, inst);
-//                        inst->edges[inst->n_edges].prev = i;
-//                        inst->edges[inst->n_edges].next = j;
-//                        if (++inst->n_edges > inst->dimension)
-//                            print_error("more edges than nodes, not a hamiltonian tour.");
-//                    }
-//                }
-//            }
-            gather_solution_path(inst, xstar, 0);
-            plot_solution(inst) ? print_error("plot_solution() error") : printf("\n... gnuplot ok\n");
-            inst->n_edges = 0;
-
-            // rname: rows' names (row = constraint)
-            char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-            rname[0] = (char *) calloc(100, sizeof(char));
-
-            if (verbose == VERBOSE) {
+            if (inst->param.verbose >= NORMAL) {
                 for (int n = 0; n < c; n++) {
                     printf("\t -- COMPONENT %d : %d NODES\n", n + 1, length_comp[n]);
                 }
             }
+
+            done = 1;
+        } else {
+            // If more than one component plot and check the partial solution
+
+            if (inst->param.verbose >= NORMAL) {
+                for (int n = 0; n < c; n++) {
+                    printf("\t -- COMPONENT %d : %d NODES\n", n + 1, length_comp[n]);
+                }
+            }
+
+            gather_solution_path(inst, xstar, 0);
+            if (plot_solution(inst)) print_error("plot_solution() error");
+            inst->n_edges = 0;
+
+            // Add SEC to each component found
+
+            // rname: rows' names (row = constraint)
+            char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
+            rname[0] = (char *) calloc(100, sizeof(char));
 
             for (int mycomp = 0; mycomp < c; mycomp++) {
 
@@ -1397,15 +1399,28 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst) {
                     print_error("wrong CPXnewrows");
 
                 for (int i = 0; i < inst->dimension; i++) {
-                    if (comp[i] != mycomp)
-                        continue;
-                    for (int j = i + 1; j < inst->dimension; j++) {
-                        if (comp[j] != mycomp)
+                    if (inst->model_type == 8) {
+                        if (comp[i] != mycomp)
                             continue;
-                        // add (i,j) to SEC
-                        if (CPXchgcoef(env, lp, row, xpos(i, j, inst), 1.0)) // 1.0 * x_ij
-                            print_error("wrong CPXchgcoef");
+                        for (int j = i + 1; j < inst->dimension; j++) {
+                            if (comp[j] != mycomp)
+                                continue;
+                            // add (i,j) to SEC
+                            if (CPXchgcoef(env, lp, row, xpos(i, j, inst), 1.0)) // 1.0 * x_ij
+                                print_error("wrong CPXchgcoef");
+                        }
+                    } else if (inst->model_type == 9) {
+                        if (comp[i] != succ[mycomp])
+                            continue;
+                        for (int j = i + 1; j < inst->dimension; j++) {
+                            if (comp[j] != succ[mycomp])
+                                continue;
+                            // add (i,j) to SEC
+                            if (CPXchgcoef(env, lp, row, xpos(i, j, inst), 1.0)) // 1.0 * x_ij
+                                print_error("wrong CPXchgcoef");
+                        }
                     }
+
                 }
             }
 

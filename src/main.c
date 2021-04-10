@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     if (verbose >= QUIET)
         printf("TSP solved in %ld.%06ld\n", (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
 
-    plot_solution(&inst) ? print_error("plot_solution() error") : printf("... gnuplot ok\n");
+    if (plot_solution(&inst)) print_error("plot_solution() error");
     //plot_solution_edges(inst.n_edges, inst.nodes, inst.edges) ? print_error("plot_solution_edges() error") : printf("... gnuplot ok\n");
 
     generate_csv_record(inst.param.name, inst.param.seed, inst.model_type, inst.z_best, (long int)tval_result.tv_sec, (long int)tval_result.tv_usec, inst.param.run);

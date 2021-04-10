@@ -20,6 +20,7 @@ typedef struct {
     char data_type[20];     // Specifies how the data are displayed
     int seed;               // Seed given to cplex
     int run;               // Number of current run
+    int verbose;
 } parameter;
 
 typedef struct { // Node
@@ -75,8 +76,42 @@ enum sections {
     DISPLAY_DATA = 3
 };
 
-static const char *verbose_name[] = {"QUIET", "NORMAL", "VERBOSE", "NERD", "DEBUG"};
-static const char *model_name[] = {"STD", "MTZ", "MTZMOD", "MTZL", "MTZLS", "GG", "GGL", "GGLS", "BENDERS [LOOP]"};
+static const char *verbose_name[] = {
+        "QUIET",
+        "NORMAL",
+        "VERBOSE",
+        "NERD",
+        "DEBUG"
+};
+
+static const char *model_name[] = {
+        "STD",
+        "MTZ",
+        "MTZMOD",
+        "MTZL",
+        "MTZLS",
+        "GG",
+        "GGL",
+        "GGLS",
+        "BENDERS'",
+        "BENDERS' (KRUSKAL)",
+        "CALLBACK"
+};
+
+static const char *model_full_name[] = {
+        "Basic model w/o SEC",
+        "Miller-Tucker-Zemlin compact model",
+        "Miller-Tucker-Zemlin modified compact model",
+        "Miller-Tucker-Zemlin lazy compact model",
+        "Miller-Tucker-Zemlin lazy compact model w/ SEC2",
+        "Garvish-Graves compact model",
+        "Garvish-Graves lazy compact model",
+        "Garvish-Graves lazy compact model w/ SEC2",
+        "Benders' method'",
+        "Benders' method' (Kruskal)",
+        "Callback method"
+};
+
 static int verbose = NORMAL;
 
 // TSP solver
@@ -126,6 +161,10 @@ double compute_edges( instance *inst, const double *xstar, int type);
 // Find the connected components inside a solution
 void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp);
 void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp);
+
+// Callback
+
+static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle );
 
 // Retrieve the position of the variable
 int xpos(int i, int j, instance *inst);     // position in the model for undirected graphs
