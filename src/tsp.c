@@ -1,25 +1,27 @@
 #include "../include/utils.h"
 
-double dist(int i, int j, instance *inst) {
+double dist(int i, int j, instance *inst)
+{
 
     double distance = INFINITY;
 
-    if (strncmp(inst->param.weight_type, "GEO", 3) == 0) {
+    if (strncmp(inst->param.weight_type, "GEO", 3) == 0)
+    {
         double deg, min;
 
-        deg = (int) inst->nodes[i].x;
+        deg = (int)inst->nodes[i].x;
         min = inst->nodes[i].x - deg;
         double lat_i = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
 
-        deg = (int) inst->nodes[i].y;
+        deg = (int)inst->nodes[i].y;
         min = inst->nodes[i].y - deg;
         double long_i = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
 
-        deg = (int) inst->nodes[j].x;
+        deg = (int)inst->nodes[j].x;
         min = inst->nodes[j].x - deg;
         double lat_j = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
 
-        deg = (int) inst->nodes[j].y;
+        deg = (int)inst->nodes[j].y;
         min = inst->nodes[j].y - deg;
         double long_j = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
 
@@ -29,19 +31,23 @@ double dist(int i, int j, instance *inst) {
         double q2 = cos(lat_i - lat_j);
         double q3 = cos(lat_i + lat_j);
 
-        distance = (int) (RRR * acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
-    } else if (strncmp(inst->param.weight_type, "EUC_2D", 6) == 0) {
+        distance = (int)(RRR * acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
+    }
+    else if (strncmp(inst->param.weight_type, "EUC_2D", 6) == 0)
+    {
         double dx = inst->nodes[i].x - inst->nodes[j].x;
         double dy = inst->nodes[i].y - inst->nodes[j].y;
         if (!inst->integer_costs)
             return sqrt(dx * dx + dy * dy);
         int dis = sqrt(dx * dx + dy * dy) + 0.499999999;
         distance = dis + 0.0;
-    } else if (strncmp(inst->param.weight_type, "ATT", 3) == 0) {
+    }
+    else if (strncmp(inst->param.weight_type, "ATT", 3) == 0)
+    {
         double dx = inst->nodes[i].x - inst->nodes[j].x;
         double dy = inst->nodes[i].y - inst->nodes[j].y;
         double dis1 = sqrt((dx * dx + dy * dy) / 10.0);
-        int dis2 = (int) (dis1 + 0.5);
+        int dis2 = (int)(dis1 + 0.5);
         if (dis2 < dis1)
             distance = dis2 + 1;
         else
@@ -51,13 +57,20 @@ double dist(int i, int j, instance *inst) {
     return distance;
 }
 
-double gather_solution_path(instance *inst, const double *xstar, int type) {
-    if (type == 0) {
-        if (inst->param.verbose >= DEBUG) printf("Printing selected edges...\n");
-        for (int i = 0; i < inst->dimension; i++) {
-            for (int j = i + 1; j < inst->dimension; j++) {
-                if (xstar[xpos(i, j, inst)] > 0.5) {
-                    if (inst->param.verbose >= DEBUG) printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+double gather_solution_path(instance *inst, const double *xstar, int type)
+{
+    if (type == 0)
+    {
+        if (inst->param.verbose >= DEBUG)
+            printf("Printing selected edges...\n");
+        for (int i = 0; i < inst->dimension; i++)
+        {
+            for (int j = i + 1; j < inst->dimension; j++)
+            {
+                if (xstar[xpos(i, j, inst)] > 0.5)
+                {
+                    if (inst->param.verbose >= DEBUG)
+                        printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
                     inst->edges[inst->n_edges].dist = dist(i, j, inst);
                     inst->edges[inst->n_edges].prev = i;
                     inst->edges[inst->n_edges].next = j;
@@ -66,12 +79,19 @@ double gather_solution_path(instance *inst, const double *xstar, int type) {
                 }
             }
         }
-    } else if (type == 1) {
-        if (inst->param.verbose >= DEBUG) printf("Printing selected arcs...\n");
-        for (int i = 0; i < inst->dimension; i++) {
-            for (int j = 0; j < inst->dimension; j++) {
-                if (xstar[xpos_dir(i, j, inst)] > 0.5) {
-                    if (inst->param.verbose >= DEBUG) printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+    }
+    else if (type == 1)
+    {
+        if (inst->param.verbose >= DEBUG)
+            printf("Printing selected arcs...\n");
+        for (int i = 0; i < inst->dimension; i++)
+        {
+            for (int j = 0; j < inst->dimension; j++)
+            {
+                if (xstar[xpos_dir(i, j, inst)] > 0.5)
+                {
+                    if (inst->param.verbose >= DEBUG)
+                        printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
                     inst->edges[inst->n_edges].dist = dist(i, j, inst);
                     inst->edges[inst->n_edges].prev = i;
                     inst->edges[inst->n_edges].next = j;
@@ -88,21 +108,23 @@ void findConnectedComponents(const double *xstar, instance *inst, int *succ, int
 {
     // initialization
     *ncomp = 0;
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
         succ[i] = -1;
         comp[i] = -1;
     }
 
-    for (int start = 0; start < inst->dimension; start++) {
+    for (int start = 0; start < inst->dimension; start++)
+    {
         if (comp[start] >= 0)
             continue; // node "start" was already visited, just skip it
 
         // a new component is found
         (*ncomp)++;
         if ((*ncomp) == 1)
-            (*length_comp) = (int *) calloc(1, sizeof(int));
+            (*length_comp) = (int *)calloc(1, sizeof(int));
         else
-            (*length_comp) = (int *) realloc(*length_comp, (*ncomp) * sizeof(int));
+            (*length_comp) = (int *)realloc(*length_comp, (*ncomp) * sizeof(int));
         int i = start;
         int length = 1;
         int done = 0;
@@ -110,7 +132,8 @@ void findConnectedComponents(const double *xstar, instance *inst, int *succ, int
         {
             comp[i] = (*ncomp) - 1;
             done = 1;
-            for (int j = 0; j < inst->dimension; j++) {
+            for (int j = 0; j < inst->dimension; j++)
+            {
                 if (i == j)
                     continue;
                 if (xstar[xpos(i, j, inst)] > 0.5 &&
@@ -133,10 +156,12 @@ void findConnectedComponents(const double *xstar, instance *inst, int *succ, int
 
 // Kruskal algorithm to find connected components
 void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp,
-                                     int **length_comp) {
+                                     int **length_comp)
+{
 
     // Some initialization
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
         comp[i] = i;
         succ[i] = -1;
     }
@@ -145,86 +170,104 @@ void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *s
     *ncomp = 0;
 
     // Found connected components
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = i + 1; j < inst->dimension; j++) {
-            if (xstar[xpos(i, j, inst)] == 1) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = i + 1; j < inst->dimension; j++)
+        {
+            if (xstar[xpos(i, j, inst)] == 1)
+            {
                 int c1 = comp[i];
                 int c2 = comp[j];
-                if (c1 != c2) {
-                    for (int k = 0; k < inst->dimension; k++) if (comp[k] == c2) comp[k] = c1;
+                if (c1 != c2)
+                {
+                    for (int k = 0; k < inst->dimension; k++)
+                        if (comp[k] == c2)
+                            comp[k] = c1;
                 }
             }
         }
     }
 
     // Count how many components are present
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
 
         int inside = 0;
 
-        for (int j = 0; j < (*ncomp) + 1; j++) {
-            if (succ[j] == comp[i]) {
+        for (int j = 0; j < (*ncomp) + 1; j++)
+        {
+            if (succ[j] == comp[i])
+            {
                 inside = 1;
                 break;
             }
         }
 
-        if (!inside) {
+        if (!inside)
+        {
             succ[(*ncomp)] = comp[i];
             (*ncomp)++;
         }
-
     }
 
-    (*length_comp) = (int *) calloc((*ncomp), sizeof(int));
+    (*length_comp) = (int *)calloc((*ncomp), sizeof(int));
 
-    for (int k = 0; k < (*ncomp); k++) {
+    for (int k = 0; k < (*ncomp); k++)
+    {
         int length = 0;
-        for (int h = 0; h < inst->dimension; h++) {
+        for (int h = 0; h < inst->dimension; h++)
+        {
 
-            if (comp[h] != succ[k]) continue;
-            else length++;
+            if (comp[h] != succ[k])
+                continue;
+            else
+                length++;
         }
 
         (*length_comp)[k] = length;
-
     }
-
 }
 
-static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle) {
+static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
+{
 
-    instance *inst = (instance *) userhandle;
-    double *xstar = (double *) malloc(inst->dimension * sizeof(double));
+    instance *inst = (instance *)userhandle;
+    double *xstar = (double *)malloc(inst->dimension * sizeof(double));
     double objval = CPX_INFBOUND;
 
-    if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->dimension - 1, &objval)) print_error("CPXcallbackgetcandidatepoint error");
+    if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->dimension - 1, &objval))
+        print_error("CPXcallbackgetcandidatepoint error");
 
-    int *comp = (int *) calloc(inst->dimension, sizeof(int));
-    int *succ = (int *) calloc(inst->dimension, sizeof(int));
+    int *comp = (int *)calloc(inst->dimension, sizeof(int));
+    int *succ = (int *)calloc(inst->dimension, sizeof(int));
     int c = 0; // number of connected components
     int *length_comp;
 
     // Retrieve the number of connected components so far
     findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
 
-    if (c > 1) {
-        for (int k = 0; k < c; k++) {
+    if (c > 1)
+    {
+        for (int k = 0; k < c; k++)
+        {
             int nnz = 0;
             int izero = 0;
             char sense = 'L';
-            double rhs = length_comp[k] -1.0;	// in order to have |S|-1 in the end
-            int *index = (int *) calloc(inst->cols, sizeof(int));
-            double *value = (double *) calloc(inst->cols, sizeof(double));
+            double rhs = length_comp[k] - 1.0; // in order to have |S|-1 in the end
+            int *index = (int *)calloc(inst->cols, sizeof(int));
+            double *value = (double *)calloc(inst->cols, sizeof(double));
 
-            for (int i = 0; i < inst->dimension; i++) {
-                if (comp[i] != k) continue;
-                for (int j = i + 1; j < inst->dimension; j++) {
-                    if (comp[j] != k) continue;
+            for (int i = 0; i < inst->dimension; i++)
+            {
+                if (comp[i] != k)
+                    continue;
+                for (int j = i + 1; j < inst->dimension; j++)
+                {
+                    if (comp[j] != k)
+                        continue;
 
                     index[nnz] = xpos(i, j, inst);
                     value[nnz++] = 1.0;
-
                 }
             }
             if (CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value))
@@ -239,11 +282,10 @@ static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, 
 
     free(xstar);
     return 0;
-
 }
 
-
-int TSPopt(instance *inst) {
+int TSPopt(instance *inst)
+{
 
     // Open CPLEX model
     int error;
@@ -267,9 +309,11 @@ int TSPopt(instance *inst) {
     CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0);
     CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
 
-    if (inst->model_type == 10) {
+    if (inst->model_type == 10)
+    {
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE;
-        if (CPXcallbacksetfunc(env, lp, contextid, callback, inst)) print_error("CPXcallbacksetfunc() error");
+        if (CPXcallbacksetfunc(env, lp, contextid, callback, inst))
+            print_error("CPXcallbacksetfunc() error");
     }
 
     inst->cols = CPXgetnumcols(env, lp);
@@ -281,7 +325,7 @@ int TSPopt(instance *inst) {
     printf("\nRUNNING : %s\n", model_full_name[inst->model_type]);
     // Use the optimal solution found by CPLEX
     int cols = CPXgetnumcols(env, lp);
-    double *xstar = (double *) calloc(cols, sizeof(double));
+    double *xstar = (double *)calloc(cols, sizeof(double));
     if (CPXgetx(env, lp, xstar, 0, cols - 1))
         print_error("CPXgetx() error");
 
@@ -290,20 +334,22 @@ int TSPopt(instance *inst) {
     if (inst->model_type == 0 || inst->model_type == 10) // undirected graph
     {
         gather_solution_path(inst, xstar, 0);
-    } else if (inst->model_type == 8 || inst->model_type == 9) // Benders
+    }
+    else if (inst->model_type == 8 || inst->model_type == 9) // Benders
     {
-//        printf("Benders' method is running...\n");
+        //        printf("Benders' method is running...\n");
         benders(env, lp, inst);
 
         int cols = CPXgetnumcols(env, lp);
-        double *xstar = (double *) calloc(cols, sizeof(double));
+        double *xstar = (double *)calloc(cols, sizeof(double));
         if (CPXgetx(env, lp, xstar, 0, cols - 1))
             print_error("CPXgetx() error");
 
         gather_solution_path(inst, xstar, 0);
-    } else {
+    }
+    else
+    {
         gather_solution_path(inst, xstar, 1);
-
     }
 
     if (inst->n_edges != inst->dimension)
@@ -324,49 +370,53 @@ int TSPopt(instance *inst) {
     return 0;
 }
 
-void build_model(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
 
-    switch (inst->model_type) {
-        case 0: // basic model (no SEC)
-        case 8: // benders model (SEC)
-        case 9: // benders model (SEC) - kruskal
-        case 10: // callbacks model (SEC)
-            basic_model_no_sec(env, lp, inst);
-            break;
-        case 1: // MTZ with static constraints
-            MTZ_static(env, lp, inst);
-            break;
-        case 2: // MTZ (mod) with static constraints
-            MTZ_static_mod(env, lp, inst);
-            break;
-        case 3: // MTZ with lazy constraints
-            MTZ_lazy(env, lp, inst);
-            break;
-        case 4: // MTZ with lazy constraints and sub-tour elimination constraints of degree 2
-            MTZ_lazy_sec(env, lp, inst);
-            break;
-        case 5: // GG
-            GG(env, lp, inst);
-            break;
-        case 6:
-            GG_lazy(env, lp, inst);
-            break;
-        case 7:
-            GG_lazy_sec(env, lp, inst);
-            break;
-        default:
-            fprintf(stderr, "ERROR: Model type %d not available.\n", inst->model_type);
-            break;
+    switch (inst->model_type)
+    {
+    case 0:  // basic model (no SEC)
+    case 8:  // benders model (SEC)
+    case 9:  // benders model (SEC) - kruskal
+    case 10: // callbacks model (SEC)
+        basic_model_no_sec(env, lp, inst);
+        break;
+    case 1: // MTZ with static constraints
+        MTZ_static(env, lp, inst);
+        break;
+    case 2: // MTZ (mod) with static constraints
+        MTZ_static_mod(env, lp, inst);
+        break;
+    case 3: // MTZ with lazy constraints
+        MTZ_lazy(env, lp, inst);
+        break;
+    case 4: // MTZ with lazy constraints and sub-tour elimination constraints of degree 2
+        MTZ_lazy_sec(env, lp, inst);
+        break;
+    case 5: // GG
+        GG(env, lp, inst);
+        break;
+    case 6:
+        GG_lazy(env, lp, inst);
+        break;
+    case 7:
+        GG_lazy_sec(env, lp, inst);
+        break;
+    default:
+        fprintf(stderr, "ERROR: Model type %d not available.\n", inst->model_type);
+        break;
     }
 
     char path[1000];
-    if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp")) print_error("Unable to generate path");
+    if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp"))
+        print_error("Unable to generate path");
     // path : "../output/model_[type]_[name].lp"
     //TODO: check that "model" folder exists
     CPXwriteprob(env, lp, path, NULL);
 }
 
-int xpos(int i, int j, instance *inst) {
+int xpos(int i, int j, instance *inst)
+{
 
     if (i == j)
         print_error("Same indexes are not valid!");
@@ -380,7 +430,8 @@ int xpos(int i, int j, instance *inst) {
         return i * inst->dimension + j - (i + 1) * (i + 2) / 2;
 }
 
-int xpos_dir(int i, int j, instance *inst) {
+int xpos_dir(int i, int j, instance *inst)
+{
 
     if (i < 0 || j < 0)
         print_error("Negative indexes are not valid!");
@@ -389,32 +440,37 @@ int xpos_dir(int i, int j, instance *inst) {
     return i * inst->dimension + j;
 }
 
-int upos(int i, instance *inst) {
+int upos(int i, instance *inst)
+{
 
     if (i < 0)
         print_error("Negative index is not valid!");
     return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i;
 }
 
-int ypos(int i, int j, instance *inst) {
+int ypos(int i, int j, instance *inst)
+{
 
     if (i < 0)
         print_error("Negative index is not valid!");
     return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i * inst->dimension + j;
 }
 
-void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
     char binary = 'B'; // B => binary variable flag
     // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
+    char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
+    cname[0] = (char *)calloc(100, sizeof(char));
 
     // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
+    char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+    rname[0] = (char *)calloc(100, sizeof(char));
     // Add binary variables x(i,j) for i < j
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = i + 1; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = i + 1; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
             double obj = dist(i, j, inst); // cost == distance
             double lb = 0.0;
@@ -427,7 +483,8 @@ void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add the degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 2.0;
@@ -436,7 +493,8 @@ void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (i == h)
                 continue;
             if (CPXchgcoef(env, lp, row, xpos(i, h, inst), 1.0))
@@ -449,20 +507,23 @@ void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     free(rname);
 }
 
-void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
     char binary = 'B';  // B => binary variable flag
     char integer = 'I'; // I => integer variable flag
 
     // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
+    char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
+    cname[0] = (char *)calloc(100, sizeof(char));
 
     // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
+    char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+    rname[0] = (char *)calloc(100, sizeof(char));
     // Add binary variables x(i,j) for each (i,j)
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
             double obj = dist(i, j, inst); // cost == distance
             double lb = 0.0;
@@ -477,7 +538,8 @@ void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add u-variables one for each node ( u_0 = 0 )
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
         sprintf(cname[0], "u(%d)", i + 1);
         double obj = 0.0;
         double lb = 0.0;
@@ -491,7 +553,8 @@ void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add the in-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -499,14 +562,16 @@ void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(i, h, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
     }
 
     // Add the out-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -514,7 +579,8 @@ void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "out_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(h, i, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
@@ -526,7 +592,8 @@ void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst) {
     char sense = 'L';                         // L stands for less than or equal
     for (int i = 1; i < inst->dimension; i++) // *** faster including i=0 ? yes -> MTZ_static_mod ***
     {
-        for (int j = 1; j < inst->dimension; j++) {
+        for (int j = 1; j < inst->dimension; j++)
+        {
             if (i == j)
                 continue;
             int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
@@ -547,20 +614,23 @@ void MTZ_static(CPXENVptr env, CPXLPptr lp, instance *inst) {
     free(rname);
 }
 
-void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
     char binary = 'B';  // B => binary variable flag
     char integer = 'I'; // I => integer variable flag
 
     // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
+    char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
+    cname[0] = (char *)calloc(100, sizeof(char));
 
     // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
+    char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+    rname[0] = (char *)calloc(100, sizeof(char));
     // Add binary variables x(i,j) for each (i,j)
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
             double obj = dist(i, j, inst); // cost == distance
             double lb = 0.0;
@@ -575,7 +645,8 @@ void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add u-variables one for each node ( u_0 = 0 )
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
         sprintf(cname[0], "u(%d)", i + 1);
         double obj = 0.0;
         double lb = 0.0;
@@ -589,7 +660,8 @@ void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add the in-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -597,14 +669,16 @@ void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(i, h, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
     }
 
     // Add the out-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -612,7 +686,8 @@ void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "out_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(h, i, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
@@ -624,7 +699,8 @@ void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst) {
     char sense = 'L';                         // L stands for less than or equal
     for (int i = 0; i < inst->dimension; i++) // *** faster including i=0 ? yes ***
     {
-        for (int j = 1; j < inst->dimension; j++) {
+        for (int j = 1; j < inst->dimension; j++)
+        {
             if (i == j)
                 continue;
             int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
@@ -645,20 +721,23 @@ void MTZ_static_mod(CPXENVptr env, CPXLPptr lp, instance *inst) {
     free(rname);
 }
 
-void MTZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void MTZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
     char binary = 'B';  // B => binary variable flag
     char integer = 'I'; // I => integer variable flag
 
     // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
+    char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
+    cname[0] = (char *)calloc(100, sizeof(char));
 
     // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
+    char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+    rname[0] = (char *)calloc(100, sizeof(char));
     // Add binary variables x(i,j) for each (i,j)
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
             double obj = dist(i, j, inst); // cost == distance
             double lb = 0.0;
@@ -673,7 +752,8 @@ void MTZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add u-variables one for each node ( u_0 = 0 )
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
         sprintf(cname[0], "u(%d)", i + 1);
         double obj = 0.0;
         double lb = 0.0;
@@ -687,7 +767,8 @@ void MTZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add the in-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -695,14 +776,16 @@ void MTZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(i, h, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
     }
 
     // Add the out-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -710,7 +793,8 @@ void MTZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "out_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(h, i, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
@@ -749,20 +833,23 @@ void MTZ_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
     free(rname);
 }
 
-void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
     char binary = 'B';  // B => binary variable flag
     char integer = 'I'; // I => integer variable flag
 
     // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
+    char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
+    cname[0] = (char *)calloc(100, sizeof(char));
 
     // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
+    char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+    rname[0] = (char *)calloc(100, sizeof(char));
     // Add binary variables x(i,j) for each (i,j)
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
             double obj = dist(i, j, inst); // cost == distance
             double lb = 0.0;
@@ -777,7 +864,8 @@ void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add u-variables one for each node ( u_0 = 0 )
-    for (int i = 0; i < inst->dimension; i++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
         sprintf(cname[0], "u(%d)", i + 1);
         double obj = 0.0;
         double lb = 0.0;
@@ -791,7 +879,8 @@ void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add the in-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -799,14 +888,16 @@ void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(i, h, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
     }
 
     // Add the out-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -814,7 +905,8 @@ void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "out_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(h, i, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
@@ -848,17 +940,19 @@ void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add static 2-SEC contraints: x(i, j) + x(j, i) <= 1 for every i < j
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = i + 1; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = i + 1; j < inst->dimension; j++)
+        {
 
             int lastrow = CPXgetnumrows(env, lp);
             double rhs = 1.0;
             char sense = 'L';
 
             sprintf(cname[0], "2-SEC(%d, %d)", i + 1, j + 1);
-            int *beg = (int *) calloc(2, sizeof(int));
-            int *ind = (int *) calloc(2, sizeof(int));
-            double *val = (double *) calloc(2, sizeof(double));
+            int *beg = (int *)calloc(2, sizeof(int));
+            int *ind = (int *)calloc(2, sizeof(int));
+            double *val = (double *)calloc(2, sizeof(double));
 
             int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
             if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
@@ -905,21 +999,24 @@ void MTZ_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     free(rname);
 }
 
-void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void GG(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
     char binary = 'B';  // B => binary variable flag
     char integer = 'I'; // I => integer variable flag
 
     // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
+    char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
+    cname[0] = (char *)calloc(100, sizeof(char));
 
     // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
+    char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+    rname[0] = (char *)calloc(100, sizeof(char));
 
     // Add binary variables x(i,j) for each (i,j)
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
             double obj = dist(i, j, inst); // cost == distance
             double lb = 0.0;
@@ -934,8 +1031,10 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add y-variables one for each arc (i,j) with i!=j and i,j > 0
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "y(%d,%d)", i + 1, j + 1);
             double obj = 0.0;
             double lb = 0.0;
@@ -952,7 +1051,8 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add the in-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -960,14 +1060,16 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(i, h, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
     }
 
     // Add the out-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -975,7 +1077,8 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "out_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(h, i, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
@@ -990,7 +1093,8 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_flow out_flow node (%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (h == i)
                 continue;
             if (CPXchgcoef(env, lp, row, ypos(i, h, inst), 1.0)) // 1.0 * y_ih
@@ -1019,7 +1123,8 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
     // linking constraints: y_ij <= (n-2)x_ij for each i,j > 0 and i!=j
     for (int i = 1; i < inst->dimension; i++) // exludes node 0
     {
-        for (int j = 1; j < inst->dimension; j++) {
+        for (int j = 1; j < inst->dimension; j++)
+        {
             if (i == j)
                 continue;
             double rhs = 0.0;
@@ -1042,21 +1147,24 @@ void GG(CPXENVptr env, CPXLPptr lp, instance *inst) {
     free(rname);
 }
 
-void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
     char binary = 'B';  // B => binary variable flag
     char integer = 'I'; // I => integer variable flag
 
     // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
+    char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
+    cname[0] = (char *)calloc(100, sizeof(char));
 
     // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
+    char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+    rname[0] = (char *)calloc(100, sizeof(char));
 
     // Add binary variables x(i,j) for each (i,j)
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
             double obj = dist(i, j, inst); // cost == distance
             double lb = 0.0;
@@ -1071,8 +1179,10 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add y-variables one for each arc (i,j) with i!=j and i,j > 0
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "y(%d,%d)", i + 1, j + 1);
             double obj = 0.0;
             double lb = 0.0;
@@ -1089,7 +1199,8 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add the in-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -1097,14 +1208,16 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(i, h, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
     }
 
     // Add the out-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -1112,7 +1225,8 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "out_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(h, i, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
@@ -1127,7 +1241,8 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_flow out_flow node (%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (h == i)
                 continue;
             if (CPXchgcoef(env, lp, row, ypos(i, h, inst), 1.0)) // 1.0 * y_ih
@@ -1183,21 +1298,24 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst) {
     free(rname);
 }
 
-void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
     char binary = 'B';  // B => binary variable flag
     char integer = 'I'; // I => integer variable flag
 
     // cname: columns' names (column = variable)
-    char **cname = (char **) calloc(1, sizeof(char *)); // array of strings to store the column names
-    cname[0] = (char *) calloc(100, sizeof(char));
+    char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
+    cname[0] = (char *)calloc(100, sizeof(char));
 
     // rname: rows' names (row = constraint)
-    char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-    rname[0] = (char *) calloc(100, sizeof(char));
+    char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+    rname[0] = (char *)calloc(100, sizeof(char));
 
     // Add binary variables x(i,j) for each (i,j)
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
             double obj = dist(i, j, inst); // cost == distance
             double lb = 0.0;
@@ -1212,8 +1330,10 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add y-variables one for each arc (i,j) with i!=j and i,j > 0
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = 0; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = 0; j < inst->dimension; j++)
+        {
             sprintf(cname[0], "y(%d,%d)", i + 1, j + 1);
             double obj = 0.0;
             double lb = 0.0;
@@ -1230,7 +1350,8 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add the in-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -1238,14 +1359,16 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(i, h, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
     }
 
     // Add the out-degree constraints
-    for (int h = 0; h < inst->dimension; h++) {
+    for (int h = 0; h < inst->dimension; h++)
+    {
 
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         double rhs = 1.0;
@@ -1253,7 +1376,8 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "out_degree(%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (CPXchgcoef(env, lp, row, xpos_dir(h, i, inst), 1.0))
                 print_error("wrong CPXchgcoef [degree]");
         }
@@ -1268,7 +1392,8 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
         sprintf(rname[0], "in_flow out_flow node (%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
-        for (int i = 0; i < inst->dimension; i++) {
+        for (int i = 0; i < inst->dimension; i++)
+        {
             if (h == i)
                 continue;
             if (CPXchgcoef(env, lp, row, ypos(i, h, inst), 1.0)) // 1.0 * y_ih
@@ -1319,17 +1444,19 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 
     // Add static 2-SEC contraints: x(i, j) + x(j, i) <= 1 for every i < j
-    for (int i = 0; i < inst->dimension; i++) {
-        for (int j = i + 1; j < inst->dimension; j++) {
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = i + 1; j < inst->dimension; j++)
+        {
 
             int lastrow = CPXgetnumrows(env, lp);
             double rhs = 1.0;
             char sense = 'L';
 
             sprintf(cname[0], "2-SEC(%d, %d)", i + 1, j + 1);
-            int *beg = (int *) calloc(2, sizeof(int));
-            int *ind = (int *) calloc(2, sizeof(int));
-            double *val = (double *) calloc(2, sizeof(double));
+            int *beg = (int *)calloc(2, sizeof(int));
+            int *ind = (int *)calloc(2, sizeof(int));
+            double *val = (double *)calloc(2, sizeof(double));
 
             int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
             if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
@@ -1349,61 +1476,78 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst) {
     free(rname);
 }
 
-void benders(CPXENVptr env, CPXLPptr lp, instance *inst) {
+void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
+{
 
     // Application of Benders method
 
     int done = 0;
     int it = 0; // iteration number
-    while (!done) {
+    while (!done)
+    {
         int ncols = CPXgetnumcols(env, lp);
-        double *xstar = (double *) calloc(ncols, sizeof(double));
+        double *xstar = (double *)calloc(ncols, sizeof(double));
 
         int status = CPXgetx(env, lp, xstar, 0, ncols - 1);
-        if (status) {
+        if (status)
+        {
             print_error_status("Failed to obtain the values in LOOP method", status);
         }
 
-        int *comp = (int *) calloc(inst->dimension, sizeof(int));
-        int *succ = (int *) calloc(inst->dimension, sizeof(int));
+        int *comp = (int *)calloc(inst->dimension, sizeof(int));
+        int *succ = (int *)calloc(inst->dimension, sizeof(int));
         int c = 0; // number of connected components
         int *length_comp;
 
         // Retrieve the number of connected components so far
-        if (inst->model_type == 8) findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
-        else if (inst->model_type == 9) findConnectedComponents_kruskal(xstar, inst, succ, comp, &c, &length_comp);
+        if (inst->model_type == 8)
+            findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
+        else if (inst->model_type == 9)
+            findConnectedComponents_kruskal(xstar, inst, succ, comp, &c, &length_comp);
 
         printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d\n", ++it, c);
 
-        if (c == 1) {
+        if (c == 1)
+        {
             // If exactly one component is found, end the loop and exit
-            if (inst->param.verbose >= NORMAL) {
-                for (int n = 0; n < c; n++) {
+            if (inst->param.verbose >= NORMAL)
+            {
+                for (int n = 0; n < c; n++)
+                {
                     printf("\t -- COMPONENT %d : %d NODES\n", n + 1, length_comp[n]);
                 }
             }
 
             done = 1;
-        } else {
+        }
+        else
+        {
             // If more than one component plot and check the partial solution
 
-            if (inst->param.verbose >= NORMAL) {
-                for (int n = 0; n < c; n++) {
+            if (inst->param.verbose >= NORMAL)
+            {
+                for (int n = 0; n < c; n++)
+                {
                     printf("\t -- COMPONENT %d : %d NODES\n", n + 1, length_comp[n]);
                 }
             }
 
             gather_solution_path(inst, xstar, 0);
-            if (plot_solution(inst)) print_error("plot_solution() error");
+            if (inst->param.verbose >= DEBUG)
+            {
+                if (plot_solution(inst))
+                    print_error("plot_solution() error");
+            }
             inst->n_edges = 0;
 
             // Add SEC to each component found
 
             // rname: rows' names (row = constraint)
-            char **rname = (char **) calloc(1, sizeof(char *)); // array of strings to store the row names
-            rname[0] = (char *) calloc(100, sizeof(char));
+            char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+            rname[0] = (char *)calloc(100, sizeof(char));
 
-            for (int mycomp = 0; mycomp < c; mycomp++) {
+            for (int mycomp = 0; mycomp < c; mycomp++)
+            {
 
                 double rhs = length_comp[mycomp] - 1.0;
                 char sense = 'L';
@@ -1412,21 +1556,27 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst) {
                 if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
                     print_error("wrong CPXnewrows");
 
-                for (int i = 0; i < inst->dimension; i++) {
-                    if (inst->model_type == 8) {
+                for (int i = 0; i < inst->dimension; i++)
+                {
+                    if (inst->model_type == 8)
+                    {
                         if (comp[i] != mycomp)
                             continue;
-                        for (int j = i + 1; j < inst->dimension; j++) {
+                        for (int j = i + 1; j < inst->dimension; j++)
+                        {
                             if (comp[j] != mycomp)
                                 continue;
                             // add (i,j) to SEC
                             if (CPXchgcoef(env, lp, row, xpos(i, j, inst), 1.0)) // 1.0 * x_ij
                                 print_error("wrong CPXchgcoef");
                         }
-                    } else if (inst->model_type == 9) {
+                    }
+                    else if (inst->model_type == 9)
+                    {
                         if (comp[i] != succ[mycomp])
                             continue;
-                        for (int j = i + 1; j < inst->dimension; j++) {
+                        for (int j = i + 1; j < inst->dimension; j++)
+                        {
                             if (comp[j] != succ[mycomp])
                                 continue;
                             // add (i,j) to SEC
@@ -1434,7 +1584,6 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst) {
                                 print_error("wrong CPXchgcoef");
                         }
                     }
-
                 }
             }
 
@@ -1452,5 +1601,6 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst) {
     }
 }
 
-void print_time_csv() {
+void print_time_csv()
+{
 }
