@@ -275,6 +275,10 @@ static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, 
             free(index);
             free(value);
         }
+        if (inst->param.verbose >= NORMAL)
+        {
+            printf("*** callback #%d: solution rejected, added %d SEC ***\n", ++(inst->param.callback_counter), c);
+        }
     }
     free(comp);
     free(succ);

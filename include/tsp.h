@@ -10,7 +10,8 @@
 #include <unistd.h>
 
 // Data Structures
-typedef struct {
+typedef struct
+{
     char input_file[1000];  // Path of the file
     char name[100];         // Identifies the data file
     char type[10];          // Specifies the type of data (TSP or ATSP)
@@ -19,11 +20,14 @@ typedef struct {
     char weight_format[20]; // Specifies how the edge weights (or distances) are formatted
     char data_type[20];     // Specifies how the data are displayed
     int seed;               // Seed given to cplex
-    int run;               // Number of current run
+    int run;                // Number of current run
     int verbose;
+    int callback_counter;   // #callback's called
+
 } parameter;
 
-typedef struct { // Node
+typedef struct
+{ // Node
 
     int id;   // number of the node (e.g. 1, 2, 3, ..., n)
     double x; // x coordinate
@@ -31,7 +35,8 @@ typedef struct { // Node
 
 } node;
 
-typedef struct { // Edge in the circuit
+typedef struct
+{ // Edge in the circuit
 
     //    _Bool flag;			        // = TRUE (1) if inside the circuit, = FALSE (0) otherwise
     double dist; // Weight of the edge
@@ -40,7 +45,8 @@ typedef struct { // Edge in the circuit
 
 } edge;
 
-typedef struct {
+typedef struct
+{
 
     // Input data
     int dimension; // Number of nodes of the problem
@@ -62,7 +68,8 @@ typedef struct {
 } instance;
 
 // Enumerations
-enum verbose_level {
+enum verbose_level
+{
     QUIET = 0,
     NORMAL = 1,
     VERBOSE = 2,
@@ -70,7 +77,8 @@ enum verbose_level {
     DEBUG = 4
 };
 
-enum sections {
+enum sections
+{
     PARAMETERS = 0,
     NODE_COORD = 1,
     EDGE_WEIGHT = 2,
@@ -78,40 +86,37 @@ enum sections {
 };
 
 static const char *verbose_name[] = {
-        "QUIET",
-        "NORMAL",
-        "VERBOSE",
-        "NERD",
-        "DEBUG"
-};
+    "QUIET",
+    "NORMAL",
+    "VERBOSE",
+    "NERD",
+    "DEBUG"};
 
 static const char *model_name[] = {
-        "STD",
-        "MTZ",
-        "MTZMOD",
-        "MTZL",
-        "MTZLS",
-        "GG",
-        "GGL",
-        "GGLS",
-        "BENDERS'",
-        "BENDERS' (KRUSKAL)",
-        "CALLBACK"
-};
+    "STD",
+    "MTZ",
+    "MTZMOD",
+    "MTZL",
+    "MTZLS",
+    "GG",
+    "GGL",
+    "GGLS",
+    "BENDERS'",
+    "BENDERS' (KRUSKAL)",
+    "CALLBACK"};
 
 static const char *model_full_name[] = {
-        "Basic model w/o SEC",
-        "Miller-Tucker-Zemlin compact model",
-        "Miller-Tucker-Zemlin modified compact model",
-        "Miller-Tucker-Zemlin lazy compact model",
-        "Miller-Tucker-Zemlin lazy compact model w/ SEC2",
-        "Garvish-Graves compact model",
-        "Garvish-Graves lazy compact model",
-        "Garvish-Graves lazy compact model w/ SEC2",
-        "Benders' method'",
-        "Benders' method' (Kruskal)",
-        "Callback method"
-};
+    "Basic model w/o SEC",
+    "Miller-Tucker-Zemlin compact model",
+    "Miller-Tucker-Zemlin modified compact model",
+    "Miller-Tucker-Zemlin lazy compact model",
+    "Miller-Tucker-Zemlin lazy compact model w/ SEC2",
+    "Garvish-Graves compact model",
+    "Garvish-Graves lazy compact model",
+    "Garvish-Graves lazy compact model w/ SEC2",
+    "Benders' method'",
+    "Benders' method' (Kruskal)",
+    "Callback method"};
 
 static int verbose = NORMAL;
 
@@ -129,7 +134,6 @@ void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 8: benders model (SEC)
 void benders(CPXENVptr env, CPXLPptr lp, instance *inst);
-
 
 // Compact model (directed graphs)
 // model 1: TMZ_static
@@ -157,7 +161,7 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // Retrieve the distance among each node of the instance
 double dist(int i, int j, instance *inst);
-double compute_edges( instance *inst, const double *xstar, int type);
+double compute_edges(instance *inst, const double *xstar, int type);
 
 // Find the connected components inside a solution
 void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp, int **length_comp);
@@ -165,7 +169,7 @@ void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *s
 
 // Callback
 
-static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle );
+static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle);
 
 // Retrieve the position of the variable
 int xpos(int i, int j, instance *inst);     // position in the model for undirected graphs
