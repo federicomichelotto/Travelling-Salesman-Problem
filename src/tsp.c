@@ -230,12 +230,11 @@ void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *s
 
 static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
 {
-
     instance *inst = (instance *)userhandle;
-    double *xstar = (double *)malloc(inst->dimension * sizeof(double));
+    double *xstar = (double *)malloc(inst->cols * sizeof(double));
     double objval = CPX_INFBOUND;
 
-    if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->dimension - 1, &objval))
+    if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->cols - 1, &objval))
         print_error("CPXcallbackgetcandidatepoint error");
 
     int *comp = (int *)calloc(inst->dimension, sizeof(int));
@@ -243,29 +242,29 @@ static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, 
     int c = 0; // number of connected components
     int *length_comp;
 
-    // Retrieve the number of connected components so far
+    // Retrieve the connected components of the current solution
     findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
 
     if (c > 1)
     {
-        for (int k = 0; k < c; k++)
+        // add one cut for each connected component
+        for (int mycomp = 0; mycomp < c; mycomp++)
         {
             int nnz = 0;
             int izero = 0;
             char sense = 'L';
-            double rhs = length_comp[k] - 1.0; // in order to have |S|-1 in the end
+            double rhs = length_comp[mycomp] - 1.0; // in order to have |S|-1 in the end
             int *index = (int *)calloc(inst->cols, sizeof(int));
             double *value = (double *)calloc(inst->cols, sizeof(double));
 
             for (int i = 0; i < inst->dimension; i++)
             {
-                if (comp[i] != k)
+                if (comp[i] != mycomp)
                     continue;
                 for (int j = i + 1; j < inst->dimension; j++)
                 {
-                    if (comp[j] != k)
+                    if (comp[j] != mycomp)
                         continue;
-
                     index[nnz] = xpos(i, j, inst);
                     value[nnz++] = 1.0;
                 }
@@ -279,7 +278,7 @@ static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, 
     }
     free(comp);
     free(succ);
-
+    free(length_comp);
     free(xstar);
     return 0;
 }
@@ -291,8 +290,8 @@ int TSPopt(instance *inst)
     int error;
     CPXENVptr env = CPXopenCPLEX(&error);
     CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
-
     build_model(env, lp, inst);
+    inst->cols = CPXgetnumcols(env, lp);
 
     char path[1000];
     if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed,
@@ -309,14 +308,12 @@ int TSPopt(instance *inst)
     CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0);
     CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
 
-    if (inst->model_type == 10)
+    if (inst->model_type == 10) // callback's method
     {
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE;
         if (CPXcallbacksetfunc(env, lp, contextid, callback, inst))
             print_error("CPXcallbacksetfunc() error");
     }
-
-    inst->cols = CPXgetnumcols(env, lp);
 
     if (CPXmipopt(env, lp))
         print_error("CPXmipopt() error");
@@ -324,9 +321,8 @@ int TSPopt(instance *inst)
     printf("\nSOLUTION -----------------------------------------------\n");
     printf("\nRUNNING : %s\n", model_full_name[inst->model_type]);
     // Use the optimal solution found by CPLEX
-    int cols = CPXgetnumcols(env, lp);
-    double *xstar = (double *)calloc(cols, sizeof(double));
-    if (CPXgetx(env, lp, xstar, 0, cols - 1))
+    double *xstar = (double *)calloc(inst->cols, sizeof(double));
+    if (CPXgetx(env, lp, xstar, 0, inst->cols - 1))
         print_error("CPXgetx() error");
 
     inst->n_edges = 0;
@@ -340,9 +336,9 @@ int TSPopt(instance *inst)
         //        printf("Benders' method is running...\n");
         benders(env, lp, inst);
 
-        int cols = CPXgetnumcols(env, lp);
-        double *xstar = (double *)calloc(cols, sizeof(double));
-        if (CPXgetx(env, lp, xstar, 0, cols - 1))
+        inst->cols = CPXgetnumcols(env, lp);
+        double *xstar = (double *)calloc(inst->cols, sizeof(double));
+        if (CPXgetx(env, lp, xstar, 0, inst->cols - 1))
             print_error("CPXgetx() error");
 
         gather_solution_path(inst, xstar, 0);
@@ -411,7 +407,7 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
     if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp"))
         print_error("Unable to generate path");
     // path : "../output/model_[type]_[name].lp"
-    //TODO: check that "model" folder exists
+    //TODO: check that folder exists
     CPXwriteprob(env, lp, path, NULL);
 }
 
@@ -1485,10 +1481,11 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
     int it = 0; // iteration number
     while (!done)
     {
-        int ncols = CPXgetnumcols(env, lp);
-        double *xstar = (double *)calloc(ncols, sizeof(double));
+        inst->cols = CPXgetnumcols(env, lp);
 
-        int status = CPXgetx(env, lp, xstar, 0, ncols - 1);
+        double *xstar = (double *)calloc(inst->cols, sizeof(double));
+
+        int status = CPXgetx(env, lp, xstar, 0, inst->cols - 1);
         if (status)
         {
             print_error_status("Failed to obtain the values in LOOP method", status);
