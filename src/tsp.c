@@ -293,6 +293,8 @@ int TSPopt(instance *inst)
     // Open CPLEX model
     int error;
     CPXENVptr env = CPXopenCPLEX(&error);
+    CPXgettime(env, &inst->timestamp_start);
+    //CPXgetdettime(env, &inst->timestamp_start); //ticks
     CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
@@ -360,13 +362,12 @@ int TSPopt(instance *inst)
 
     printf("\nObjective value: %lf\n", inst->z_best);
     printf("Lower bound: %lf\n", inst->best_lb);
-
+    CPXgettime(env, &inst->timestamp_finish);
+    //CPXgetdettime(env, &inst->timestamp_finish); // ticks
     free(xstar);
-
     // Free and close CPLEX model
     CPXfreeprob(env, &lp);
     CPXcloseCPLEX(&env);
-
     return 0;
 }
 
@@ -1478,15 +1479,20 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
 
 void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
 {
-
     // Application of Benders method
-
     int done = 0;
     int it = 0; // iteration number
     while (!done)
     {
-        inst->cols = CPXgetnumcols(env, lp);
+        // update time limit
+        CPXgettime(env, &inst->timestamp_finish);
+        //CPXgetdettime(env, &inst->timestamp_finish); // ticks
+        inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
+        if (inst->time_left <= 0.0)
+            return;
+        CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
 
+        inst->cols = CPXgetnumcols(env, lp);
         double *xstar = (double *)calloc(inst->cols, sizeof(double));
 
         int status = CPXgetx(env, lp, xstar, 0, inst->cols - 1);
@@ -1506,7 +1512,7 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
         else if (inst->model_type == 9)
             findConnectedComponents_kruskal(xstar, inst, succ, comp, &c, &length_comp);
 
-        printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d\n", ++it, c);
+        printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d \tTIME LEFT: %f\n", ++it, c, inst->time_left);
 
         if (c == 1)
         {

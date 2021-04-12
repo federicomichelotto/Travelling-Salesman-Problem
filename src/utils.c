@@ -27,6 +27,7 @@ void parse_command_line(int argc, char **argv, instance *inst)
             if (strcmp(argv[i], "-t") == 0)
             { // Time limit (seconds)
                 inst->time_limit = strtof(argv[++i], NULL);
+                inst->time_left = inst->time_limit;
                 continue;
             }
 
@@ -258,6 +259,7 @@ void initialize_instance(instance *inst)
 
     inst->model_type = 0;
     inst->time_limit = CPX_INFBOUND;
+    inst->time_left = CPX_INFBOUND;
     inst->param.seed = 1;
     inst->param.run = -1;
     inst->param.verbose = NORMAL;
@@ -271,6 +273,9 @@ void initialize_instance(instance *inst)
     inst->weights = NULL;
     inst->integer_costs = 1;
     inst->z_best = -1.0;
+
+    inst->timestamp_start = 0.0;
+    inst->timestamp_finish = 0.0;
 
     strcpy(inst->param.input_file, "NULL");
     strcpy(inst->param.name, "NULL");
@@ -437,7 +442,7 @@ int generate_path(char *path, char *folder, char *type, const char *model, char 
     return 0;
 }
 
-int generate_csv_record(char *instance_name, int seed, int model_type, double z_best, long int time_sec, long int time_usec, int run)
+int generate_csv_record(char *instance_name, int seed, int model_type, double z_best, double time_elapsed, int run)
 {
     FILE *csv;
     char *filename = "../output/scores.csv";
@@ -446,15 +451,13 @@ int generate_csv_record(char *instance_name, int seed, int model_type, double z_
     {
         print_message("scores.csv exists, adding the results");
         csv = fopen(filename, "a");
-        fprintf(csv, "%s, %d, %s, %f, %ld.%ld, run-%d\n", instance_name, seed, model_name[model_type], z_best, time_sec,
-                time_usec, run);
+        fprintf(csv, "%s, %d, %s, %f, %f, run-%d\n", instance_name, seed, model_name[model_type], z_best, time_elapsed, run);
     }
     else
     {
         print_message("scores.csv does not exists yet, creating file and adding the results");
         csv = fopen(filename, "w");
-        fprintf(csv, "%s, %d, %s, %f, %ld.%ld, run-%d\n", instance_name, seed, model_name[model_type], z_best, time_sec,
-                time_usec, run);
+        fprintf(csv, "%s, %d, %s, %f, %f, run-%d\n", instance_name, seed, model_name[model_type], z_best, time_elapsed, run);
     }
 
     if (fclose(csv))

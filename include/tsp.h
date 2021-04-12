@@ -22,7 +22,7 @@ typedef struct
     int seed;               // Seed given to cplex
     int run;                // Number of current run
     int verbose;
-    int callback_counter;   // #callback's called
+    int callback_counter; // #callback's called
 
 } parameter;
 
@@ -60,8 +60,11 @@ typedef struct
     parameter param; // Parameters of the instance
 
     double time_limit; // Specifies the maximum time allowed within the execution
-    int model_type;    // Specifies the type of the model
-    double z_best;     // Value of the best solution available
+    double time_left;  // Time left for the case of multiple runs
+    double timestamp_start;
+    double timestamp_finish;
+    int model_type; // Specifies the type of the model
+    double z_best;  // Value of the best solution available
     double best_lb;
     int cols;
 
