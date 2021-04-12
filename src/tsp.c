@@ -293,9 +293,9 @@ int TSPopt(instance *inst)
     // Open CPLEX model
     int error;
     CPXENVptr env = CPXopenCPLEX(&error);
+    CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
     CPXgettime(env, &inst->timestamp_start);
     //CPXgetdettime(env, &inst->timestamp_start); //ticks
-    CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
 
