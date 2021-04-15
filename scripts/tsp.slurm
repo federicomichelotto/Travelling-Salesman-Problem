@@ -16,25 +16,39 @@
 # Setup my personal project folder
 DIRECTORY=/home/miliamikel/tsp
 BUILD=build
+SRC=src
 
 # Change the folder to my project directory
 cd $DIRECTORY || exit
 
 # Change the folder to where the executable are located
+if [[ -d "$SRC" ]]; then
+
+  for file in $SRC/*; do
+    echo "Checking $file ..."
+
+    if [ "$(($(date +"%s") - $(stat -c "%Y" "$file")))" -gt "1800" ]; then
+      echo "Updated recently file: $file"
+      echo "Recompile needed"
+      MAKE=1
+      break
+    fi
+  done
+fi
 
 if [[ -d "$BUILD" ]]; then
 
+  echo "Changing current directory to $BUILD ..."
   cd $BUILD || exit
-  echo "Directory '$BUILD' exists"
 
-  #  if [ "$(ls -A $BUILD)" ]; then
-  echo "Building the executables ..."
-  cmake ..
-  make
-  echo "Building complete."
-  #  else
+  if [ $MAKE -eq 1 ]; then
+    echo "Building the executables ..."
+    cmake ..
+    make
+    echo "Building complete."
+  fi
+
   echo "Starting the submission ..."
-  #  fi
 
   for file in ../data/compact/*; do
     nodes=$(echo "$file" | grep -o -E '[0-9]+')

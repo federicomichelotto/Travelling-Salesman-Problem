@@ -261,7 +261,7 @@ void initialize_instance(instance *inst)
     inst->time_limit = CPX_INFBOUND;
     inst->time_left = CPX_INFBOUND;
     inst->param.seed = 1;
-    inst->param.run = -1;
+    inst->param.run = 0;
     inst->param.verbose = NORMAL;
     inst->param.callback_counter = 0;
 
@@ -368,9 +368,12 @@ void print_message(const char *msg)
 
 int plot_solution(instance *inst)
 {
+    char cmd[100];
+    sprintf(cmd, "set output '../output/plot/%s_%d.svg", inst->param.name, inst->param.seed);
+
     char *commandsForGnuplot[] = {"set title 'Solution plot'",
-                                  //"set terminal svg size 350,262",
-                                  //"set output '../output/plot/test.svg", // TODO : find a way to modify the nama of the output file
+                                  "set term svg",
+                                  cmd,
                                   "unset key",
                                   "set autoscale",
                                   "set ylabel 'Y'",
