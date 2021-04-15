@@ -445,7 +445,9 @@ int generate_path(char *path, char *folder, char *type, const char *model, char 
 int generate_csv_record(char *instance_name, int seed, int model_type, double z_best, double time_elapsed, int run)
 {
     FILE *csv;
-    char *filename = "../output/scores.csv";
+    char filename[100];
+    printf("run: %d\n", run);
+    sprintf(filename, "../output/scores_%d.csv", run);
 
     if (access(filename, F_OK) == 0)
     {

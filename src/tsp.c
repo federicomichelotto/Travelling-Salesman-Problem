@@ -8,7 +8,6 @@ double dist(int i, int j, instance *inst)
     if (strncmp(inst->param.weight_type, "GEO", 3) == 0)
     {
         double deg, min;
-
         deg = (int)inst->nodes[i].x;
         min = inst->nodes[i].x - deg;
         double lat_i = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
@@ -311,10 +310,10 @@ int TSPopt(instance *inst)
     CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC); // Set opportunistic mode
 
     // CPLEX's precision setting
-    CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0);
+    CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0); // very important if big-M is present
     CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
-
-    if (inst->model_type == 10) // callback's method
+    CPXsetdblparam(env, CPX_PARAM_EPGAP, 1e-5); // abort Cplex when relative gap below this value
+    if (inst->model_type == 10) // callback method
     {
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE;
         if (CPXcallbacksetfunc(env, lp, contextid, callback, inst))
@@ -326,6 +325,9 @@ int TSPopt(instance *inst)
 
     printf("\nSOLUTION -----------------------------------------------\n");
     printf("\nRUNNING : %s\n", model_full_name[inst->model_type]);
+    // solution status of the problem
+    int lpstat = CPXgetstat(env, lp);
+    printf("CPLEX status: %d\n", lpstat);
     // Use the optimal solution found by CPLEX
     double *xstar = (double *)calloc(inst->cols, sizeof(double));
     if (CPXgetx(env, lp, xstar, 0, inst->cols - 1))
@@ -359,7 +361,6 @@ int TSPopt(instance *inst)
 
     CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
     CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
-
     printf("\nObjective value: %lf\n", inst->z_best);
     printf("Lower bound: %lf\n", inst->best_lb);
     CPXgettime(env, &inst->timestamp_finish);
@@ -379,7 +380,7 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
     case 0:  // basic model (no SEC)
     case 8:  // benders model (SEC)
     case 9:  // benders model (SEC) - kruskal
-    case 10: // callbacks model (SEC)
+    case 10: // callback model (SEC)
         basic_model_no_sec(env, lp, inst);
         break;
     case 1: // MTZ with static constraints
@@ -1487,7 +1488,7 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
         // update time limit
         CPXgettime(env, &inst->timestamp_finish);
         //CPXgetdettime(env, &inst->timestamp_finish); // ticks
-        inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
+        inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start); // TO DO
         if (inst->time_left <= 0.0)
             return;
         CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
@@ -1593,7 +1594,7 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
                     }
                 }
             }
-
+        
             // solve with the new constraints
             if (CPXmipopt(env, lp))
                 print_error("CPXmipopt() error");

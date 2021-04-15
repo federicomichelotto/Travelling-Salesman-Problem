@@ -15,7 +15,7 @@ int main(int argc, char **argv)
     TSPopt(&inst) ? print_error("TSPopt() ") : print_message("All went good inside TSPopt()");
     time_elapsed = inst.timestamp_finish - inst.timestamp_start;
     if (verbose >= QUIET)
-        printf("TSP solved in %f\n seconds", time_elapsed);
+        printf("TSP solved in %f seconds\n", time_elapsed);
     if (plot_solution(&inst)) print_error("plot_solution() error");
     //plot_solution_edges(inst.n_edges, inst.nodes, inst.edges) ? print_error("plot_solution_edges() error") : printf("... gnuplot ok\n");
 
