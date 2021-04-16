@@ -427,7 +427,6 @@ int TSPopt(instance *inst)
         //        printf("Benders' method is running...\n");
         benders(env, lp, inst);
 
-        inst->cols = CPXgetnumcols(env, lp);
         double *xstar = (double *)calloc(inst->cols, sizeof(double));
         if (CPXgetx(env, lp, xstar, 0, inst->cols - 1))
             print_error("CPXgetx() error");
@@ -1580,7 +1579,6 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
             return;
         CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
 
-        inst->cols = CPXgetnumcols(env, lp);
         double *xstar = (double *)calloc(inst->cols, sizeof(double));
 
         int status = CPXgetx(env, lp, xstar, 0, inst->cols - 1);
