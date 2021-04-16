@@ -227,7 +227,18 @@ void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *s
     }
 }
 
-static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
+static int CPXPUBLIC callback_driver(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
+{
+    instance *inst = (instance *)userhandle;
+    if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE)
+        return callback_candidate(context, contextid, userhandle);
+    if (contextid == CPX_CALLBACKCONTEXT_RELAXATION)
+        return callback_relaxation(context, contextid, userhandle);
+    print_error("contextid unknownn in my_callback");
+    return 1;
+}
+
+static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
 {
     instance *inst = (instance *)userhandle;
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
@@ -238,16 +249,16 @@ static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, 
 
     int *comp = (int *)calloc(inst->dimension, sizeof(int));
     int *succ = (int *)calloc(inst->dimension, sizeof(int));
-    int c = 0; // number of connected components
+    int ncomp = 0; // number of connected components
     int *length_comp;
 
     // Retrieve the connected components of the current solution
-    findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
+    findConnectedComponents(xstar, inst, succ, comp, &ncomp, &length_comp);
 
-    if (c > 1)
+    if (ncomp > 1)
     {
         // add one cut for each connected component
-        for (int mycomp = 0; mycomp < c; mycomp++)
+        for (int mycomp = 0; mycomp < ncomp; mycomp++)
         {
             int nnz = 0;
             int izero = 0;
@@ -276,11 +287,84 @@ static int CPXPUBLIC callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, 
         }
         if (inst->param.verbose >= NORMAL)
         {
-            printf("*** callback #%d: solution rejected, added %d SEC ***\n", ++(inst->param.callback_counter), c);
+            printf("*** callback #%d (candidate): solution rejected, added %d SEC ***\n", ++(inst->param.callback_counter), ncomp);
         }
     }
     free(comp);
     free(succ);
+    free(length_comp);
+    free(xstar);
+    return 0;
+}
+
+static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
+{
+    instance *inst = (instance *)userhandle;
+    double *xstar = (double *)malloc(inst->cols * sizeof(double));
+    double objval = CPX_INFBOUND;
+
+    if (CPXcallbackgetrelaxationpoint(context, xstar, 0, inst->cols - 1, &objval))
+        print_error("CPXcallbackgetrelaxationpoint error");
+
+    int ncomp;
+    int *comp = (int *)calloc(inst->dimension, sizeof(int));
+    int *length_comp = (int *)calloc(inst->dimension, sizeof(int));
+    // list of edges in "node format"
+    int elist[2 * inst->cols]; // [0,1, 0,2, 0,3, ...]
+
+    int loader = 0;
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = i + 1; j < inst->dimension; j++)
+        {
+            elist[loader++] = i;
+            elist[loader++] = j;
+        }
+    }
+
+    if (CCcut_connect_components(inst->dimension, inst->cols, elist, xstar, &ncomp, &length_comp, &comp))
+        print_error("CCcut_connect_components error");
+
+    if (ncomp > 1)
+    {
+        // add one cut for each connected component
+        for (int mycomp = 0; mycomp < ncomp; mycomp++)
+        {
+            int nnz = 0;
+            int purgeable = CPX_USECUT_FILTER;
+            int local = 0;
+            int izero = 0;
+            char sense = 'L';
+            double rhs = length_comp[mycomp] - 1.0; // in order to have |S|-1 in the end
+            int *index = (int *)calloc(inst->cols, sizeof(int));
+            double *value = (double *)calloc(inst->cols, sizeof(double));
+
+            for (int i = 0; i < inst->dimension; i++)
+            {
+                if (comp[i] != mycomp)
+                    continue;
+                for (int j = i + 1; j < inst->dimension; j++)
+                {
+                    if (comp[j] != mycomp)
+                        continue;
+                    index[nnz] = xpos(i, j, inst);
+                    value[nnz++] = 1.0;
+                }
+            }
+
+            if (CPXcallbackaddusercuts(context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local))
+                print_error("CPXcallbackaddusercuts() error"); // add user cut
+
+            free(index);
+            free(value);
+        }
+        if (inst->param.verbose >= NORMAL)
+        {
+            printf("*** callback #%d (relaxation): added %d user cut ***\n", ++(inst->param.callback_counter), ncomp);
+        }
+    }
+
+    free(comp);
     free(length_comp);
     free(xstar);
     return 0;
@@ -293,6 +377,7 @@ int TSPopt(instance *inst)
     int error;
     CPXENVptr env = CPXopenCPLEX(&error);
     CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
+    // get timestamp
     CPXgettime(env, &inst->timestamp_start);
     //CPXgetdettime(env, &inst->timestamp_start); //ticks
     build_model(env, lp, inst);
@@ -313,10 +398,10 @@ int TSPopt(instance *inst)
     CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0); // very important if big-M is present
     CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
     CPXsetdblparam(env, CPX_PARAM_EPGAP, 1e-5); // abort Cplex when relative gap below this value
-    if (inst->model_type == 10) // callback method
+    if (inst->model_type == 10)                 // callback method
     {
-        CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE;
-        if (CPXcallbacksetfunc(env, lp, contextid, callback, inst))
+        CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION;
+        if (CPXcallbacksetfunc(env, lp, contextid, callback_driver, inst))
             print_error("CPXcallbacksetfunc() error");
     }
 
@@ -325,9 +410,7 @@ int TSPopt(instance *inst)
 
     printf("\nSOLUTION -----------------------------------------------\n");
     printf("\nRUNNING : %s\n", model_full_name[inst->model_type]);
-    // solution status of the problem
-    int lpstat = CPXgetstat(env, lp);
-    printf("CPLEX status: %d\n", lpstat);
+
     // Use the optimal solution found by CPLEX
     double *xstar = (double *)calloc(inst->cols, sizeof(double));
     if (CPXgetx(env, lp, xstar, 0, inst->cols - 1))
@@ -363,6 +446,10 @@ int TSPopt(instance *inst)
     CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
     printf("\nObjective value: %lf\n", inst->z_best);
     printf("Lower bound: %lf\n", inst->best_lb);
+    // solution status of the problem
+    int lpstat = CPXgetstat(env, lp);
+    printf("CPLEX status: %d\n", lpstat);
+    // get timestamp
     CPXgettime(env, &inst->timestamp_finish);
     //CPXgetdettime(env, &inst->timestamp_finish); // ticks
     free(xstar);
@@ -1594,7 +1681,7 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
                     }
                 }
             }
-        
+
             // solve with the new constraints
             if (CPXmipopt(env, lp))
                 print_error("CPXmipopt() error");
