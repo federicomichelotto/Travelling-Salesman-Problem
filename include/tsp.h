@@ -71,6 +71,12 @@ typedef struct
 
 } instance;
 
+typedef struct{
+    instance *inst;
+    CPXCALLBACKCONTEXTptr context;
+} doit_fn_input;
+
+
 // Enumerations
 enum verbose_level
 {
@@ -176,6 +182,8 @@ void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *s
 static int CPXPUBLIC callback_driver(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle);
 static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle);
 static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle);
+
+int doit_fn_concorde(double cutval, int cutcount, int *cut, void *void_context);
 
 // Retrieve the position of the variable
 int xpos(int i, int j, instance *inst);     // position in the model for undirected graphs

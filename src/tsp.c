@@ -243,7 +243,10 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
     instance *inst = (instance *)userhandle;
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
     double objval = CPX_INFBOUND;
-
+    if (inst->param.verbose >= NORMAL)
+    {
+        printf("*** callback #%d (candidate)\n", ++(inst->param.callback_counter));
+    }
     if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->cols - 1, &objval))
         print_error("CPXcallbackgetcandidatepoint error");
 
@@ -281,13 +284,12 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
             }
             if (CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value))
                 print_error("CPXcallbackrejectcandidate() error"); // reject the solution and adds one cut
-
+            if (inst->param.verbose >= DEBUG)
+            {
+                printf("### added a SEC constraint \n");
+            }
             free(index);
             free(value);
-        }
-        if (inst->param.verbose >= NORMAL)
-        {
-            printf("*** callback #%d (candidate): solution rejected, added %d SEC ***\n", ++(inst->param.callback_counter), ncomp);
         }
     }
     free(comp);
@@ -302,7 +304,11 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     instance *inst = (instance *)userhandle;
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
     double objval = CPX_INFBOUND;
-
+    double const eps = 0.1;
+    if (inst->param.verbose >= NORMAL)
+    {
+        printf("*** callback #%d (relaxation) \n", ++(inst->param.callback_counter));
+    }
     if (CPXcallbackgetrelaxationpoint(context, xstar, 0, inst->cols - 1, &objval))
         print_error("CPXcallbackgetrelaxationpoint error");
 
@@ -325,48 +331,61 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     if (CCcut_connect_components(inst->dimension, inst->cols, elist, xstar, &ncomp, &length_comp, &comp))
         print_error("CCcut_connect_components error");
 
+    doit_fn_input in;
+    in.context = context;
+    in.inst = inst;
     if (ncomp > 1)
     {
-        // add one cut for each connected component
-        for (int mycomp = 0; mycomp < ncomp; mycomp++)
-        {
-            int nnz = 0;
-            int purgeable = CPX_USECUT_FILTER;
-            int local = 0;
-            int izero = 0;
-            char sense = 'L';
-            double rhs = length_comp[mycomp] - 1.0; // in order to have |S|-1 in the end
-            int *index = (int *)calloc(inst->cols, sizeof(int));
-            double *value = (double *)calloc(inst->cols, sizeof(double));
-
-            for (int i = 0; i < inst->dimension; i++)
-            {
-                if (comp[i] != mycomp)
-                    continue;
-                for (int j = i + 1; j < inst->dimension; j++)
-                {
-                    if (comp[j] != mycomp)
-                        continue;
-                    index[nnz] = xpos(i, j, inst);
-                    value[nnz++] = 1.0;
-                }
-            }
-
-            if (CPXcallbackaddusercuts(context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local))
-                print_error("CPXcallbackaddusercuts() error"); // add user cut
-
-            free(index);
-            free(value);
-        }
-        if (inst->param.verbose >= NORMAL)
-        {
-            printf("*** callback #%d (relaxation): added %d user cut ***\n", ++(inst->param.callback_counter), ncomp);
-        }
+        if (CCcut_violated_cuts(inst->dimension, inst->cols, elist, xstar, 2 - eps, doit_fn_concorde, (void *)&in))
+            print_error("CCcut_violated_cuts error");
     }
 
     free(comp);
     free(length_comp);
     free(xstar);
+    return 0;
+}
+
+// double cutval = value of the cut
+// int cutcount = number of nodes in the cut (rhs + 1 ?)
+// int ∗cut = the array of the members of the cut (indeces of the nodes in the cut?)
+int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
+{
+    //CPXCALLBACKCONTEXTptr context = (CPXCALLBACKCONTEXTptr)void_context;
+    doit_fn_input *input = (doit_fn_input *)in;
+    double rhs = cutcount - 1.0;
+    int nnz = 0;
+    char sense = 'L';
+    //int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
+    int purgeable = CPX_USECUT_FORCE;
+    int local = 0;
+    int izero = 0;
+    if (input->inst->param.verbose >= DEBUG)
+    {
+        printf("#### cutval: %f ", cutval);
+        printf("#### cutcount: %d \n", cutcount);
+        for (int i = 0; i < cutcount; i++)
+            printf("cut[%d] = %d\n", i, cut[i]);
+    }
+    double *value = (double *)calloc(cutcount * (cutcount - 1) / 2, sizeof(double));
+    int *index = (int *)calloc(cutcount * (cutcount - 1) / 2, sizeof(int));
+    for (int i = 0; i < cutcount; i++)
+    {
+        for (int j = i + 1; j < cutcount; j++)
+        {
+            index[nnz] = xpos(i, j, input->inst);
+            value[nnz++] = 1.0;
+        }
+    }
+
+    if (CPXcallbackaddusercuts(input->context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local))
+        print_error("CPXcallbackaddusercuts() error"); // add user cut
+    if (input->inst->param.verbose >= DEBUG)
+    {
+        printf("### added a user cut \n");
+    }
+    free(index);
+    free(value);
     return 0;
 }
 
