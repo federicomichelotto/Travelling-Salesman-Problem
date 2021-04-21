@@ -301,6 +301,10 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
 
 static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
 {
+    double ticks = 0;
+    CPXcallbackgetinfodbl(context, CPXCALLBACKINFO_DETTIME, &ticks);
+    if (!((int)ticks % 10))
+        return 0;
     instance *inst = (instance *)userhandle;
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
     double objval = CPX_INFBOUND;
@@ -334,11 +338,13 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     doit_fn_input in;
     in.context = context;
     in.inst = inst;
-    if (ncomp > 1)
+
+    if (ncomp == 1)
     {
         if (CCcut_violated_cuts(inst->dimension, inst->cols, elist, xstar, 2 - eps, doit_fn_concorde, (void *)&in))
             print_error("CCcut_violated_cuts error");
     }
+
 
     free(comp);
     free(length_comp);
@@ -351,13 +357,11 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
 // int ∗cut = the array of the members of the cut (indeces of the nodes in the cut?)
 int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
 {
-    //CPXCALLBACKCONTEXTptr context = (CPXCALLBACKCONTEXTptr)void_context;
     doit_fn_input *input = (doit_fn_input *)in;
     double rhs = cutcount - 1.0;
     int nnz = 0;
     char sense = 'L';
-    //int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
-    int purgeable = CPX_USECUT_FORCE;
+    int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
     int local = 0;
     int izero = 0;
     if (input->inst->param.verbose >= DEBUG)
@@ -369,12 +373,16 @@ int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
     }
     double *value = (double *)calloc(cutcount * (cutcount - 1) / 2, sizeof(double));
     int *index = (int *)calloc(cutcount * (cutcount - 1) / 2, sizeof(int));
+
+    // CHECK THIS
     for (int i = 0; i < cutcount; i++)
     {
-        for (int j = i + 1; j < cutcount; j++)
+        for (int j = 0; j < cutcount; j++)
         {
-            index[nnz] = xpos(i, j, input->inst);
-            value[nnz++] = 1.0;
+            if(cut[i] < cut[j]){
+                index[nnz] = xpos(cut[i], cut[j], input->inst);
+                value[nnz++] = 1.0;
+            }
         }
     }
 
