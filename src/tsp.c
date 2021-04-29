@@ -458,6 +458,10 @@ int TSPopt(instance *inst)
     if (CPXmipopt(env, lp))
         print_error("CPXmipopt() error");
 
+    // Use the optimal solution found by CPLEX
+    if (CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1))
+        print_error("CPXgetx() error");
+
     CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
     CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
 
@@ -482,8 +486,6 @@ int TSPopt(instance *inst)
     }
     else if (inst->model_type == 11)
     {
-        if (CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1))
-            print_error("CPXgetx() error");
         if (inst->param.verbose >= NORMAL)
             printf("Initial incumbent: %f\n", inst->z_best);
         hard_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20, 0.8);
