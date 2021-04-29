@@ -243,10 +243,12 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
     instance *inst = (instance *)userhandle;
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
     double objval = CPX_INFBOUND;
+    /*
     if (inst->param.verbose >= NORMAL)
     {
         printf("*** callback #%d (candidate)\n", ++(inst->param.callback_counter));
     }
+    */
     if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->cols - 1, &objval))
         print_error("CPXcallbackgetcandidatepoint error");
 
@@ -284,10 +286,12 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
             }
             if (CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value))
                 print_error("CPXcallbackrejectcandidate() error"); // reject the solution and adds one cut
+            /*
             if (inst->param.verbose >= DEBUG)
             {
                 printf("### added a SEC constraint \n");
             }
+            */
             free(index);
             free(value);
         }
@@ -309,10 +313,12 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
     double objval = CPX_INFBOUND;
     double const eps = 0.1;
+    /*
     if (inst->param.verbose >= NORMAL)
     {
         printf("*** callback #%d (relaxation) \n", ++(inst->param.callback_counter));
     }
+    */
     if (CPXcallbackgetrelaxationpoint(context, xstar, 0, inst->cols - 1, &objval))
         print_error("CPXcallbackgetrelaxationpoint error");
 
@@ -327,6 +333,8 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     {
         for (int j = i + 1; j < inst->dimension; j++)
         {
+            // CHECK xstar > 0 (eps)
+            // CCxstar
             elist[loader++] = i;
             elist[loader++] = j;
         }
@@ -344,7 +352,6 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
         if (CCcut_violated_cuts(inst->dimension, inst->cols, elist, xstar, 2 - eps, doit_fn_concorde, (void *)&in))
             print_error("CCcut_violated_cuts error");
     }
-
 
     free(comp);
     free(length_comp);
@@ -364,6 +371,7 @@ int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
     int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
     int local = 0;
     int izero = 0;
+    /*
     if (input->inst->param.verbose >= DEBUG)
     {
         printf("#### cutval: %f ", cutval);
@@ -371,6 +379,7 @@ int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
         for (int i = 0; i < cutcount; i++)
             printf("cut[%d] = %d\n", i, cut[i]);
     }
+    */
     double *value = (double *)calloc(cutcount * (cutcount - 1) / 2, sizeof(double));
     int *index = (int *)calloc(cutcount * (cutcount - 1) / 2, sizeof(int));
 
@@ -379,19 +388,23 @@ int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
     {
         for (int j = 0; j < cutcount; j++)
         {
-            if(cut[i] < cut[j]){
+            if (cut[i] < cut[j])
+            {
                 index[nnz] = xpos(cut[i], cut[j], input->inst);
                 value[nnz++] = 1.0;
             }
         }
     }
+    // TODO: CHECK nnz = cutcount*(cutcount-1)/2
 
     if (CPXcallbackaddusercuts(input->context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local))
         print_error("CPXcallbackaddusercuts() error"); // add user cut
+    /*
     if (input->inst->param.verbose >= DEBUG)
     {
         printf("### added a user cut \n");
     }
+    */
     free(index);
     free(value);
     return 0;
@@ -409,6 +422,8 @@ int TSPopt(instance *inst)
     //CPXgetdettime(env, &inst->timestamp_start); //ticks
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
+    inst->best_sol = (double *)malloc(inst->cols * sizeof(double));
+    inst->n_edges = 0;
 
     char path[1000];
     if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed,
@@ -419,57 +434,70 @@ int TSPopt(instance *inst)
     CPXsetlogfilename(env, path, "w");                           // Save log
     CPXsetintparam(env, CPX_PARAM_RANDOMSEED, inst->param.seed); // Set seed
     CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit);
-    CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC); // Set opportunistic mode
+    //CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC); // Set opportunistic mode
 
     // CPLEX's precision setting
     CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0); // very important if big-M is present
     CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
     CPXsetdblparam(env, CPX_PARAM_EPGAP, 1e-5); // abort Cplex when relative gap below this value
-    if (inst->model_type == 10)                 // callback method
+
+    if (inst->model_type == 10) // callback method
     {
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION;
         if (CPXcallbacksetfunc(env, lp, contextid, callback_driver, inst))
             print_error("CPXcallbacksetfunc() error");
     }
+    if (inst->model_type == 11) // hard fixing method
+    {
+        CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION;
+        if (CPXcallbacksetfunc(env, lp, contextid, callback_driver, inst))
+            print_error("CPXcallbacksetfunc() error");
+        // we don't want to spend all the available time for just one run!
+        CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit / 20);
+    }
 
     if (CPXmipopt(env, lp))
         print_error("CPXmipopt() error");
+
+    CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
+    CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
 
     printf("\nSOLUTION -----------------------------------------------\n");
     printf("\nRUNNING : %s\n", model_full_name[inst->model_type]);
 
     // Use the optimal solution found by CPLEX
-    double *xstar = (double *)calloc(inst->cols, sizeof(double));
-    if (CPXgetx(env, lp, xstar, 0, inst->cols - 1))
-        print_error("CPXgetx() error");
-
-    inst->n_edges = 0;
 
     if (inst->model_type == 0 || inst->model_type == 10) // undirected graph
     {
-        gather_solution_path(inst, xstar, 0);
+        gather_solution_path(inst, inst->best_sol, 0);
     }
     else if (inst->model_type == 8 || inst->model_type == 9) // Benders
     {
         //        printf("Benders' method is running...\n");
         benders(env, lp, inst);
 
-        double *xstar = (double *)calloc(inst->cols, sizeof(double));
-        if (CPXgetx(env, lp, xstar, 0, inst->cols - 1))
+        if (CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1))
             print_error("CPXgetx() error");
 
-        gather_solution_path(inst, xstar, 0);
+        gather_solution_path(inst, inst->best_sol, 0);
+    }
+    else if (inst->model_type == 11)
+    {
+        if (CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1))
+            print_error("CPXgetx() error");
+        if (inst->param.verbose >= NORMAL)
+            printf("Initial incumbent: %f\n", inst->z_best);
+        hard_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20, 0.8);
+        gather_solution_path(inst, inst->best_sol, 0);
     }
     else
     {
-        gather_solution_path(inst, xstar, 1);
+        gather_solution_path(inst, inst->best_sol, 1);
     }
 
     if (inst->n_edges != inst->dimension)
         print_error("not a tour.");
 
-    CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
-    CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
     printf("\nObjective value: %lf\n", inst->z_best);
     printf("Lower bound: %lf\n", inst->best_lb);
     // solution status of the problem
@@ -478,7 +506,6 @@ int TSPopt(instance *inst)
     // get timestamp
     CPXgettime(env, &inst->timestamp_finish);
     //CPXgetdettime(env, &inst->timestamp_finish); // ticks
-    free(xstar);
     // Free and close CPLEX model
     CPXfreeprob(env, &lp);
     CPXcloseCPLEX(&env);
@@ -494,6 +521,7 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
     case 8:  // benders model (SEC)
     case 9:  // benders model (SEC) - kruskal
     case 10: // callback model (SEC)
+    case 11: // hard fixing heuristic
         basic_model_no_sec(env, lp, inst);
         break;
     case 1: // MTZ with static constraints
@@ -1598,11 +1626,11 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
     int it = 0; // iteration number
     while (!done)
     {
-        // update time limit
+        // update time left
         CPXgettime(env, &inst->timestamp_finish);
         //CPXgetdettime(env, &inst->timestamp_finish); // ticks
         inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start); // TO DO
-        if (inst->time_left <= 0.0)
+        if (inst->time_left <= 0.5)
             return;
         CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
 
@@ -1718,6 +1746,69 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
         free(succ);
         free(xstar);
         free(length_comp);
+    }
+}
+
+void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, double fix_ratio)
+{
+    while (1)
+    {
+        // update time left
+        CPXgettime(env, &inst->timestamp_finish);
+        //CPXgetdettime(env, &inst->timestamp_finish); // ticks
+        inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
+        if (inst->time_left <= 0.5)
+            return;
+        if (inst->time_left <= time_limit_iter)
+            CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
+        if (inst->param.verbose >= DEBUG)
+            printf("*** time_left = %f\n", inst->time_left);
+
+        // allocate two arrays with size ncols
+        int *indices = (int *)malloc(inst->cols * sizeof(int));
+        double *values = (double *)malloc(inst->cols * sizeof(double));
+        char senses[inst->cols]; // we only need to change the lower bound of our variables
+        // no need to use xpos(i,j)
+        for (int k = 0; k < inst->cols; k++)
+        {
+            indices[k] = k;
+            values[k] = 0.0;
+            senses[k] = 'L';
+            // random selection a subset of arcs of the best solution found so far
+            //printf("*** best_sol[%d] = %f\n",k,inst->best_sol[k]);
+            if (inst->best_sol[k] > 0.5)
+                if ((rand() % 100) + 1 < fix_ratio*100)
+                    values[k] = 1.0;
+        }
+
+        // change the lower bounds
+        if (CPXchgbds(env, lp, inst->cols, indices, senses, values))
+            print_error("CPXchgbds error");
+
+        // solve with the new constraints
+        if (CPXmipopt(env, lp))
+            print_error("CPXmipopt() error");
+
+        // retrieve the incumbent of the current solution
+        double current_incumbent;
+        CPXgetobjval(env, lp, &current_incumbent);
+        if (inst->param.verbose >= DEBUG)
+            printf("*** current_incumbent = %f\n", current_incumbent);
+        // check if the current solution is better than the best so far
+        if (current_incumbent < inst->z_best)
+        {
+            // update best incumbent
+            inst->z_best = current_incumbent;
+            // update arcs' selection
+            int status = CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1);
+            if (status)
+                print_error_status("Failed to obtain the values in hard_fixing_heuristic method", status);
+            if (inst->param.verbose >= NORMAL)
+                printf("New incumbent: %f\n", inst->z_best);
+        }
+
+        free(indices);
+        free(values);
     }
 }
 

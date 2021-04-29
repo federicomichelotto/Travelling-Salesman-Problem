@@ -64,18 +64,19 @@ typedef struct
     double time_left;  // Time left for the case of multiple runs
     double timestamp_start;
     double timestamp_finish;
-    int model_type; // Specifies the type of the model
-    double z_best;  // Value of the best solution available
-    double best_lb;
+    int model_type;   // Specifies the type of the model
+    double z_best;    // Value of the best solution available (incumbent)
+    double best_lb;   // best lower bound
+    double *best_sol; // Best xstar found
     int cols;
 
 } instance;
 
-typedef struct{
+typedef struct
+{
     instance *inst;
     CPXCALLBACKCONTEXTptr context;
 } doit_fn_input;
-
 
 // Enumerations
 enum verbose_level
@@ -113,7 +114,8 @@ static const char *model_name[] = {
     "GGLS",
     "BENDERS'",
     "BENDERS' (KRUSKAL)",
-    "CALLBACK"};
+    "CALLBACK",
+    "HARD FIXING HEURISTIC"};
 
 static const char *model_full_name[] = {
     "Basic model w/o SEC",
@@ -126,7 +128,8 @@ static const char *model_full_name[] = {
     "Garvish-Graves lazy compact model w/ SEC2",
     "Benders' method'",
     "Benders' method' (Kruskal)",
-    "Callback method"};
+    "Callback method",
+    "Hard fixing heuristic"};
 
 static int verbose = NORMAL;
 
@@ -166,6 +169,9 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 7: GGLS
 void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
+
+// model 11: Hard fixing heuristic
+void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, double fix_ratio);
 
 // Some useful functions
 
