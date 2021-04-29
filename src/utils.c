@@ -74,6 +74,11 @@ void parse_command_line(int argc, char **argv, instance *inst)
                 }
                 continue;
             }
+            if (strcmp(argv[i], "--ticks") == 0)
+            {
+                    inst->param.ticks = 1;
+            }
+
         }
 
         print_command_line(inst);
@@ -264,6 +269,7 @@ void initialize_instance(instance *inst)
     inst->param.run = -1;
     inst->param.verbose = NORMAL;
     inst->param.callback_counter = 0;
+    inst->param.ticks = 0;
 
     inst->dimension = -1;
     inst->nodes = NULL;

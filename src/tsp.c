@@ -418,8 +418,7 @@ int TSPopt(instance *inst)
     CPXENVptr env = CPXopenCPLEX(&error);
     CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
     // get timestamp
-    CPXgettime(env, &inst->timestamp_start);
-    //CPXgetdettime(env, &inst->timestamp_start); //ticks
+    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : CPXgettime(env, &inst->timestamp_start);
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
     inst->best_sol = (double *)malloc(inst->cols * sizeof(double));
@@ -504,8 +503,8 @@ int TSPopt(instance *inst)
     int lpstat = CPXgetstat(env, lp);
     printf("CPLEX status: %d\n", lpstat);
     // get timestamp
-    CPXgettime(env, &inst->timestamp_finish);
-    //CPXgetdettime(env, &inst->timestamp_finish); // ticks
+    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
+
     // Free and close CPLEX model
     CPXfreeprob(env, &lp);
     CPXcloseCPLEX(&env);
@@ -1627,8 +1626,7 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
     while (!done)
     {
         // update time left
-        CPXgettime(env, &inst->timestamp_finish);
-        //CPXgetdettime(env, &inst->timestamp_finish); // ticks
+        inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
         inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start); // TO DO
         if (inst->time_left <= 0.5)
             return;
@@ -1754,8 +1752,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     while (1)
     {
         // update time left
-        CPXgettime(env, &inst->timestamp_finish);
-        //CPXgetdettime(env, &inst->timestamp_finish); // ticks
+        inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
         inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
         if (inst->time_left <= 0.5)
             return;
@@ -1777,7 +1774,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             // random selection a subset of arcs of the best solution found so far
             //printf("*** best_sol[%d] = %f\n",k,inst->best_sol[k]);
             if (inst->best_sol[k] > 0.5)
-                if ((rand() % 100) + 1 < fix_ratio*100)
+                if ((rand() % 100) + 1 < fix_ratio * 100)
                     values[k] = 1.0;
         }
 

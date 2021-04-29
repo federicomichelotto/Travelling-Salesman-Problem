@@ -24,7 +24,7 @@ typedef struct
     int run;                // Number of current run
     int verbose;
     int callback_counter; // #callback's called
-
+    int ticks;
 } parameter;
 
 typedef struct
