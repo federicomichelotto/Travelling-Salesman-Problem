@@ -112,6 +112,7 @@ static const char *model_name[] = {
     "GG",
     "GGL",
     "GGLS",
+    "GG_ORIGINAL",
     "BENDERS'",
     "BENDERS' (KRUSKAL)",
     "CALLBACK",
@@ -126,6 +127,7 @@ static const char *model_full_name[] = {
     "Garvish-Graves compact model",
     "Garvish-Graves lazy compact model",
     "Garvish-Graves lazy compact model w/ SEC2",
+    "Garvish-Graves compact model original",
     "Benders' method'",
     "Benders' method' (Kruskal)",
     "Callback method",
@@ -144,8 +146,9 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
 // Basic model (undirected graphs)
 // model 0: basic model (no SEC)
 void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
+void basic_model_directed(CPXENVptr env, CPXLPptr lp, instance *inst);
 
-// model 8: benders model (SEC)
+// model 9-10: benders model (SEC)
 void benders(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // Compact model (directed graphs)
@@ -170,7 +173,10 @@ void GG_lazy(CPXENVptr env, CPXLPptr lp, instance *inst);
 // model 7: GGLS
 void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst);
 
-// model 11: Hard fixing heuristic
+// model 8: GG_ORIGINAL
+void GG_original(CPXENVptr env, CPXLPptr lp, instance *inst);
+
+// model 12: Hard fixing heuristic
 void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, double fix_ratio);
 
 // Some useful functions
@@ -196,7 +202,5 @@ int xpos(int i, int j, instance *inst);     // position in the model for undirec
 int xpos_dir(int i, int j, instance *inst); // position in the model for directed graphs
 int upos(int i, instance *inst);            // position in the model of i-th u-variable
 int ypos(int i, int j, instance *inst);     // position in the model of y-variable for the arc (i,j)
-
-void print_time_csv();
 
 #endif //TSP_H
