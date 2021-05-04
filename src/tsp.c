@@ -69,7 +69,7 @@ double gather_solution_path(instance *inst, const double *xstar, int type)
                 if (xstar[xpos(i, j, inst)] > 0.5)
                 {
                     if (inst->param.verbose >= DEBUG)
-                        printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+//                        printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
                     inst->edges[inst->n_edges].dist = dist(i, j, inst);
                     inst->edges[inst->n_edges].prev = i;
                     inst->edges[inst->n_edges].next = j;
@@ -1627,9 +1627,9 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 {
     while (1)
     {
-        // inst->n_edges = 0;
-        // gather_solution_path(inst, inst->best_sol, 0);
-        // plot_solution(inst);
+         inst->n_edges = 0;
+         gather_solution_path(inst, inst->best_sol, 0);
+         plot_solution(inst);
 
         // update time left
         inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
@@ -1692,11 +1692,12 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, int k)
 {
     int iter = 0;
+    int stuck = 0;
     while (1)
     {
-        // inst->n_edges = 0;
-        // gather_solution_path(inst, inst->best_sol, 0);
-        // plot_solution(inst);
+         inst->n_edges = 0;
+         gather_solution_path(inst, inst->best_sol, 0);
+         plot_solution(inst);
 
         // update time left
         inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
@@ -1708,18 +1709,25 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         if (inst->param.verbose >= DEBUG)
             printf("*** time_left = %f\n", inst->time_left);
 
+
+        if (stuck == 1 && k <= 50){
+            k = k + 10;
+            printf("Stuck : %d\n", stuck);
+            printf("New radius: %d\n", k);
+
+            stuck = 0;
+        } else if (k > 50){
+            printf("Best solution found : %f", inst->z_best);
+            print_error("No improved solution found!");
+        }
+
         int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
 
-        if (iter)
-        {
-            if (CPXdelrows(env, lp, row, row-1))
-                print_error("CPXdelrows error");           
-        }
         double rhs = inst->dimension - k;
         char sense = 'G';
         char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
         rname[0] = (char *)calloc(100, sizeof(char));
-        sprintf(rname[0], "soft-fixing(%d)", iter++);
+        sprintf(rname[0], "soft_fixing(%d)", iter++);
 
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("CPXnewrows error");
@@ -1753,8 +1761,7 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         if (inst->param.verbose >= DEBUG)
             printf("*** current_incumbent = %f\n", current_incumbent);
         // check if the current solution is better than the best so far
-        if (current_incumbent < inst->z_best)
-        {
+        if (current_incumbent < inst->z_best) {
             // update best incumbent
             inst->z_best = current_incumbent;
             // update arcs' selection
@@ -1763,7 +1770,15 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
                 print_error_status("Failed to obtain the values in soft_fixing_heuristic method", status);
             if (inst->param.verbose >= NORMAL)
                 printf("New incumbent: %f\n", inst->z_best);
+        } else {
+            stuck++;
         }
+
+        if (iter) {
+            if (CPXdelrows(env, lp, row - 1, row))
+                print_error("CPXdelrows error");
+        }
+
         free(rname[0]);
         free(rname);
         free(indices);
