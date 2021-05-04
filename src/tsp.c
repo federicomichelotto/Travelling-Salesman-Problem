@@ -458,7 +458,7 @@ int TSPopt(instance *inst)
         if (CPXcallbacksetfunc(env, lp, contextid, callback_driver, inst))
             print_error("CPXcallbacksetfunc() error");
     }
-    if (inst->model_type == 12) // hard fixing method
+    if (inst->model_type == 12 || inst->model_type == 13) // hard/soft fixing method
     {
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION;
         if (CPXcallbacksetfunc(env, lp, contextid, callback_driver, inst))
@@ -504,6 +504,13 @@ int TSPopt(instance *inst)
         hard_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20, 0.8);
         gather_solution_path(inst, inst->best_sol, 0);
     }
+    else if (inst->model_type == 13)
+    {
+        if (inst->param.verbose >= NORMAL)
+            printf("Initial incumbent: %f\n", inst->z_best);
+        soft_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20, 5);
+        gather_solution_path(inst, inst->best_sol, 0);
+    }
     else
     {
         gather_solution_path(inst, inst->best_sol, 1);
@@ -534,6 +541,7 @@ void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
     case 10: // benders model (SEC) - kruskal
     case 11: // callback model (SEC)
     case 12: // hard fixing heuristic
+    case 13: // soft fixing heuristic
         basic_model_no_sec(env, lp, inst);
         break;
     case 1: // MTZ with static constraints
@@ -1441,7 +1449,6 @@ void GG_original(CPXENVptr env, CPXLPptr lp, instance *inst)
         }
     }
 
-    
     // Add out-flow constraint for node 0: sum(y_0j) = n-1
     double rhs = inst->dimension - 1;
     char sense = 'E'; // E stands for equal
@@ -1620,9 +1627,9 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 {
     while (1)
     {
-        inst->n_edges = 0;
-        gather_solution_path(inst, inst->best_sol, 0);
-        plot_solution(inst);
+        // inst->n_edges = 0;
+        // gather_solution_path(inst, inst->best_sol, 0);
+        // plot_solution(inst);
 
         // update time left
         inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
@@ -1679,5 +1686,87 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 
         free(indices);
         free(values);
+    }
+}
+
+void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, int k)
+{
+    int iter = 0;
+    while (1)
+    {
+        // inst->n_edges = 0;
+        // gather_solution_path(inst, inst->best_sol, 0);
+        // plot_solution(inst);
+
+        // update time left
+        inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
+        inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
+        if (inst->time_left <= 0.5)
+            return;
+        if (inst->time_left <= time_limit_iter)
+            CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
+        if (inst->param.verbose >= DEBUG)
+            printf("*** time_left = %f\n", inst->time_left);
+
+        int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
+
+        if (iter)
+        {
+            if (CPXdelrows(env, lp, row, row-1))
+                print_error("CPXdelrows error");           
+        }
+        double rhs = inst->dimension - k;
+        char sense = 'G';
+        char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
+        rname[0] = (char *)calloc(100, sizeof(char));
+        sprintf(rname[0], "soft-fixing(%d)", iter++);
+
+        if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
+            print_error("CPXnewrows error");
+
+        int nedges = inst->dimension * (inst->dimension - 1) / 2;
+        int rows[nedges];
+        int *indices = (int *)malloc(inst->cols * sizeof(int));
+        double *coeffs = (double *)malloc(inst->cols * sizeof(double));
+        for (int i = 0; i < nedges; i++)
+        {
+            rows[i] = row;
+            indices[i] = i;
+            coeffs[i] = 1.0;
+        }
+        if (CPXchgcoeflist(env, lp, nedges, rows, indices, coeffs))
+            print_error("wrong CPXchgcoef [degree]");
+
+        // rewrite the LP model
+        char path[1000];
+        if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp"))
+            print_error("Unable to generate path");
+        CPXwriteprob(env, lp, path, NULL);
+
+        // solve with the new constraint
+        if (CPXmipopt(env, lp))
+            print_error("CPXmipopt() error");
+
+        // retrieve the incumbent of the current solution
+        double current_incumbent;
+        CPXgetobjval(env, lp, &current_incumbent);
+        if (inst->param.verbose >= DEBUG)
+            printf("*** current_incumbent = %f\n", current_incumbent);
+        // check if the current solution is better than the best so far
+        if (current_incumbent < inst->z_best)
+        {
+            // update best incumbent
+            inst->z_best = current_incumbent;
+            // update arcs' selection
+            int status = CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1);
+            if (status)
+                print_error_status("Failed to obtain the values in soft_fixing_heuristic method", status);
+            if (inst->param.verbose >= NORMAL)
+                printf("New incumbent: %f\n", inst->z_best);
+        }
+        free(rname[0]);
+        free(rname);
+        free(indices);
+        free(coeffs);
     }
 }

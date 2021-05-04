@@ -116,7 +116,8 @@ static const char *model_name[] = {
     "BENDERS'",
     "BENDERS' (KRUSKAL)",
     "CALLBACK",
-    "HARD FIXING HEURISTIC"};
+    "HARD FIXING HEURISTIC",
+    "SOFT FIXING HEURISTIC"};
 
 static const char *model_full_name[] = {
     "Basic model w/o SEC",
@@ -131,7 +132,8 @@ static const char *model_full_name[] = {
     "Benders' method'",
     "Benders' method' (Kruskal)",
     "Callback method",
-    "Hard fixing heuristic"};
+    "Hard fixing heuristic",
+    "Soft fixing heuristic"};
 
 static int verbose = NORMAL;
 
@@ -178,6 +180,9 @@ void GG_original(CPXENVptr env, CPXLPptr lp, instance *inst);
 
 // model 12: Hard fixing heuristic
 void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, double fix_ratio);
+
+// model 13: Soft fixing heuristic
+void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, int k);
 
 // Some useful functions
 
