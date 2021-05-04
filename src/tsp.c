@@ -1710,13 +1710,13 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             printf("*** time_left = %f\n", inst->time_left);
 
 
-        if (stuck == 1 && k <= 50){
-            k = k + 10;
+        if (stuck == 1 && k <= 20){
+            k = k + 2;
             printf("Stuck : %d\n", stuck);
             printf("New radius: %d\n", k);
 
             stuck = 0;
-        } else if (k > 50){
+        } else if (k > 20){
             printf("Best solution found : %f", inst->z_best);
             print_error("No improved solution found!");
         }
