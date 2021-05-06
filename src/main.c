@@ -17,10 +17,11 @@ int main(int argc, char **argv)
     if (verbose >= QUIET)
         inst.param.ticks ? printf("TSP solved in %f ticks\n", time_elapsed) : printf("TSP solved in %f seconds\n", time_elapsed);
     
-    if (plot_solution(&inst)) print_error("plot_solution() error");
+    if (plot_solution(&inst,0)) print_error("plot_solution() error");
     //plot_solution_edges(inst.n_edges, inst.nodes, inst.edges) ? print_error("plot_solution_edges() error") : printf("... gnuplot ok\n");
 
     generate_csv_record(inst.param.name, inst.param.seed, inst.model_type, inst.z_best, time_elapsed, inst.param.run);
+
 
     // Free the memory used by the instance
     free_instance(&inst);

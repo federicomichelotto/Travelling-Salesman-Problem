@@ -182,7 +182,7 @@ void GG_original(CPXENVptr env, CPXLPptr lp, instance *inst);
 void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, double fix_ratio);
 
 // model 13: Soft fixing heuristic
-void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, int k);
+void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter);
 
 // Some useful functions
 

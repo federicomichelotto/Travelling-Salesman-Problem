@@ -58,10 +58,11 @@ double dist(int i, int j, instance *inst)
 
 double gather_solution_path(instance *inst, const double *xstar, int type)
 {
+    inst->n_edges = 0;
     if (type == 0)
     {
         if (inst->param.verbose >= DEBUG)
-            printf("Printing selected edges...\n");
+            printf("Saving selected edges...\n");
         for (int i = 0; i < inst->dimension; i++)
         {
             for (int j = i + 1; j < inst->dimension; j++)
@@ -69,8 +70,8 @@ double gather_solution_path(instance *inst, const double *xstar, int type)
                 if (xstar[xpos(i, j, inst)] > 0.5)
                 {
                     if (inst->param.verbose >= DEBUG)
-//                        printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
+                        //                        printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
+                        inst->edges[inst->n_edges].dist = dist(i, j, inst);
                     inst->edges[inst->n_edges].prev = i;
                     inst->edges[inst->n_edges].next = j;
                     if (++inst->n_edges > inst->dimension)
@@ -434,7 +435,6 @@ int TSPopt(instance *inst)
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
     inst->best_sol = (double *)malloc(inst->cols * sizeof(double));
-    inst->n_edges = 0;
 
     char path[1000];
     if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed,
@@ -442,16 +442,21 @@ int TSPopt(instance *inst)
         print_error("Unable to generate path");
 
     // CPLEX's parameter setting
-    CPXsetlogfilename(env, path, "w");                           // Save log
-    CPXsetintparam(env, CPX_PARAM_RANDOMSEED, inst->param.seed); // Set seed
-    CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit);
-    CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC); // Set opportunistic mode
+    CPXsetlogfilename(env, path, "w");                               // Save log
+    if (CPXsetintparam(env, CPX_PARAM_RANDOMSEED, inst->param.seed)) // Set seed
+        print_error("CPX_PARAM_RANDOMSEED error");
+    if (CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit))
+        print_error("CPX_PARAM_TILIM error");
+    if (CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC)) // Set opportunistic mode
+        print_error("CPXPARAM_Parallel error");
 
     // CPLEX's precision setting
-    CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0); // very important if big-M is present
-    CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9);
-    CPXsetdblparam(env, CPX_PARAM_EPGAP, 1e-5); // abort Cplex when relative gap below this value
-
+    if (CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0)) // very important if big-M is present
+        print_error("CPX_PARAM_EPINT error");
+    if (CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9))
+        print_error("CPX_PARAM_EPRHS error");
+    if (CPXsetdblparam(env, CPX_PARAM_EPGAP, 1e-5)) // abort Cplex when relative gap below this value
+        print_error("CPX_PARAM_EPGAP error");
     if (inst->model_type == 11) // callback method
     {
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION;
@@ -463,8 +468,12 @@ int TSPopt(instance *inst)
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION;
         if (CPXcallbacksetfunc(env, lp, contextid, callback_driver, inst))
             print_error("CPXcallbacksetfunc() error");
+        // node limit = 0
+        if (CPXsetintparam(env, CPX_PARAM_NODELIM, 0))
+            print_error("CPX_PARAM_NODELIM error");
         // we don't want to spend all the available time for just one run!
-        CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit / 20);
+        if (CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit / 20))
+            print_error("CPX_PARAM_TILIM error");
     }
 
     if (CPXmipopt(env, lp))
@@ -499,17 +508,22 @@ int TSPopt(instance *inst)
     }
     else if (inst->model_type == 12)
     {
+        gather_solution_path(inst, inst->best_sol, 0);
         if (inst->param.verbose >= NORMAL)
             printf("Initial incumbent: %f\n", inst->z_best);
+        if (CPXsetintparam(env, CPX_PARAM_NODELIM, 2100000000))
+            print_error("CPX_PARAM_NODELIM error");
         hard_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20, 0.8);
-        gather_solution_path(inst, inst->best_sol, 0);
     }
     else if (inst->model_type == 13)
     {
+        gather_solution_path(inst, inst->best_sol, 0);
         if (inst->param.verbose >= NORMAL)
             printf("Initial incumbent: %f\n", inst->z_best);
-        soft_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20, 5);
-        gather_solution_path(inst, inst->best_sol, 0);
+        // reset the node limit to default
+        if (CPXsetintparam(env, CPX_PARAM_NODELIM, 2100000000))
+            print_error("CPX_PARAM_NODELIM error");
+        soft_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20);
     }
     else
     {
@@ -1557,10 +1571,9 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
             gather_solution_path(inst, xstar, 0);
             if (inst->param.verbose >= DEBUG)
             {
-                if (plot_solution(inst))
+                if (plot_solution(inst, it))
                     print_error("plot_solution() error");
             }
-            inst->n_edges = 0;
 
             // Add SEC to each component found
 
@@ -1627,10 +1640,6 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 {
     while (1)
     {
-         inst->n_edges = 0;
-         gather_solution_path(inst, inst->best_sol, 0);
-         plot_solution(inst);
-
         // update time left
         inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
         inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
@@ -1639,14 +1648,14 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         if (inst->time_left <= time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
         if (inst->param.verbose >= DEBUG)
-            printf("*** time_left = %f\n", inst->time_left);
+            printf("*** time left = %f\n", inst->time_left);
 
         // allocate two arrays with size ncols
         int *indices = (int *)malloc(inst->cols * sizeof(int));
         double *values = (double *)malloc(inst->cols * sizeof(double));
         char senses[inst->cols]; // we only need to change the lower bound of our variables
-        // no need to use xpos(i,j)
-        for (int k = 0; k < inst->cols; k++)
+        int nedges = inst->dimension * (inst->dimension - 1) / 2;
+        for (int k = 0; k < nedges; k++)
         {
             indices[k] = k;
             values[k] = 0.0;
@@ -1659,7 +1668,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         }
 
         // change the lower bounds
-        if (CPXchgbds(env, lp, inst->cols, indices, senses, values))
+        if (CPXchgbds(env, lp, nedges, indices, senses, values))
             print_error("CPXchgbds error");
 
         // solve with the new constraints
@@ -1682,6 +1691,11 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
                 print_error_status("Failed to obtain the values in hard_fixing_heuristic method", status);
             if (inst->param.verbose >= NORMAL)
                 printf("New incumbent: %f\n", inst->z_best);
+            gather_solution_path(inst, inst->best_sol, 0);
+            //plot_solution(inst, 0);
+            int beg = 0;
+            if (CPXaddmipstarts(env, lp, 1, nedges, &beg, indices, values, CPX_MIPSTART_AUTO, NULL))
+                print_error("CPXaddmipstarts error");
         }
 
         free(indices);
@@ -1689,16 +1703,12 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     }
 }
 
-void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, int k)
+void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter)
 {
     int iter = 0;
-    int stuck = 0;
+    int k = 5;
     while (1)
     {
-         inst->n_edges = 0;
-         gather_solution_path(inst, inst->best_sol, 0);
-         plot_solution(inst);
-
         // update time left
         inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
         inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
@@ -1707,21 +1717,7 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         if (inst->time_left <= time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
         if (inst->param.verbose >= DEBUG)
-            printf("*** time_left = %f\n", inst->time_left);
-
-
-        if (stuck == 1 && k <= 20){
-            k = k + 2;
-            printf("Stuck : %d\n", stuck);
-            printf("New radius: %d\n", k);
-
-            stuck = 0;
-        } else if (k > 20){
-            printf("Best solution found : %f", inst->z_best);
-            print_error("No improved solution found!");
-        }
-
-        int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
+            printf("*** time left = %f\n", inst->time_left);
 
         double rhs = inst->dimension - k;
         char sense = 'G';
@@ -1729,27 +1725,27 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         rname[0] = (char *)calloc(100, sizeof(char));
         sprintf(rname[0], "soft_fixing(%d)", iter++);
 
+        int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("CPXnewrows error");
 
         int nedges = inst->dimension * (inst->dimension - 1) / 2;
-        int rows[nedges];
-        int *indices = (int *)malloc(inst->cols * sizeof(int));
-        double *coeffs = (double *)malloc(inst->cols * sizeof(double));
+        int rows[inst->dimension];
+        int *indices = (int *)malloc(inst->dimension * sizeof(int));
+        double *coeffs = (double *)malloc(inst->dimension * sizeof(double));
+        int j = 0; // counter: 0 -> nnodes-1
         for (int i = 0; i < nedges; i++)
         {
-            rows[i] = row;
-            indices[i] = i;
-            coeffs[i] = 1.0;
+            if (inst->best_sol[i] > 0.5)
+            {
+                rows[j] = row;
+                indices[j] = i;
+                coeffs[j] = 1.0;
+                j++;
+            }
         }
-        if (CPXchgcoeflist(env, lp, nedges, rows, indices, coeffs))
-            print_error("wrong CPXchgcoef [degree]");
-
-        // rewrite the LP model
-        char path[1000];
-        if (generate_path(path, "output", "model", model_name[inst->model_type], inst->param.name, inst->param.seed, "lp"))
-            print_error("Unable to generate path");
-        CPXwriteprob(env, lp, path, NULL);
+        if (CPXchgcoeflist(env, lp, inst->dimension, rows, indices, coeffs))
+            print_error("wrong CPXchgcoeflist");
 
         // solve with the new constraint
         if (CPXmipopt(env, lp))
@@ -1759,25 +1755,37 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         double current_incumbent;
         CPXgetobjval(env, lp, &current_incumbent);
         if (inst->param.verbose >= DEBUG)
-            printf("*** current_incumbent = %f\n", current_incumbent);
+            printf("*** k = %d, current_incumbent = %f\n", k, current_incumbent);
         // check if the current solution is better than the best so far
-        if (current_incumbent < inst->z_best) {
+        if (current_incumbent < inst->z_best)
+        {
             // update best incumbent
             inst->z_best = current_incumbent;
-            // update arcs' selection
+            // update best sol
             int status = CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1);
             if (status)
                 print_error_status("Failed to obtain the values in soft_fixing_heuristic method", status);
             if (inst->param.verbose >= NORMAL)
                 printf("New incumbent: %f\n", inst->z_best);
-        } else {
-            stuck++;
+            gather_solution_path(inst, inst->best_sol, 0);
+            //plot_solution(inst, iter);
+            int beg = 0;
+            if (CPXaddmipstarts(env, lp, 1, inst->dimension, &beg, indices, coeffs, CPX_MIPSTART_AUTO, NULL))
+                print_error("CPXaddmipstarts error");
         }
-
-        if (iter) {
-            if (CPXdelrows(env, lp, row - 1, row))
-                print_error("CPXdelrows error");
+        else
+        {
+            if (k < inst->dimension && k < 20)
+                k++;
+            else
+            {
+                // reached the max neighborhood size without improving! STOP
+                printf("The procedure has been stopped before the time limit because it was reached the max neighborhood size without improving!\n");
+                return;
+            }
         }
+        if (CPXdelrows(env, lp, row, row))
+            print_error("CPXdelrows error");
 
         free(rname[0]);
         free(rname);

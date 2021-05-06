@@ -76,9 +76,8 @@ void parse_command_line(int argc, char **argv, instance *inst)
             }
             if (strcmp(argv[i], "--ticks") == 0)
             {
-                    inst->param.ticks = 1;
+                inst->param.ticks = 1;
             }
-
         }
 
         print_command_line(inst);
@@ -375,8 +374,9 @@ void print_message(const char *msg)
     fflush(NULL);
 }
 
-int plot_solution(instance *inst)
+int plot_solution(instance *inst, int update_plot)
 {
+
     char *commandsForGnuplot[] = {"set title 'Solution plot'",
                                   //"set terminal svg size 350,262",
                                   //"set output '../output/plot/test.svg", // TODO : find a way to modify the nama of the output file
@@ -385,6 +385,7 @@ int plot_solution(instance *inst)
                                   "set ylabel 'Y'",
                                   "set xlabel 'X",
                                   "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
+
     FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
     FILE *temp = fopen("data.temp", "w");
 
