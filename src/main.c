@@ -1,7 +1,6 @@
 #include "../include/utils.h"
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
     double time_elapsed;
     instance inst; // current instance of the problem
@@ -12,16 +11,39 @@ int main(int argc, char **argv)
     parse_instance(&inst);
     print_instance(&inst);
 
-    TSPopt(&inst) ? print_error("TSPopt() ") : print_message("All went good inside TSPopt()");
+    switch (inst.param.solver) {
+        case 0:
+            optimal_solver(&inst) ? print_error("optimal_solver() ") : print_message("All went good inside optimal_solver()");
+            plot_optimal_solution(&inst) ? print_error("plot_solution() error") : print_message("All went good inside plot_optimal_solution()");
+            //plot_solution_edges(inst.n_edges, inst.nodes, inst.edges) ? print_error("plot_solution_edges() error") : printf("... gnuplot ok\n");
+            break;
+        case 1:
+            math_solver(&inst) ? print_error("math_solver() ") : print_message("All went good inside math_solver()");
+            break;
+        case 2:
+            heuristic_solver(&inst) ? print_error("heuristic_solver() ") : print_message("All went good inside heuristic_solver()");
+            break;
+        default:
+            print_error("No implemented solver selected");
+    }
+
     time_elapsed = inst.timestamp_finish - inst.timestamp_start;
-    if (verbose >= QUIET)
+    if (inst.param.verbose >= QUIET)
         inst.param.ticks ? printf("TSP solved in %f ticks\n", time_elapsed) : printf("TSP solved in %f seconds\n", time_elapsed);
-    
-    if (plot_solution(&inst,0)) print_error("plot_solution() error");
-    //plot_solution_edges(inst.n_edges, inst.nodes, inst.edges) ? print_error("plot_solution_edges() error") : printf("... gnuplot ok\n");
 
-    generate_csv_record(inst.param.name, inst.param.seed, inst.model_type, inst.z_best, time_elapsed, inst.param.run);
-
+    switch (inst.param.solver) {
+        case 0:
+            generate_csv_record(inst.param.name, inst.param.seed, optimal_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
+            break;
+        case 1:
+            generate_csv_record(inst.param.name, inst.param.seed, math_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
+            break;
+        case 2:
+            generate_csv_record(inst.param.name, inst.param.seed, heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
+            break;
+        default:
+            print_error("No implemented solver selected");
+    }
 
     // Free the memory used by the instance
     free_instance(&inst);

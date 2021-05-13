@@ -74,9 +74,20 @@ void parse_command_line(int argc, char **argv, instance *inst)
                 }
                 continue;
             }
+
             if (strcmp(argv[i], "--ticks") == 0)
             {
                 inst->param.ticks = 1;
+            }
+
+            if (strcmp(argv[i], "--math") == 0)
+            {
+                inst->param.solver = 1;
+            }
+
+            if (strcmp(argv[i], "--heur") == 0)
+            {
+                inst->param.solver = 2;
             }
         }
 
@@ -269,6 +280,7 @@ void initialize_instance(instance *inst)
     inst->param.verbose = NORMAL;
     inst->param.callback_counter = 0;
     inst->param.ticks = 0;
+    inst->param.solver = 0; // default
 
     inst->dimension = -1;
     inst->nodes = NULL;
@@ -312,11 +324,33 @@ void print_command_line(instance *inst)
 {
     printf("\nPARAMETERS ---------------------------------------------\n");
     printf("-f %s\n", inst->param.input_file);
-    printf("-t %f seconds\n", inst->time_limit);
-    printf("-m %d (%s)\n", inst->model_type, model_name[inst->model_type]);
+    if(inst->param.ticks == 1){
+        printf("-t %f ticks\n", inst->time_limit);
+        printf("--ticks (ACTIVE -> %d)\n", inst->param.ticks);
+    } else {
+        printf("-t %f seconds\n", inst->time_limit);
+    }
+
+    switch (inst->param.solver) {
+        case 0:
+            printf("-m %d (%s)\n", inst->model_type, optimal_model_name[inst->model_type]);
+            break;
+        case 1:
+            printf("-m %d (%s)\n", inst->model_type, math_model_name[inst->model_type]);
+            printf("--math (MATH HEURISTICS SOLVER) (ACTIVE -> %d)\n", inst->param.solver);
+            break;
+        case 2:
+            printf("-m %d (%s)\n", inst->model_type, heuristic_model_name[inst->model_type]);
+            printf("--heur (HEURISTICS SOLVER) (ACTIVE -> %d)\n", inst->param.solver);
+            break;
+        default:
+            print_error("No implemented solver selected");
+    }
+
     printf("-s %d\n", inst->param.seed);
     printf("-v %d (%s)\n", inst->param.verbose, verbose_name[inst->param.verbose]);
     printf("--------------------------------------------------------\n\n");
+
 }
 
 void print_instance(instance *inst)
@@ -328,7 +362,21 @@ void print_instance(instance *inst)
     printf("Dimension: %d \n", inst->dimension);
     printf("Edge weight type: %s\n", inst->param.weight_type);
     printf("Edge weight format: %s\n", inst->param.weight_format);
-    printf("Model type: %d (%s)\n", inst->model_type, model_name[inst->model_type]);
+
+    switch (inst->param.solver) {
+        case 0:
+            printf("Model type: %d (%s)\n", inst->model_type, optimal_model_name[inst->model_type]);
+            break;
+        case 1:
+            printf("Model type: %d (%s)\n", inst->model_type, math_model_name[inst->model_type]);
+            break;
+        case 2:
+            printf("Model type: %d (%s)\n", inst->model_type, heuristic_model_name[inst->model_type]);
+            break;
+        default:
+            print_error("No implemented solver selected");
+    }
+
     printf("Input file path: %s\n", inst->param.input_file);
     printf("Data type: %s\n", inst->param.data_type);
     // TODO implement the EDGE WEIGHT SECTION
@@ -347,7 +395,10 @@ void print_help()
     printf("\nHELP ---------------------------------------------------\n");
     printf("-f <path>  : used to pass the relative instance path \n");
     printf("-t <time>  : used to pass the total running time allowed in seconds\n");
-    printf("-m <model> : used to set the model type\n");
+    printf("--ticks    : used to set the way time is interpreted inside the solver (optional)\n");
+    printf("--math     : used to set the math-heuristic solver (optional)\n");
+    printf("--heur     : used to set the heuristic solver (optional)\n");
+    printf("-m <model> : used to set the model type (based on the solver)\n");
     printf("-s <seed>  : used to set the seed\n");
     printf("-v <value> : used to set the verbosity, from QUIET (0) up to DEBUG (4)\n");
     printf("--------------------------------------------------------\n\n");
@@ -374,19 +425,42 @@ void print_message(const char *msg)
     fflush(NULL);
 }
 
-int plot_solution(instance *inst, int update_plot)
+int plot_optimal_solution(instance *inst)
 {
 
-    char *commandsForGnuplot[] = {"set title 'Solution plot'",
-                                  //"set terminal svg size 350,262",
-                                  //"set output '../output/plot/test.svg", // TODO : find a way to modify the nama of the output file
-                                  "unset key",
-                                  "set autoscale",
-                                  "set ylabel 'Y'",
-                                  "set xlabel 'X",
-                                  "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
+    char *out = (char *)calloc(1000, sizeof(char));
+    char *plot = (char *)calloc(100, sizeof(char));
 
-    FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
+    switch (inst->param.solver) {
+        case 0:
+            sprintf(out, "set output '../output/plot/%s_%s_opt.jpg", inst->param.name, optimal_model_name[inst->model_type]);
+            break;
+        case 1:
+            sprintf(out, "set output '../output/plot/%s_%s_opt.jpg", inst->param.name, math_model_name[inst->model_type]);
+
+            break;
+        case 2:
+            sprintf(out, "set output '../output/plot/%s_%s_opt.jpg", inst->param.name, heuristic_model_name[inst->model_type]);
+            break;
+        default:
+            print_error("No implemented solver selected");
+    }
+
+    sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
+
+    char *commandsForGnuplot[] = {
+            "set title 'Solution plot'",
+            "set terminal jpeg size 1024,768",
+            out,
+            "unset key",
+            "set autoscale",
+            "set ylabel 'Y'",
+            "set xlabel 'X",
+            plot,
+            "clear"
+    };
+
+    FILE *gnuPlotPipe = popen("gnuplot -persistent", "w");
     FILE *temp = fopen("data.temp", "w");
 
     for (int i = 0; i < inst->n_edges; i++)
@@ -401,15 +475,83 @@ int plot_solution(instance *inst, int update_plot)
     fclose(temp);
 
     int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
-    for (int i = 0; i < commands; i++)
-    {
-        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
-    }
-    if (pclose(gnuplotPipe) == -1)
-    {
+
+    //Send commands to gnuplot one by one.
+    for (int i = 0; i < commands; i++) fprintf(gnuPlotPipe, "%s \n", commandsForGnuplot[i]);
+
+    if (pclose(gnuPlotPipe) == -1) {
         print_error("pclose error");
         return -1;
     }
+
+    free(plot);
+    free(out);
+
+    return 0;
+}
+
+int plot_intermediate_solution(instance *inst, int update_plot)
+{
+
+    char *out = (char *)calloc(1000, sizeof(char));
+    char *plot = (char *)calloc(100, sizeof(char));
+
+    switch (inst->param.solver) {
+        case 0:
+            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, optimal_model_name[inst->model_type], update_plot);
+            break;
+        case 1:
+            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, math_model_name[inst->model_type],
+                    update_plot);
+
+            break;
+        case 2:
+            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, heuristic_model_name[inst->model_type], update_plot);
+            break;
+        default:
+            print_error("No implemented solver selected");
+    }
+
+    sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
+
+    char *commandsForGnuplot[] = {
+            "set title 'Solution plot'",
+            "set terminal jpeg size 1024,768",
+            out,
+            "unset key",
+            "set autoscale",
+            "set ylabel 'Y'",
+            "set xlabel 'X",
+            plot,
+            "clear"
+    };
+
+    FILE *gnuPlotPipe = popen("gnuplot -persistent", "w");
+    FILE *temp = fopen("data.temp", "w");
+
+    for (int i = 0; i < inst->n_edges; i++)
+    {
+        int prev = inst->edges[i].prev;
+        int next = inst->edges[i].next;
+        //Write the coordinates of the two nodes inside a temporary file
+        fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[prev].x, inst->nodes[prev].y, inst->nodes[next].x, inst->nodes[next].y);
+        // double '\n' to create a new block of coordinates
+    }
+    fclose(temp);
+
+    int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
+
+    //Send commands to gnuplot one by one.
+    for (int i = 0; i < commands; i++) fprintf(gnuPlotPipe, "%s \n", commandsForGnuplot[i]);
+
+    if (pclose(gnuPlotPipe) == -1) {
+        print_error("pclose error");
+        return -1;
+    }
+
+    free(plot);
+    free(out);
+
     return 0;
 }
 
@@ -452,7 +594,7 @@ int generate_path(char *path, char *folder, char *type, const char *model, char 
     return 0;
 }
 
-int generate_csv_record(char *instance_name, int seed, int model_type, double z_best, double time_elapsed, int run)
+int generate_csv_record(char *instance_name, int seed, const char *model, double z_best, double time_elapsed, int run)
 {
     FILE *csv;
     char filename[100];
@@ -463,13 +605,13 @@ int generate_csv_record(char *instance_name, int seed, int model_type, double z_
     {
         print_message("scores.csv exists, adding the results");
         csv = fopen(filename, "a");
-        fprintf(csv, "%s, %d, %s, %f, %f, run-%d\n", instance_name, seed, model_name[model_type], z_best, time_elapsed, run);
+        fprintf(csv, "%s, %d, %s, %f, %f, run-%d\n", instance_name, seed, model, z_best, time_elapsed, run);
     }
     else
     {
         print_message("scores.csv does not exists yet, creating file and adding the results");
         csv = fopen(filename, "w");
-        fprintf(csv, "%s, %d, %s, %f, %f, run-%d\n", instance_name, seed, model_name[model_type], z_best, time_elapsed, run);
+        fprintf(csv, "%s, %d, %s, %f, %f, run-%d\n", instance_name, seed, model, z_best, time_elapsed, run);
     }
 
     if (fclose(csv))
