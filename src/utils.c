@@ -425,6 +425,8 @@ void print_message(const char *msg)
     fflush(NULL);
 }
 
+// TODO generate a function able to print inside the same window the updated solution
+
 int plot_optimal_solution(instance *inst)
 {
 

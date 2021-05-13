@@ -631,7 +631,6 @@ int heuristic_solver(instance *inst) {
         }
 
         gather_solution_path(inst, inst->best_sol, 0);
-
         plot_intermediate_solution(inst, i + 1);
 
         for (int k = 0; k < n; k++) {
@@ -1924,6 +1923,7 @@ double extra_mileage(instance *inst, int starting_node) {
 //        for (int i = 0; i < inst->dimension; i++) {
 //            printf("best edges: (%d, %d) \n", edge_list[i].prev, edge_list[i].next);
 //        }
+        // TODO try to print each added edge as debug
     }
 
     printf("Best objective value for starting node %d: %f\n", starting_node + 1, obj);
@@ -1935,9 +1935,6 @@ double extra_mileage(instance *inst, int starting_node) {
         inst->best_sol[xpos(prev, next, inst)] = 1.0;
         inst->edges[i] = edge_list[i];
     }
-
-    gather_solution_path(inst, inst->best_sol, 0);
-    plot_intermediate_solution(inst, ++iter);
 
     free(node_list);
     free(edge_list);
