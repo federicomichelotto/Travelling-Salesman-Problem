@@ -11,7 +11,8 @@
 #include <unistd.h>
 
 // Data Structures
-typedef struct {
+typedef struct
+{
     char input_file[1000];  // Path of the file
     char name[100];         // Identifies the data file
     char type[10];          // Specifies the type of data (TSP or ATSP)
@@ -20,16 +21,19 @@ typedef struct {
     char weight_format[20]; // Specifies how the edge weights (or distances) are formatted
     char data_type[20];     // Specifies how the data are displayed
 
-    int seed;               // Seed given to cplex
-    int run;                // Number of current run
+    int seed;     // Seed given to cplex
+    int run; // Number of current run
     int verbose;
     int callback_counter; // #callback's called
     int ticks;
-    int solver; // 0 : optimal, 1 : math, 2 : heuristic
+    int solver;      // 0 : optimal, 1 : math, 2 : heuristic
+    int interactive; // 0: none plot is displayed, 1: all plots are printed
+    int saveplots;   // 0: save only the final plot, 1: save all plots
 
 } parameter;
 
-typedef struct { // Node
+typedef struct
+{ // Node
 
     int id;   // number of the node (e.g. 1, 2, 3, ..., n)
     double x; // x coordinate
@@ -38,7 +42,8 @@ typedef struct { // Node
 
 } node;
 
-typedef struct { // Edge in the circuit
+typedef struct
+{ // Edge in the circuit
 
     double dist; // Weight of the edge
     int prev;    // Starting node
@@ -47,7 +52,8 @@ typedef struct { // Edge in the circuit
 
 } edge;
 
-typedef struct {
+typedef struct
+{
 
     // Input data
     int dimension; // Number of nodes of the problem
@@ -69,16 +75,19 @@ typedef struct {
     double best_lb;   // best lower bound
     double *best_sol; // Best xstar found
     int cols;
+    FILE *gnuplotPipe;
 
 } instance;
 
-typedef struct {
+typedef struct
+{
     instance *inst;
     CPXCALLBACKCONTEXTptr context;
 } doit_fn_input;
 
 // Enumerations
-enum verbose_level {
+enum verbose_level
+{
     QUIET = 0,
     NORMAL = 1,
     VERBOSE = 2,
@@ -86,7 +95,8 @@ enum verbose_level {
     DEBUG = 4
 };
 
-enum sections {
+enum sections
+{
     PARAMETERS = 0,
     NODE_COORD = 1,
     EDGE_WEIGHT = 2,
@@ -94,65 +104,58 @@ enum sections {
 };
 
 static const char *verbose_name[] = {
-        "QUIET",
-        "NORMAL",
-        "VERBOSE",
-        "NERD",
-        "DEBUG"
-};
+    "QUIET",
+    "NORMAL",
+    "VERBOSE",
+    "NERD",
+    "DEBUG"};
 
 static const char *optimal_model_name[] = {
-        "STD",
-        "MTZ",
-        "MTZMOD",
-        "MTZL",
-        "MTZLS",
-        "GG",
-        "GGL",
-        "GGLS",
-        "GG_ORIGINAL",
-        "BENDERS",
-        "BENDERS (KRUSKAL)",
-        "CALLBACK"
-};
-
+    "STD",
+    "MTZ",
+    "MTZMOD",
+    "MTZL",
+    "MTZLS",
+    "GG",
+    "GGL",
+    "GGLS",
+    "GG_ORIGINAL",
+    "BENDERS",
+    "BENDERS (KRUSKAL)",
+    "CALLBACK"};
 
 static const char *math_model_name[] = {
-        "HARD FIXING HEURISTIC",
-        "SOFT FIXING HEURISTIC"
-};
+    "HARD FIXING HEURISTIC",
+    "SOFT FIXING HEURISTIC"};
 
 static const char *heuristic_model_name[] = {
-        "GREEDY",
-        "EXTRA-MILEAGE (NEAR)",
-        "EXTRA-MILEAGE (FAR)"
-};
+    "GREEDY",
+    "EXTRA-MILEAGE (NEAR)",
+    "EXTRA-MILEAGE (FAR)"};
 
 static const char *optimal_model_full_name[] = {
-        "Basic model w/o SEC",
-        "Miller-Tucker-Zemlin compact model",
-        "Miller-Tucker-Zemlin modified compact model",
-        "Miller-Tucker-Zemlin lazy compact model",
-        "Miller-Tucker-Zemlin lazy compact model w/ SEC2",
-        "Garvish-Graves compact model",
-        "Garvish-Graves lazy compact model",
-        "Garvish-Graves lazy compact model w/ SEC2",
-        "Garvish-Graves compact model original",
-        "Benders' method'",
-        "Benders' method' (Kruskal)",
-        "Callback method",
+    "Basic model w/o SEC",
+    "Miller-Tucker-Zemlin compact model",
+    "Miller-Tucker-Zemlin modified compact model",
+    "Miller-Tucker-Zemlin lazy compact model",
+    "Miller-Tucker-Zemlin lazy compact model w/ SEC2",
+    "Garvish-Graves compact model",
+    "Garvish-Graves lazy compact model",
+    "Garvish-Graves lazy compact model w/ SEC2",
+    "Garvish-Graves compact model original",
+    "Benders' method'",
+    "Benders' method' (Kruskal)",
+    "Callback method",
 };
 
 static const char *math_model_full_name[] = {
-        "Hard fixing heuristic",
-        "Soft fixing heuristic"
-};
+    "Hard fixing heuristic",
+    "Soft fixing heuristic"};
 
 static const char *heuristic_model_full_name[] = {
-        "Nearest Neighbors (Greedy)",
-        "Extra-milage (nearest insertion)",
-        "Extra-milage (farthest insertion)"
-};
+    "Nearest Neighbors (Greedy)",
+    "Extra-milage (nearest insertion)",
+    "Extra-milage (farthest insertion)"};
 
 // TSP solver
 int optimal_solver(instance *inst);
@@ -215,6 +218,7 @@ int nearest_insertion(instance *inst, int n, node *node_list, double random_numb
 int farthest_insertion(instance *inst, int n, node *node_list, double random_number);
 
 // Some useful functions
+double gather_solution_path(instance *inst, const double *xstar, int type);
 
 // Retrieve the distance among each node of the instance
 double dist(int i, int j, instance *inst);

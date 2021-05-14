@@ -79,6 +79,15 @@ void parse_command_line(int argc, char **argv, instance *inst)
             {
                 inst->param.ticks = 1;
             }
+            if (strcmp(argv[i], "--interactive") == 0)
+            {
+                inst->param.interactive = 1;
+            }
+
+            if (strcmp(argv[i], "--saveplots") == 0)
+            {
+                inst->param.saveplots = 1;
+            }
 
             if (strcmp(argv[i], "--math") == 0)
             {
@@ -271,16 +280,17 @@ void parse_instance(instance *inst)
 
 void initialize_instance(instance *inst)
 {
-
     inst->model_type = 0;
     inst->time_limit = CPX_INFBOUND;
     inst->time_left = CPX_INFBOUND;
     inst->param.seed = 1;
-    inst->param.run = -1;
+    inst->param.run = 0;
     inst->param.verbose = NORMAL;
     inst->param.callback_counter = 0;
     inst->param.ticks = 0;
     inst->param.solver = 0; // default
+    inst->param.interactive = 0;
+    inst->param.saveplots = 0;
 
     inst->dimension = -1;
     inst->nodes = NULL;
@@ -301,6 +311,7 @@ void initialize_instance(instance *inst)
     strcpy(inst->param.weight_type, "NULL");
     strcpy(inst->param.weight_format, "NULL");
     strcpy(inst->param.data_type, "NULL");
+    inst->gnuplotPipe = popen("gnuplot -persistent", "w");
 }
 
 void check_format(char *param)
@@ -318,39 +329,48 @@ void free_instance(instance *inst)
     free(inst->best_sol);
     free(inst->weights);
     // todo write the code to free the allocated memory within the instance (bottom-up approach)
+    // close gnuplot pipe
+    if (pclose(inst->gnuplotPipe) == -1)
+    {
+        print_error("pclose error");
+        return;
+    }
 }
 
 void print_command_line(instance *inst)
 {
     printf("\nPARAMETERS ---------------------------------------------\n");
     printf("-f %s\n", inst->param.input_file);
-    if(inst->param.ticks == 1){
+    if (inst->param.ticks == 1)
+    {
         printf("-t %f ticks\n", inst->time_limit);
         printf("--ticks (ACTIVE -> %d)\n", inst->param.ticks);
-    } else {
+    }
+    else
+    {
         printf("-t %f seconds\n", inst->time_limit);
     }
 
-    switch (inst->param.solver) {
-        case 0:
-            printf("-m %d (%s)\n", inst->model_type, optimal_model_name[inst->model_type]);
-            break;
-        case 1:
-            printf("-m %d (%s)\n", inst->model_type, math_model_name[inst->model_type]);
-            printf("--math (MATH HEURISTICS SOLVER) (ACTIVE -> %d)\n", inst->param.solver);
-            break;
-        case 2:
-            printf("-m %d (%s)\n", inst->model_type, heuristic_model_name[inst->model_type]);
-            printf("--heur (HEURISTICS SOLVER) (ACTIVE -> %d)\n", inst->param.solver);
-            break;
-        default:
-            print_error("No implemented solver selected");
+    switch (inst->param.solver)
+    {
+    case 0:
+        printf("-m %d (%s)\n", inst->model_type, optimal_model_name[inst->model_type]);
+        break;
+    case 1:
+        printf("-m %d (%s)\n", inst->model_type, math_model_name[inst->model_type]);
+        printf("--math (MATH HEURISTICS SOLVER) (ACTIVE -> %d)\n", inst->param.solver);
+        break;
+    case 2:
+        printf("-m %d (%s)\n", inst->model_type, heuristic_model_name[inst->model_type]);
+        printf("--heur (HEURISTICS SOLVER) (ACTIVE -> %d)\n", inst->param.solver);
+        break;
+    default:
+        print_error("No implemented solver selected");
     }
 
     printf("-s %d\n", inst->param.seed);
     printf("-v %d (%s)\n", inst->param.verbose, verbose_name[inst->param.verbose]);
     printf("--------------------------------------------------------\n\n");
-
 }
 
 void print_instance(instance *inst)
@@ -363,18 +383,19 @@ void print_instance(instance *inst)
     printf("Edge weight type: %s\n", inst->param.weight_type);
     printf("Edge weight format: %s\n", inst->param.weight_format);
 
-    switch (inst->param.solver) {
-        case 0:
-            printf("Model type: %d (%s)\n", inst->model_type, optimal_model_name[inst->model_type]);
-            break;
-        case 1:
-            printf("Model type: %d (%s)\n", inst->model_type, math_model_name[inst->model_type]);
-            break;
-        case 2:
-            printf("Model type: %d (%s)\n", inst->model_type, heuristic_model_name[inst->model_type]);
-            break;
-        default:
-            print_error("No implemented solver selected");
+    switch (inst->param.solver)
+    {
+    case 0:
+        printf("Model type: %d (%s)\n", inst->model_type, optimal_model_name[inst->model_type]);
+        break;
+    case 1:
+        printf("Model type: %d (%s)\n", inst->model_type, math_model_name[inst->model_type]);
+        break;
+    case 2:
+        printf("Model type: %d (%s)\n", inst->model_type, heuristic_model_name[inst->model_type]);
+        break;
+    default:
+        print_error("No implemented solver selected");
     }
 
     printf("Input file path: %s\n", inst->param.input_file);
@@ -393,14 +414,16 @@ void print_instance(instance *inst)
 void print_help()
 {
     printf("\nHELP ---------------------------------------------------\n");
-    printf("-f <path>  : used to pass the relative instance path \n");
-    printf("-t <time>  : used to pass the total running time allowed in seconds\n");
-    printf("--ticks    : used to set the way time is interpreted inside the solver (optional)\n");
-    printf("--math     : used to set the math-heuristic solver (optional)\n");
-    printf("--heur     : used to set the heuristic solver (optional)\n");
-    printf("-m <model> : used to set the model type (based on the solver)\n");
-    printf("-s <seed>  : used to set the seed\n");
-    printf("-v <value> : used to set the verbosity, from QUIET (0) up to DEBUG (4)\n");
+    printf("-f <path>       : used to pass the relative instance path \n");
+    printf("-t <time>       : used to pass the total running time allowed in seconds\n");
+    printf("--ticks         : used to set the way time is interpreted inside the solver (optional)\n");
+    printf("--interactive   : used to plot all the solutions (by default none plot is displayed)\n");
+    printf("--saveplots     : used to save all the solutions' plots (by default only the final solution's plot is saved)\n");
+    printf("--math          : used to set the math-heuristic solver (optional)\n");
+    printf("--heur          : used to set the heuristic solver (optional)\n");
+    printf("-m <model>      : used to set the model type (based on the solver)\n");
+    printf("-s <seed>       : used to set the seed\n");
+    printf("-v <value>      : used to set the verbosity, from QUIET (0) up to DEBUG (4)\n");
     printf("--------------------------------------------------------\n\n");
     exit(1);
 }
@@ -425,148 +448,102 @@ void print_message(const char *msg)
     fflush(NULL);
 }
 
-// TODO generate a function able to print inside the same window the updated solution
-
-int plot_optimal_solution(instance *inst)
+int save_and_plot_solution(instance *inst, int iter)
 {
 
-    char *out = (char *)calloc(1000, sizeof(char));
-    char *plot = (char *)calloc(100, sizeof(char));
-
-    switch (inst->param.solver) {
-        case 0:
-            sprintf(out, "set output '../output/plot/%s_%s_opt.jpg", inst->param.name, optimal_model_name[inst->model_type]);
-            break;
-        case 1:
-            sprintf(out, "set output '../output/plot/%s_%s_opt.jpg", inst->param.name, math_model_name[inst->model_type]);
-
-            break;
-        case 2:
-            sprintf(out, "set output '../output/plot/%s_%s_opt.jpg", inst->param.name, heuristic_model_name[inst->model_type]);
-            break;
-        default:
-            print_error("No implemented solver selected");
-    }
-
-    sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
-
-    char *commandsForGnuplot[] = {
-            "set title 'Solution plot'",
-            "set terminal jpeg size 1024,768",
-            out,
-            "unset key",
-            "set autoscale",
-            "set ylabel 'Y'",
-            "set xlabel 'X",
-            plot,
-            "clear"
-    };
-
-    FILE *gnuPlotPipe = popen("gnuplot -persistent", "w");
-    FILE *temp = fopen("data.temp", "w");
-
-    for (int i = 0; i < inst->n_edges; i++)
+    if (inst->param.saveplots || inst->param.interactive)
     {
-        int prev = inst->edges[i].prev;
-        int next = inst->edges[i].next;
-        //Write the coordinates of the two nodes inside a temporary file
-        fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[prev].x, inst->nodes[prev].y, inst->nodes[next].x,
-                inst->nodes[next].y);
-        // double '\n' to create a new block of coordinates
+        // write solution to file
+        FILE *temp = fopen("data.temp", "w");
+        for (int i = 0; i < inst->n_edges; i++)
+        {
+            int prev = inst->edges[i].prev;
+            int next = inst->edges[i].next;
+            //Write the coordinates of the two nodes inside a temporary file
+            fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[prev].x, inst->nodes[prev].y, inst->nodes[next].x, inst->nodes[next].y);
+            // double '\n' to create a new block of coordinates
+        }
+        fclose(temp);
+
+        FILE *gnuplotPipe = popen("gnuplot", "w"); // local gnuplotPipe to avoid conflicts with the global gnuplotPipe
+        if (inst->param.saveplots)
+        {
+            // save plot
+            char *out = (char *)calloc(1000, sizeof(char));
+            char *plot = (char *)calloc(1000, sizeof(char));
+            char *model_name = (char *)calloc(100, sizeof(char));
+
+            switch (inst->param.solver)
+            {
+            case 0:
+                strcpy(model_name, optimal_model_name[inst->model_type]);
+                break;
+            case 1:
+                strcpy(model_name, math_model_name[inst->model_type]);
+                break;
+            case 2:
+                strcpy(model_name, heuristic_model_name[inst->model_type]);
+                break;
+            }
+
+            if (iter == -1) // final solution
+                sprintf(out, "set output '../output/plot/%s_%s_final.jpg'", inst->param.name, model_name);
+            else
+                sprintf(out, "set output '../output/plot/%s_%s_%d.jpg'", inst->param.name, model_name, iter);
+
+            sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
+
+            char *commandsForGnuplot[] = {
+                "set title 'Solution plot'",
+                "set terminal jpeg size 1024,768",
+                out,
+                "unset key",
+                "set autoscale",
+                "set ylabel 'Y'",
+                "set xlabel 'X'",
+                plot,
+                "clear"};
+
+            int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
+
+            //Send commands to gnuplot one by one.
+            for (int i = 0; i < commands; i++)
+                fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]);
+
+            pclose(gnuplotPipe); // execute the commands
+            free(plot);
+            free(out);
+        }
+
+        if (inst->param.interactive)
+        {
+            // plot solution
+            // here we use a global gnuplotPipe to remain on the same window
+            char *commandsForGnuplot[] = {"set title 'Solution plot'",
+                                          "unset key",
+                                          "set autoscale",
+                                          "set ylabel 'Y'",
+                                          "set xlabel 'X'",
+                                          "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
+
+            int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
+            for (int i = 0; i < commands; i++)
+                fprintf(inst->gnuplotPipe, "%s \n", commandsForGnuplot[i]);
+            fflush(inst->gnuplotPipe); // execute the commands
+        }
     }
-    fclose(temp);
-
-    int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
-
-    //Send commands to gnuplot one by one.
-    for (int i = 0; i < commands; i++) fprintf(gnuPlotPipe, "%s \n", commandsForGnuplot[i]);
-
-    if (pclose(gnuPlotPipe) == -1) {
-        print_error("pclose error");
-        return -1;
-    }
-
-    free(plot);
-    free(out);
-
     return 0;
 }
 
-int plot_intermediate_solution(instance *inst, int update_plot)
+int plot_solution_edges(int n_edges, node *nodes, edge *edges, FILE *gnuplotPipe)
 {
-
-    char *out = (char *)calloc(1000, sizeof(char));
-    char *plot = (char *)calloc(100, sizeof(char));
-
-    switch (inst->param.solver) {
-        case 0:
-            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, optimal_model_name[inst->model_type], update_plot);
-            break;
-        case 1:
-            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, math_model_name[inst->model_type], update_plot);
-
-            break;
-        case 2:
-            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, heuristic_model_name[inst->model_type], update_plot);
-            break;
-        default:
-            print_error("No implemented solver selected");
+    int newpipe = 0;
+    if (gnuplotPipe==NULL){
+        gnuplotPipe = popen("gnuplot", "w");
+        newpipe = 1;
     }
-
-    sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
-
-    char *commandsForGnuplot[] = {
-            "set title 'Solution plot'",
-            "set terminal jpeg size 1024,768",
-            out,
-            "unset key",
-            "set autoscale",
-            "set ylabel 'Y'",
-            "set xlabel 'X",
-            plot,
-            "clear"
-    };
-
-    FILE *gnuPlotPipe = popen("gnuplot -persistent", "w");
+    // write solution to file
     FILE *temp = fopen("data.temp", "w");
-
-    for (int i = 0; i < inst->n_edges; i++)
-    {
-        int prev = inst->edges[i].prev;
-        int next = inst->edges[i].next;
-        //Write the coordinates of the two nodes inside a temporary file
-        fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[prev].x, inst->nodes[prev].y, inst->nodes[next].x, inst->nodes[next].y);
-        // double '\n' to create a new block of coordinates
-    }
-    fclose(temp);
-
-    int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
-
-    //Send commands to gnuplot one by one.
-    for (int i = 0; i < commands; i++) fprintf(gnuPlotPipe, "%s \n", commandsForGnuplot[i]);
-
-    if (pclose(gnuPlotPipe) == -1) {
-        print_error("pclose error");
-        return -1;
-    }
-
-    free(plot);
-    free(out);
-
-    return 0;
-}
-
-int plot_solution_edges(int n_edges, node *nodes, edge *edges)
-{
-    char *commandsForGnuplot[] = {"set title 'Solution plot'",
-                                  "unset key",
-                                  "set autoscale",
-                                  "set ylabel 'Y'",
-                                  "set xlabel 'X",
-                                  "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
-    FILE *gnuplotPipe = popen("gnuplot -persistent", "w");
-    FILE *temp = fopen("data.temp", "w");
-
     for (int i = 0; i < n_edges; i++)
     {
         //Write the coordinates of the two nodes inside a temporary file
@@ -576,18 +553,26 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges)
     }
     fclose(temp);
 
+    // plot solution
+    char *commandsForGnuplot[] = {"set title 'Solution plot'",
+                                  "unset key",
+                                  "set autoscale",
+                                  "set ylabel 'Y'",
+                                  "set xlabel 'X'",
+                                  "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
     int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
     for (int i = 0; i < commands; i++)
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
-    if (pclose(gnuplotPipe) == -1)
-    {
-        print_error("pclose error");
-        return -1;
-    }
+    
+    if (newpipe)
+        pclose(gnuplotPipe);
+    else
+        fflush(gnuplotPipe);
     return 0;
 }
+
 
 int generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension)
 {
