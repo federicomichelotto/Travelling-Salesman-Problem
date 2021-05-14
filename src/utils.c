@@ -324,17 +324,18 @@ void check_format(char *param)
 
 void free_instance(instance *inst)
 {
-    free(inst->nodes);
-    free(inst->edges);
-    free(inst->best_sol);
-    free(inst->weights);
-    // todo write the code to free the allocated memory within the instance (bottom-up approach)
     // close gnuplot pipe
     if (pclose(inst->gnuplotPipe) == -1)
     {
         print_error("pclose error");
         return;
     }
+
+    free(inst->nodes);
+    free(inst->edges);
+    free(inst->best_sol);
+    free(inst->weights);
+    // todo write the code to free the allocated memory within the instance (bottom-up approach)
 }
 
 void print_command_line(instance *inst)
@@ -451,7 +452,7 @@ void print_message(const char *msg)
 int save_and_plot_solution(instance *inst, int iter)
 {
 
-    if (inst->param.saveplots || inst->param.interactive)
+    if (inst->param.saveplots || inst->param.interactive || iter == -1)
     {
         // write solution to file
         FILE *temp = fopen("data.temp", "w");
@@ -466,7 +467,7 @@ int save_and_plot_solution(instance *inst, int iter)
         fclose(temp);
 
         FILE *gnuplotPipe = popen("gnuplot", "w"); // local gnuplotPipe to avoid conflicts with the global gnuplotPipe
-        if (inst->param.saveplots)
+        if (inst->param.saveplots || iter == -1)
         {
             // save plot
             char *out = (char *)calloc(1000, sizeof(char));
@@ -486,12 +487,13 @@ int save_and_plot_solution(instance *inst, int iter)
                 break;
             }
 
-            if (iter == -1) // final solution
-                sprintf(out, "set output '../output/plot/%s_%s_final.jpg'", inst->param.name, model_name);
-            else
-                sprintf(out, "set output '../output/plot/%s_%s_%d.jpg'", inst->param.name, model_name, iter);
-
+            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg'", inst->param.name, model_name, iter);
             sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
+            if (iter == -1) // final solution
+            {
+                sprintf(out, "set output '../output/plot/%s_%s_final.jpg'", inst->param.name, model_name);
+                sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'red' lw 1 notitle");
+            }
 
             char *commandsForGnuplot[] = {
                 "set title 'Solution plot'",
@@ -538,7 +540,8 @@ int save_and_plot_solution(instance *inst, int iter)
 int plot_solution_edges(int n_edges, node *nodes, edge *edges, FILE *gnuplotPipe)
 {
     int newpipe = 0;
-    if (gnuplotPipe==NULL){
+    if (gnuplotPipe == NULL)
+    {
         gnuplotPipe = popen("gnuplot", "w");
         newpipe = 1;
     }
@@ -565,14 +568,13 @@ int plot_solution_edges(int n_edges, node *nodes, edge *edges, FILE *gnuplotPipe
     {
         fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
     }
-    
+
     if (newpipe)
         pclose(gnuplotPipe);
     else
         fflush(gnuplotPipe);
     return 0;
 }
-
 
 int generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension)
 {

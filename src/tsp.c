@@ -544,8 +544,6 @@ int optimal_solver(instance *inst)
     printf("\nObjective value: %lf\n", inst->z_best);
     printf("Lower bound: %lf\n", inst->best_lb);
 
-    save_and_plot_solution(inst, 0);
-
     // get timestamp
     inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
 

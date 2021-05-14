@@ -21,8 +21,8 @@ typedef struct
     char weight_format[20]; // Specifies how the edge weights (or distances) are formatted
     char data_type[20];     // Specifies how the data are displayed
 
-    int seed;     // Seed given to cplex
-    int run; // Number of current run
+    int seed; // Seed given to cplex
+    int run;  // Number of current run
     int verbose;
     int callback_counter; // #callback's called
     int ticks;
