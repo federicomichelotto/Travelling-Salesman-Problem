@@ -503,8 +503,7 @@ int plot_intermediate_solution(instance *inst, int update_plot)
             sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, optimal_model_name[inst->model_type], update_plot);
             break;
         case 1:
-            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, math_model_name[inst->model_type],
-                    update_plot);
+            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg", inst->param.name, math_model_name[inst->model_type], update_plot);
 
             break;
         case 2:

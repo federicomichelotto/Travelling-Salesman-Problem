@@ -1646,6 +1646,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
                 print_error_status("Failed to obtain the values in hard_fixing_heuristic method", status);
             if (inst->param.verbose >= NORMAL)
                 printf("New incumbent: %f\n", inst->z_best);
+
             gather_solution_path(inst, inst->best_sol, 0);
             plot_intermediate_solution(inst, ++iter);
 
