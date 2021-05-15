@@ -24,4 +24,7 @@ int save_and_plot_solution(instance *inst, int iter);
 int generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension);
 int generate_csv_record(char *instance_name, int seed, const char *model, double z_best, double time_elapsed, int run);
 
+int checkFolders();
+int IsPathExist(const char *s);
+
 #endif //UTILS_H

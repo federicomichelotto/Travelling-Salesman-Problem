@@ -2,6 +2,8 @@
 
 int main(int argc, char **argv)
 {
+    // check folders exist
+    checkFolders();
 
     double time_elapsed;
     instance inst; // current instance of the problem

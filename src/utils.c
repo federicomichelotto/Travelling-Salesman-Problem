@@ -1,4 +1,5 @@
 #include "../include/utils.h"
+#include <sys/stat.h>
 
 void parse_command_line(int argc, char **argv, instance *inst)
 {
@@ -469,6 +470,7 @@ int save_and_plot_solution(instance *inst, int iter)
         FILE *gnuplotPipe = popen("gnuplot", "w"); // local gnuplotPipe to avoid conflicts with the global gnuplotPipe
         if (inst->param.saveplots || iter == -1)
         {
+
             // save plot
             char *out = (char *)calloc(1000, sizeof(char));
             char *plot = (char *)calloc(1000, sizeof(char));
@@ -608,4 +610,38 @@ int generate_csv_record(char *instance_name, int seed, const char *model, double
     }
 
     return 0;
+}
+
+int checkFolders()
+{
+    if (!IsPathExist("../output"))
+    {
+        if (mkdir("../output", 0777))
+            print_error("error creating output folder");
+        if (mkdir("../output/log", 0777))
+            print_error("error creating log folder");
+        if (mkdir("../output/lp", 0777))
+            print_error("error creating lp folder");
+        if (mkdir("../output/plot", 0777))
+            print_error("error creating plot folder");
+    }
+    else
+    {
+        if (!IsPathExist("../output/log"))
+            if (mkdir("../output/log", 0777))
+                print_error("error creating log folder");
+        if (!IsPathExist("../output/lp"))
+            if (mkdir("../output/lp", 0777))
+                print_error("error creating lp folder");
+        if (!IsPathExist("../output/plot"))
+            if (mkdir("../output/plot", 0777))
+                print_error("error creating plot folder");
+    }
+    return 0;
+}
+
+int IsPathExist(const char *s)
+{
+    struct stat buffer;
+    return !stat(s, &buffer);
 }
