@@ -208,14 +208,18 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 // model 1: Soft fixing heuristic
 void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter);
 
-// HEURISTIC
-double nearest_neighbours(instance *inst, int starting_node);
+// CONSTRUCTIVE HEURISTIC
+double nearest_neighbours(instance *inst, int starting_node, double *sol);
 
 double extra_mileage(instance *inst, int starting_node);
 
 int nearest_insertion(instance *inst, int n, node *node_list, double random_number);
 
 int farthest_insertion(instance *inst, int n, node *node_list, double random_number);
+
+// REFINEMENT HEURISTIC 
+// to use to refine a solution, we assume that inside inst->best_sol there is a valid solution, and the selected edges are in inst->edges
+double two_opt(instance *inst);
 
 // Some useful functions
 double gather_solution_path(instance *inst, const double *xstar, int type);

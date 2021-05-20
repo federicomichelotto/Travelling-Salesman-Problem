@@ -200,9 +200,8 @@ void parse_instance(instance *inst)
                 inst->dimension = strtol(value, NULL, 10);
                 if (inst->param.verbose > DEBUG)
                     printf("NODES %d\n", inst->dimension);
-
-                inst->nodes = (node *)calloc(inst->dimension, sizeof(node));
                 inst->edges = (edge *)calloc(inst->dimension, sizeof(edge));
+                inst->nodes = (node *)calloc(inst->dimension, sizeof(node));
             }
             else if (strncmp(parameter, "EDGE_WEIGHT_TYPE", 16) == 0)
             {

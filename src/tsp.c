@@ -105,6 +105,7 @@ double gather_solution_path(instance *inst, const double *xstar, int type)
         //        if (inst->param.verbose >= DEBUG) printf("Saving selected edges...\n");
         for (int i = 0; i < inst->dimension; i++)
         {
+            inst->best_sol[i] = xstar[i];
             for (int j = i + 1; j < inst->dimension; j++)
             {
                 if (xstar[xpos(i, j, inst)] > 0.5)
@@ -126,6 +127,7 @@ double gather_solution_path(instance *inst, const double *xstar, int type)
             printf("Saving selected arcs...\n");
         for (int i = 0; i < inst->dimension; i++)
         {
+            inst->best_sol[i] = xstar[i];
             for (int j = 0; j < inst->dimension; j++)
             {
                 if (xstar[xpos_dir(i, j, inst)] > 0.5)
@@ -458,9 +460,10 @@ int optimal_solver(instance *inst)
     CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
     // get timestamp
     inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : CPXgettime(env, &inst->timestamp_start);
+
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
-    inst->best_sol = (double *)malloc(inst->cols * sizeof(double));
+    inst->best_sol = (double *)calloc(inst->cols, sizeof(double));
 
     char path[1000];
     if (generate_path(path, "output", "model", optimal_model_name[inst->model_type], inst->param.name, inst->param.seed,
@@ -564,7 +567,7 @@ int math_solver(instance *inst)
     inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : CPXgettime(env, &inst->timestamp_start);
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
-    inst->best_sol = (double *)malloc(inst->cols * sizeof(double));
+    inst->best_sol = (double *)calloc(inst->cols, sizeof(double));
 
     char path[1000];
     if (generate_path(path, "output", "model", math_model_name[inst->model_type], inst->param.name, inst->param.seed,
@@ -678,57 +681,37 @@ int math_solver(instance *inst)
 
 int heuristic_solver(instance *inst)
 {
-
     double min_obj = CPX_INFBOUND;
     double obj_i = 0;
 
     int n = inst->dimension * (inst->dimension - 1) / 2;
 
     inst->best_sol = (double *)calloc(n, sizeof(double));
-    double *temp_sol = (double *)calloc(n, sizeof(double));
 
     printf("\nSOLUTION -----------------------------------------------\n");
     printf("\nRUNNING : %s\n", heuristic_model_full_name[inst->model_type]);
 
     for (int i = 0; i < inst->dimension; i++)
     {
+        double *sol_i = (double *)calloc(n, sizeof(double));
+        //edge *edge_list_i = (edge *)calloc(n, sizeof(edge));
 
         if (inst->model_type == 0)
-            obj_i = nearest_neighbours(inst, i);
+            obj_i = nearest_neighbours(inst, i, sol_i);
         else
             obj_i = extra_mileage(inst, i);
 
         if (obj_i < min_obj)
         {
             min_obj = obj_i;
-            for (int j = 0; j < n; j++)
-            {
-                temp_sol[j] = inst->best_sol[j];
-            }
+            gather_solution_path(inst, sol_i, 0);
+            save_and_plot_solution(inst, i + 1);
         }
-
-        gather_solution_path(inst, inst->best_sol, 0);
-        save_and_plot_solution(inst, i + 1);
-
-
-        for (int k = 0; k < n; k++)
-        {
-            inst->best_sol[k] = 0.0;
-        }
+        free(sol_i);
+        //free(edge_list_i);
     }
 
     printf("Best objective value: %f\n", min_obj);
-
-    inst->z_best = min_obj;
-    for (int j = 0; j < n; j++)
-    {
-        inst->best_sol[j] = temp_sol[j];
-    }
-
-    gather_solution_path(inst, inst->best_sol, 0);
-
-    free(temp_sol);
-
     return 0;
 }
 
@@ -1911,16 +1894,15 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     }
 }
 
-double nearest_neighbours(instance *inst, int starting_node)
+double nearest_neighbours(instance *inst, int starting_node, double *sol)
 {
 
     // TODO implement GRASP
 
-    double obj = 0;
+    double obj = 0.0;
+    // list of selected nodes
     node *node_list = (node *)calloc(inst->dimension, sizeof(node));
     edge *edge_list = (edge *)calloc(inst->dimension, sizeof(edge));
-
-    inst->edges = (edge *)calloc(inst->dimension, sizeof(edge));
 
     for (int i = 0; i < inst->dimension; i++)
     { // Initialize the node_list
@@ -1933,13 +1915,15 @@ double nearest_neighbours(instance *inst, int starting_node)
     node_list[starting_node].flag = 1; // Node selected as starting point
     int current = starting_node;       // Index of the current node
 
+    // select inst->dimension edges
     for (int k = 0; k < inst->dimension - 1; k++)
     {
         double min_dist = CPX_INFBOUND; // Initializing the minimum distance
         int min = current;              // Minimum distance index
+        // select the closest node w.r.t. to the current node
         for (int i = 0; i < inst->dimension; i++)
         {
-            if (node_list[i].flag == 0 && i != current)
+            if (node_list[i].flag == 0)
             {
                 double distance = dist(current, i, inst);
                 if (distance < min_dist)
@@ -1949,35 +1933,27 @@ double nearest_neighbours(instance *inst, int starting_node)
                 }
             }
         }
-
+        // add edge
         edge_list[k].prev = current;
         edge_list[k].next = min;
         edge_list[k].dist = min_dist;
+        sol[xpos(edge_list[k].prev, edge_list[k].next, inst)] = 1;
 
+        // change current node
         current = min;
         node_list[min].flag = 1;
         obj += min_dist;
     }
 
+    // Closing the circuit
     edge_list[inst->dimension - 1].prev = current;
-    edge_list[inst->dimension - 1].next = edge_list[0].prev; // Closing the circuit
+    edge_list[inst->dimension - 1].next = edge_list[0].prev;
     edge_list[inst->dimension - 1].dist = dist(edge_list[inst->dimension - 1].prev, edge_list[inst->dimension - 1].next, inst);
+    sol[xpos(edge_list[inst->dimension - 1].prev, edge_list[inst->dimension - 1].next, inst)] = 1;
     obj += edge_list[inst->dimension - 1].dist;
 
     printf("Best objective value for starting node %d: %f\n", starting_node + 1, obj);
-
-    for (int i = 0; i < inst->dimension; i++)
-    {
-        int prev = edge_list[i].prev;
-        int next = edge_list[i].next;
-        //        printf("(i, j) = (%d, %d) \n", prev, next);
-        inst->best_sol[xpos(prev, next, inst)] = 1.0;
-        inst->edges[i] = edge_list[i];
-    }
-
     free(node_list);
-    free(edge_list);
-
     return obj;
 }
 
@@ -1989,6 +1965,7 @@ double extra_mileage(instance *inst, int starting_node)
     node *node_list = (node *)calloc(inst->dimension, sizeof(node));
     edge *edge_list = (edge *)calloc(inst->dimension, sizeof(edge));
 
+    // initialization
     for (int i = 0; i < inst->dimension; i++)
     {
         node_list[i].x = inst->nodes[i].x;
@@ -2020,7 +1997,7 @@ double extra_mileage(instance *inst, int starting_node)
     node_list[idx].flag = 1; // Insert it in the circuit
 
     double distance = dist(starting_node, idx, inst); // Update objective value
-    obj += 2 * distance;
+    obj += 2 * distance;                              // starting_node->idx->starting_node
 
     edge_list[0].dist = distance; // Initialize edges in the circuit
     edge_list[0].prev = starting_node;
@@ -2046,17 +2023,21 @@ double extra_mileage(instance *inst, int starting_node)
         switch (inst->model_type)
         {
         case 1: // Nearest insertion
-            k = nearest_insertion(inst, inst->dimension, node_list, random_number);
+            k = nearest_insertion(inst, inst->dimension, node_list, random_number );
             break;
         case 2: // Farthest insertion
             k = farthest_insertion(inst, inst->dimension, node_list, random_number);
             break;
         }
 
+        // a->b
+        // min delta(a,b,k)
+        // delta(a,b,k) = Cak + Cbk - Cab
+
         //        printf("k: %d \n", k);
 
         double min_value = CPX_INFBOUND; // Insertion of node k in the circuit
-        int index;
+        int index;                       // edge that corresponds to the smallest extra mileage to add the node k to the circuit
 
         for (int i = 0; i < inst->dimension; i++)
         { // For every edge in the circuit find the one with minimum extra mileage
@@ -2083,7 +2064,8 @@ double extra_mileage(instance *inst, int starting_node)
                 break;
             }
         }
-
+        if (pos == -1)
+            print_error("Error extra_mileage: Cannot insert new edge, pos = -1");
         //        printf("pos: %d \n", pos);
 
         edge_list[pos].flag = 1; // Insert edge (j, k) in the circuit
@@ -2377,3 +2359,14 @@ int farthest_insertion(instance *inst, int n, node *node_list, double random_num
 
     return k;
 }
+
+// double two_opt(instance *inst)
+// {
+//     for (int a = 0; a < inst->dimension; a++)
+//     {
+//         for (int b = 0; b < inst->dimension; b++)
+//         {
+//             if (inst)
+//         }
+//     }
+// }
