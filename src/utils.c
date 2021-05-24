@@ -369,6 +369,16 @@ void print_command_line(instance *inst)
         print_error("No implemented solver selected");
     }
 
+    if (inst->param.interactive == 1)
+    {
+        printf("--interactive (ACTIVE -> %d)\n", inst->param.interactive);
+
+    }
+
+    if (inst->param.saveplots == 1){
+        printf("--saveplots (ACTIVE -> %d)\n", inst->param.saveplots);
+    }
+
     printf("-s %d\n", inst->param.seed);
     printf("-v %d (%s)\n", inst->param.verbose, verbose_name[inst->param.verbose]);
     printf("--------------------------------------------------------\n\n");

@@ -212,6 +212,7 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 double nearest_neighbours(instance *inst, int starting_node, double *sol);
 
 double extra_mileage(instance *inst, int starting_node);
+double extra_mileage2(instance *inst, int starting_node);
 
 int nearest_insertion(instance *inst, int n, node *node_list, double random_number);
 
