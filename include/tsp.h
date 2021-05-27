@@ -130,8 +130,8 @@ static const char *math_model_name[] = {
 
 static const char *heuristic_model_name[] = {
     "GREEDY",
-    "EXTRA-MILEAGE (NEAR)",
-    "EXTRA-MILEAGE (FAR)"};
+    "EXTRA-MILEAGE"
+    };
 
 static const char *optimal_model_full_name[] = {
     "Basic model w/o SEC",
@@ -145,7 +145,7 @@ static const char *optimal_model_full_name[] = {
     "Garvish-Graves compact model original",
     "Benders' method'",
     "Benders' method' (Kruskal)",
-    "Callback method",
+    "Callback method"
 };
 
 static const char *math_model_full_name[] = {
@@ -154,8 +154,8 @@ static const char *math_model_full_name[] = {
 
 static const char *heuristic_model_full_name[] = {
     "Nearest Neighbors (Greedy)",
-    "Extra-milage (nearest insertion)",
-    "Extra-milage (farthest insertion)"};
+    "Extra-milage"
+    };
 
 // TSP solver
 int optimal_solver(instance *inst);
@@ -212,7 +212,7 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 double nearest_neighbours(instance *inst, int starting_node, double *sol);
 
 double extra_mileage(instance *inst, int starting_node);
-double extra_mileage2(instance *inst, int starting_node);
+double extra_mileage2(instance *inst, int starting_node, double *sol);
 
 int nearest_insertion(instance *inst, int n, node *node_list, double random_number);
 
