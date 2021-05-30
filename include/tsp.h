@@ -21,14 +21,14 @@ typedef struct
     char weight_format[20]; // Specifies how the edge weights (or distances) are formatted
     char data_type[20];     // Specifies how the data are displayed
 
-    int seed; // Seed given to cplex
-    int run;  // Number of current run
-    int verbose;
+    int seed;             // Seed given to cplex
+    int run;              // Number of current run
+    int verbose;          // verbosity level [0,4]
     int callback_counter; // #callback's called
-    int ticks;
-    int solver;      // 0 : optimal, 1 : math, 2 : heuristic
-    int interactive; // 0: none plot is displayed, 1: all plots are printed
-    int saveplots;   // 0: save only the final plot, 1: save all plots
+    int ticks;            // flag: 0->seconds, 1->ticks
+    int solver;           // 0 : optimal, 1 : math, 2 : heuristic
+    int interactive;      // 0: none plot is displayed, 1: all plots are printed
+    int saveplots;        // 0: save only the final plot, 1: save all plots
 
 } parameter;
 
@@ -58,8 +58,7 @@ typedef struct
     // Input data
     int dimension; // Number of nodes of the problem
     node *nodes;   // List of nodes
-    edge *edges;   // Refined list of edges (u,v) returned by CPLEX
-    int n_edges;   // Total number of edges inside the best solution
+    int *succ;     // array of nodes' successors
 
     double *weights;     // weights
     _Bool integer_costs; // = TRUE (1) for integer costs (rounded distances), = FALSE (0) otherwise
@@ -67,14 +66,13 @@ typedef struct
     parameter param; // Parameters of the instance
 
     double time_limit; // Specifies the maximum time allowed within the execution
-    double time_left;  // Time left for the case of multiple runs
     double timestamp_start;
     double timestamp_finish;
     int model_type;   // Specifies the type of the model
     double z_best;    // Value of the best solution available (incumbent)
     double best_lb;   // best lower bound
     double *best_sol; // Best xstar found
-    int cols;
+    int cols;         // #columns in cplex
     FILE *gnuplotPipe;
 
 } instance;
@@ -130,8 +128,8 @@ static const char *math_model_name[] = {
 
 static const char *heuristic_model_name[] = {
     "GREEDY",
-    "EXTRA-MILEAGE"
-    };
+    "EXTRA-MILEAGE",
+    "EXTRA-MILEAGE FURTHEST STARTING NODES"};
 
 static const char *optimal_model_full_name[] = {
     "Basic model w/o SEC",
@@ -143,10 +141,9 @@ static const char *optimal_model_full_name[] = {
     "Garvish-Graves lazy compact model",
     "Garvish-Graves lazy compact model w/ SEC2",
     "Garvish-Graves compact model original",
-    "Benders' method'",
-    "Benders' method' (Kruskal)",
-    "Callback method"
-};
+    "Benders' method",
+    "Benders' method (Kruskal)",
+    "Callback method"};
 
 static const char *math_model_full_name[] = {
     "Hard fixing heuristic",
@@ -154,8 +151,8 @@ static const char *math_model_full_name[] = {
 
 static const char *heuristic_model_full_name[] = {
     "Nearest Neighbors (Greedy)",
-    "Extra-milage"
-    };
+    "Extra-mileage",
+    "Extra-mileage furthest starting nodes"};
 
 // TSP solver
 int optimal_solver(instance *inst);
@@ -209,21 +206,21 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter);
 
 // CONSTRUCTIVE HEURISTIC
-double nearest_neighbours(instance *inst, int starting_node, double *sol);
+double nearest_neighbours(instance *inst, int starting_node, int *succ);
 
-double extra_mileage(instance *inst, int starting_node);
-double extra_mileage2(instance *inst, int starting_node, double *sol);
+double extra_mileage(instance *inst, int starting_node, int *succ);
+double extra_mileage_furthest_starting_nodes(instance *inst, int *succ);
 
 int nearest_insertion(instance *inst, int n, node *node_list, double random_number);
 
 int farthest_insertion(instance *inst, int n, node *node_list, double random_number);
 
-// REFINEMENT HEURISTIC 
+// REFINEMENT HEURISTIC
 // to use to refine a solution, we assume that inside inst->best_sol there is a valid solution, and the selected edges are in inst->edges
 double two_opt(instance *inst);
 
 // Some useful functions
-double gather_solution_path(instance *inst, const double *xstar, int type);
+double gather_solution(instance *inst, const double *xstar, int type);
 
 // Retrieve the distance among each node of the instance
 double dist(int i, int j, instance *inst);

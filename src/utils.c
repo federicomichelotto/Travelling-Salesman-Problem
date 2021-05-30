@@ -28,7 +28,6 @@ void parse_command_line(int argc, char **argv, instance *inst)
             if (strcmp(argv[i], "-t") == 0)
             { // Time limit (seconds)
                 inst->time_limit = strtof(argv[++i], NULL);
-                inst->time_left = inst->time_limit;
                 continue;
             }
 
@@ -200,7 +199,7 @@ void parse_instance(instance *inst)
                 inst->dimension = strtol(value, NULL, 10);
                 if (inst->param.verbose > DEBUG)
                     printf("NODES %d\n", inst->dimension);
-                inst->edges = (edge *)calloc(inst->dimension, sizeof(edge));
+                inst->succ = (int *)calloc(inst->dimension, sizeof(int));
                 inst->nodes = (node *)calloc(inst->dimension, sizeof(node));
             }
             else if (strncmp(parameter, "EDGE_WEIGHT_TYPE", 16) == 0)
@@ -282,7 +281,6 @@ void initialize_instance(instance *inst)
 {
     inst->model_type = 0;
     inst->time_limit = CPX_INFBOUND;
-    inst->time_left = CPX_INFBOUND;
     inst->param.seed = 1;
     inst->param.run = 0;
     inst->param.verbose = NORMAL;
@@ -294,8 +292,7 @@ void initialize_instance(instance *inst)
 
     inst->dimension = -1;
     inst->nodes = NULL;
-    inst->edges = NULL;
-    inst->n_edges = -1;
+    inst->succ = NULL;
 
     inst->weights = NULL;
     inst->integer_costs = 1;
@@ -326,14 +323,12 @@ void free_instance(instance *inst)
 {
     // close gnuplot pipe
     if (pclose(inst->gnuplotPipe) == -1)
-    {
         print_error("pclose error");
-        return;
-    }
 
+    if (inst->param.solver != 2)
+        free(inst->best_sol);
     free(inst->nodes);
-    free(inst->edges);
-    free(inst->best_sol);
+    free(inst->succ);
     free(inst->weights);
     // todo write the code to free the allocated memory within the instance (bottom-up approach)
 }
@@ -372,10 +367,10 @@ void print_command_line(instance *inst)
     if (inst->param.interactive == 1)
     {
         printf("--interactive (ACTIVE -> %d)\n", inst->param.interactive);
-
     }
 
-    if (inst->param.saveplots == 1){
+    if (inst->param.saveplots == 1)
+    {
         printf("--saveplots (ACTIVE -> %d)\n", inst->param.saveplots);
     }
 
@@ -466,13 +461,11 @@ int save_and_plot_solution(instance *inst, int iter)
     {
         // write solution to file
         FILE *temp = fopen("data.temp", "w");
-        for (int i = 0; i < inst->n_edges; i++)
+        for (int i = 0; i < inst->dimension; i++)
         {
-            int prev = inst->edges[i].prev;
-            int next = inst->edges[i].next;
             //Write the coordinates of the two nodes inside a temporary file
-            fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[prev].x, inst->nodes[prev].y, inst->nodes[next].x, inst->nodes[next].y);
-            // double '\n' to create a new block of coordinates
+            fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[i].x, inst->nodes[i].y, inst->nodes[inst->succ[i]].x, inst->nodes[inst->succ[i]].y);
+            // double '\n' to create a new edge (block of coordinates)
         }
         fclose(temp);
 

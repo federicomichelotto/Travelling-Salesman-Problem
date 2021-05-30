@@ -60,7 +60,7 @@ int xpos(int i, int j, instance *inst)
 {
 
     if (i == j)
-        print_error("Same indexes are not valid!");
+        print_error("Same indices are not valid!");
     if (i < 0 || j < 0)
         print_error("Negative indexes are not valid!");
     if (i > inst->dimension || j > inst->dimension)
@@ -97,47 +97,53 @@ int ypos(int i, int j, instance *inst)
     return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i * inst->dimension + j;
 }
 
-double gather_solution_path(instance *inst, const double *xstar, int type)
+double gather_solution(instance *inst, const double *xstar, int type)
 {
-    inst->n_edges = 0;
-    if (type == 0)
+    int n_edges = 0;
+    if (type == 0) // undirected graph
     {
-        //        if (inst->param.verbose >= DEBUG) printf("Saving selected edges...\n");
         for (int i = 0; i < inst->dimension; i++)
         {
-            inst->best_sol[i] = xstar[i];
-            for (int j = i + 1; j < inst->dimension; j++)
+            inst->succ[i] = -1;
+        }
+        int init = 0;
+        int node = 0;
+        for (int i = 0; i < inst->dimension; i++)
+        {
+            if (i == node || inst->succ[i] == node)
+                continue;
+            if (xstar[xpos(node, i, inst)] > 0.5)
             {
-                if (xstar[xpos(i, j, inst)] > 0.5)
+                inst->succ[node] = i;
+                if (++n_edges == inst->dimension)
+                    break;
+                node = i;
+                if (i == init)
                 {
-                    //                    if (inst->param.verbose >= DEBUG) printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-
-                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
-                    inst->edges[inst->n_edges].prev = i;
-                    inst->edges[inst->n_edges].next = j;
-                    if (++inst->n_edges > inst->dimension)
-                        print_error("more edges than nodes, not a hamiltonian tour.");
+                    // look for a new connected component
+                    for (int j = 0; j < inst->dimension; j++)
+                    {
+                        if (inst->succ[j] != -1)
+                        { // node not visited yet
+                            node = j;
+                            break;
+                        }
+                    }
                 }
+                i = -1; // restart the loop from i=0
             }
         }
     }
-    else if (type == 1)
+    else if (type == 1) // directed graph
     {
-        if (inst->param.verbose >= DEBUG)
-            printf("Saving selected arcs...\n");
         for (int i = 0; i < inst->dimension; i++)
         {
-            inst->best_sol[i] = xstar[i];
             for (int j = 0; j < inst->dimension; j++)
             {
                 if (xstar[xpos_dir(i, j, inst)] > 0.5)
                 {
-                    //                    if (inst->param.verbose >= DEBUG) printf("  ... x(%3d,%3d) = 1\n", i + 1, j + 1);
-
-                    inst->edges[inst->n_edges].dist = dist(i, j, inst);
-                    inst->edges[inst->n_edges].prev = i;
-                    inst->edges[inst->n_edges].next = j;
-                    if (++inst->n_edges > inst->dimension)
+                    inst->succ[i] = j;
+                    if (++n_edges > inst->dimension)
                         print_error("more arcs than nodes, not a hamiltonian tour.");
                 }
             }
@@ -147,7 +153,8 @@ double gather_solution_path(instance *inst, const double *xstar, int type)
 
 void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp,
                              int **length_comp)
-{ // build succ() and comp() wrt xstar()...
+{
+    // build succ[] and comp[] wrt xstar()...
 
     // initialization
     *ncomp = 0;
@@ -532,20 +539,19 @@ int optimal_solver(instance *inst)
         if (inst->model_type == 9 || inst->model_type == 10)
         { // Benders
             benders(env, lp, inst);
-
+            // no need to gather the solution because benders update inst->succ directly
+        }
+        else
+        {
             if (CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1))
                 print_error("CPXgetx() error");
+            gather_solution(inst, inst->best_sol, 0);
         }
-
-        gather_solution_path(inst, inst->best_sol, 0);
     }
     else
     { // directed graph
-        gather_solution_path(inst, inst->best_sol, 1);
+        gather_solution(inst, inst->best_sol, 1);
     }
-
-    if (inst->n_edges != inst->dimension)
-        print_error("not a tour.");
 
     printf("\nObjective value: %lf\n", inst->z_best);
     printf("Lower bound: %lf\n", inst->best_lb);
@@ -641,7 +647,7 @@ int math_solver(instance *inst)
     CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
     CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
 
-    gather_solution_path(inst, inst->best_sol, 0);
+    gather_solution(inst, inst->best_sol, 0);
     save_and_plot_solution(inst, 0);
 
     printf("\nSOLUTION -----------------------------------------------\n");
@@ -667,8 +673,8 @@ int math_solver(instance *inst)
         soft_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20);
     }
 
-    if (inst->n_edges != inst->dimension)
-        print_error("not a tour.");
+    // if (inst->n_edges != inst->dimension)
+    //     print_error("not a tour.");
 
     printf("\nObjective value: %lf\n", inst->z_best);
     printf("Lower bound: %lf\n", inst->best_lb);
@@ -684,40 +690,60 @@ int math_solver(instance *inst)
 
 int heuristic_solver(instance *inst)
 {
+    // get timestamp
+    struct timespec timestamp;
+    if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
+        print_error("Error clock_gettime");
+    inst->timestamp_start = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
+
     double min_obj = CPX_INFBOUND;
     double obj_i = 0;
 
-    int n = inst->dimension * (inst->dimension - 1) / 2;
-
-    inst->best_sol = (double *)calloc(n, sizeof(double));
-
     printf("\nSOLUTION -----------------------------------------------\n");
     printf("\nRUNNING : %s\n", heuristic_model_full_name[inst->model_type]);
+    int *succ_i = (int *)calloc(inst->dimension, sizeof(int));
 
-    for (int i = 0; i < inst->dimension; i++)
+    if (inst->model_type == 2)
     {
-        double *sol_i = (double *)calloc(n, sizeof(double));
-
-        if (inst->model_type == 0)
-            obj_i = nearest_neighbours(inst, i, sol_i);
-        else
-            obj_i = extra_mileage2(inst, i, sol_i);
-        if (obj_i < min_obj)
-        {
-            min_obj = obj_i;
-            gather_solution_path(inst, sol_i, 0);
-            save_and_plot_solution(inst, i + 1);
-        }
-        free(sol_i);
+        min_obj = extra_mileage_furthest_starting_nodes(inst, succ_i);
+        for (int j = 0; j < inst->dimension; j++)
+            inst->succ[j] = succ_i[j];
+        save_and_plot_solution(inst, 1);
     }
-
+    else
+    {
+        for (int i = 0; i < inst->dimension; i++)
+        {
+            if (inst->model_type == 0)
+            {
+                obj_i = nearest_neighbours(inst, i, succ_i);
+            }
+            else if (inst->model_type == 1)
+            {
+                obj_i = extra_mileage(inst, i, succ_i);
+            }
+            if (obj_i < min_obj)
+            {
+                min_obj = obj_i;
+                for (int j = 0; j < inst->dimension; j++)
+                    inst->succ[j] = succ_i[j];
+                save_and_plot_solution(inst, i + 1);
+            }
+        }
+    }
     printf("Best objective value: %f\n", min_obj);
+
+    free(succ_i);
+
+    // get timestamp
+    if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
+        print_error("Error clock_gettime");
+    inst->timestamp_finish = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
     return 0;
 }
 
 void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
 {
-
     char path[1000];
 
     if (inst->param.solver == 0)
@@ -1607,10 +1633,10 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
     {
         // update time left
         inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
-        inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
-        if (inst->time_left <= 0.5)
+        double time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
+        if (time_left <= 0.5)
             return;
-        CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
+        CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
 
         double *xstar = (double *)calloc(inst->cols, sizeof(double));
 
@@ -1621,17 +1647,16 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
         }
 
         int *comp = (int *)calloc(inst->dimension, sizeof(int));
-        int *succ = (int *)calloc(inst->dimension, sizeof(int));
         int c = 0; // number of connected components
         int *length_comp;
 
         // Retrieve the number of connected components so far
         if (inst->model_type == 9)
-            findConnectedComponents(xstar, inst, succ, comp, &c, &length_comp);
+            findConnectedComponents(xstar, inst, inst->succ, comp, &c, &length_comp);
         else if (inst->model_type == 10)
-            findConnectedComponents_kruskal(xstar, inst, succ, comp, &c, &length_comp);
+            findConnectedComponents_kruskal(xstar, inst, inst->succ, comp, &c, &length_comp);
 
-        printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d \tTIME LEFT: %f\n", ++it, c, inst->time_left);
+        printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d \tTIME LEFT: %f\n", ++it, c, time_left);
 
         if (c == 1)
         {
@@ -1643,13 +1668,11 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
                     printf("\t -- COMPONENT %d : %d NODES\n", n + 1, length_comp[n]);
                 }
             }
-
             done = 1;
         }
         else
         {
             // If more than one component plot and check the partial solution
-
             if (inst->param.verbose >= NORMAL)
             {
                 for (int n = 0; n < c; n++)
@@ -1658,10 +1681,9 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
                 }
             }
 
-            gather_solution_path(inst, xstar, 0);
             save_and_plot_solution(inst, it);
 
-            // Add SEC to each component found
+            // Add a SEC for each component found
 
             // rname: rows' names (row = constraint)
             char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
@@ -1694,11 +1716,11 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
                     }
                     else if (inst->model_type == 10)
                     {
-                        if (comp[i] != succ[mycomp])
+                        if (comp[i] != inst->succ[mycomp])
                             continue;
                         for (int j = i + 1; j < inst->dimension; j++)
                         {
-                            if (comp[j] != succ[mycomp])
+                            if (comp[j] != inst->succ[mycomp])
                                 continue;
                             // add (i,j) to SEC
                             if (CPXchgcoef(env, lp, row, xpos(i, j, inst), 1.0)) // 1.0 * x_ij
@@ -1716,7 +1738,6 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
         }
 
         free(comp);
-        free(succ);
         free(xstar);
         free(length_comp);
     }
@@ -1729,13 +1750,13 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     {
         // update time left
         inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
-        inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
-        if (inst->time_left <= 0.5)
+        double time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
+        if (time_left <= 0.5)
             return;
-        if (inst->time_left <= time_limit_iter)
-            CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
+        if (time_left <= time_limit_iter)
+            CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
         if (inst->param.verbose >= DEBUG)
-            printf("*** time left = %f\n", inst->time_left);
+            printf("*** time left = %f\n", time_left);
 
         // allocate two arrays with size ncols
         int *indices = (int *)malloc(inst->cols * sizeof(int));
@@ -1778,12 +1799,8 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
                 print_error_status("Failed to obtain the values in hard_fixing_heuristic method", status);
             if (inst->param.verbose >= NORMAL)
                 printf("New incumbent: %f\n", inst->z_best);
-            gather_solution_path(inst, inst->best_sol, 0);
+            gather_solution(inst, inst->best_sol, 0);
             save_and_plot_solution(inst, iter);
-            // if (inst->param.saveplots)
-            //     save_intermediate_solution(inst, ++iter);
-            // if (inst->param.interactive)
-            //     plot_solution(inst);
 
             int beg = 0;
             if (CPXaddmipstarts(env, lp, 1, nedges, &beg, indices, values, CPX_MIPSTART_AUTO, NULL))
@@ -1803,13 +1820,13 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     {
         // update time left
         inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
-        inst->time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
-        if (inst->time_left <= 0.5)
+        double time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
+        if (time_left <= 0.5)
             return;
-        if (inst->time_left <= time_limit_iter)
-            CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_left);
+        if (time_left <= time_limit_iter)
+            CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
         if (inst->param.verbose >= DEBUG)
-            printf("*** time left = %f\n", inst->time_left);
+            printf("*** time left = %f\n", time_left);
 
         double rhs = inst->dimension - k;
         char sense = 'G';
@@ -1860,12 +1877,8 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             if (inst->param.verbose >= NORMAL)
                 printf("New incumbent: %f\n", inst->z_best);
 
-            gather_solution_path(inst, inst->best_sol, 0);
+            gather_solution(inst, inst->best_sol, 0);
             save_and_plot_solution(inst, iter);
-            // if (inst->param.saveplots)
-            //     save_intermediate_solution(inst, iter);
-            // if (inst->param.interactive)
-            //     plot_solution(inst);
 
             int beg = 0;
             if (CPXaddmipstarts(env, lp, 1, inst->dimension, &beg, indices, coeffs, CPX_MIPSTART_AUTO, NULL))
@@ -1893,36 +1906,26 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     }
 }
 
-double nearest_neighbours(instance *inst, int starting_node, double *sol)
+double nearest_neighbours(instance *inst, int starting_node, int *succ)
 {
-
     // TODO implement GRASP
 
     double obj = 0.0;
-    // list of selected nodes
-    node *node_list = (node *)calloc(inst->dimension, sizeof(node));
-    edge *edge_list = (edge *)calloc(inst->dimension, sizeof(edge));
-
+    // initialize succ
     for (int i = 0; i < inst->dimension; i++)
-    { // Initialize the node_list
-        node_list[i].x = inst->nodes[i].x;
-        node_list[i].y = inst->nodes[i].y;
-        node_list[i].flag = 0;
-        edge_list[i].flag = 0;
-    }
+        succ[i] = -1;
 
-    node_list[starting_node].flag = 1; // Node selected as starting point
-    int current = starting_node;       // Index of the current node
+    int current = starting_node; // Index of the current node
 
-    // select inst->dimension edges
-    for (int k = 0; k < inst->dimension - 1; k++)
+    // select inst->dimension - 1 edges
+    for (int count = 0; count < inst->dimension - 1; count++)
     {
         double min_dist = CPX_INFBOUND; // Initializing the minimum distance
-        int min = current;              // Minimum distance index
+        int min = -1;                   // Index of the closest node
         // select the closest node w.r.t. to the current node
         for (int i = 0; i < inst->dimension; i++)
         {
-            if (node_list[i].flag == 0)
+            if (i != current && succ[i] == -1) // i has not been selected yet
             {
                 double distance = dist(current, i, inst);
                 if (distance < min_dist)
@@ -1932,64 +1935,41 @@ double nearest_neighbours(instance *inst, int starting_node, double *sol)
                 }
             }
         }
+        if (min == -1)
+            print_error("min == -1");
         // add edge
-        edge_list[k].prev = current;
-        edge_list[k].next = min;
-        edge_list[k].dist = min_dist;
-        sol[xpos(edge_list[k].prev, edge_list[k].next, inst)] = 1.0;
-
+        succ[current] = min;
         // change current node
         current = min;
-        node_list[min].flag = 1;
         obj += min_dist;
     }
-
-    // Closing the circuit
-    edge_list[inst->dimension - 1].prev = current;
-    edge_list[inst->dimension - 1].next = edge_list[0].prev;
-    edge_list[inst->dimension - 1].dist = dist(edge_list[inst->dimension - 1].prev, edge_list[inst->dimension - 1].next,
-                                               inst);
-    sol[xpos(edge_list[inst->dimension - 1].prev, edge_list[inst->dimension - 1].next, inst)] = 1;
-    obj += edge_list[inst->dimension - 1].dist;
-
+    // close the circuit
+    succ[current] = starting_node;
     printf("Best objective value for starting node %d: %f\n", starting_node + 1, obj);
-
-    free(edge_list);
-    free(node_list);
 
     return obj;
 }
 
-double extra_mileage2(instance *inst, int starting_node, double *sol)
+double extra_mileage(instance *inst, int starting_node, int *succ)
 {
 
-    double obj = 0; // Objective value
+    double obj = 0;                                                        // Objective value
+    double *succ_dist = (double *)calloc(inst->dimension, sizeof(double)); // array of the distance between the node i and succ[i]
 
-    node *node_list = (node *)calloc(inst->dimension, sizeof(node));
-    edge *edge_list = (edge *)calloc(inst->dimension, sizeof(edge));
-
-    // initialization
     for (int i = 0; i < inst->dimension; i++)
     {
-        node_list[i].x = inst->nodes[i].x;
-        node_list[i].y = inst->nodes[i].y;
-
-        node_list[i].flag = 0; // The circuit has no nodes
-        edge_list[i].flag = 0; // The circuit has no edges
+        succ[i] = -1;
     }
-
-    node_list[starting_node].flag = 1; // Insert node start in the circuit
-
-    //    for (int i = 0; i < inst->dimension; i++) printf("Node %d - (%f, %f) [%d]\n", i+1, node_list[i].x, node_list[i].y, node_list[i].flag);
 
     // Find node at maximum distance from first node
     double max = 0;
+    double distance;
     int idx = starting_node;
     for (int i = 0; i < inst->dimension; i++)
     {
         if (i != starting_node)
         {
-            double distance = dist(starting_node, i, inst);
+            distance = dist(starting_node, i, inst);
             if (max < distance)
             {
                 max = distance;
@@ -1998,504 +1978,123 @@ double extra_mileage2(instance *inst, int starting_node, double *sol)
         }
     }
 
-    //    printf("Initial arc: (%d, %d)\n", starting_node, idx);
-
-    node_list[idx].flag = 1; // Insert it in the circuit
-
-    double distance = dist(starting_node, idx, inst); // Update objective value
-    obj += 2 * distance;                              // starting_node->idx->starting_node
-
-    // Initialize edges in the circuit
-    edge_list[0].dist = distance;
-    edge_list[0].prev = starting_node;
-    edge_list[0].next = idx;
-    edge_list[0].flag = 1;
-
-    edge_list[1].dist = distance;
-    edge_list[1].prev = starting_node;
-    edge_list[1].next = idx;
-    edge_list[1].flag = 1;
+    succ[starting_node] = idx;
+    succ[idx] = starting_node;
+    succ_dist[starting_node] = distance;
+    succ_dist[idx] = distance;
+    obj += 2 * succ_dist[starting_node]; // starting_node->idx->starting_node
 
     // add inst->dimension - 2 nodes
-    for (int iter = 0; iter < inst->dimension - 3; iter++)
+    for (int iter = 0; iter < inst->dimension - 2; iter++)
     {
 
         double min_value = CPX_INFBOUND; // Insertion of node selected_node in the circuit
-        int selected_edge;               // edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
+        int idx_edge;                    // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
         int selected_node;               // node to add in the circuit
 
         // for each uncovered node and for each edge in the circuit, compute the extra mileage
         for (int k = 0; k < inst->dimension; k++)
         {
-            for (int e = 0; e < inst->dimension; e++)
+            for (int i = 0; i < inst->dimension; i++)
             {
-                if (edge_list[e].flag == 1 && node_list[k].flag == 0)
+                if (succ[k] == -1 && succ[i] != -1)
                 {
-                    if (k != edge_list[e].prev || k != edge_list[e].next)
+                    // k: node not in the circuit (it has no successor)
+                    // (i, succ[i]): edge
+                    double extra_mileage = dist(i, k, inst) + dist(succ[i], k, inst) - succ_dist[i];
+                    if (extra_mileage < min_value)
                     {
-                        double extra_mileage = dist(edge_list[e].prev, k, inst) + dist(k, edge_list[e].next, inst) - edge_list[e].dist;
-                        if (extra_mileage < min_value)
-                        {
-                            min_value = extra_mileage;
-                            selected_edge = e;
-                            selected_node = k;
-                        }
+                        min_value = extra_mileage;
+                        idx_edge = i; // (i, succ[i])
+                        selected_node = k;
                     }
                 }
             }
         }
-
-        int pos = -1; // Find position for edge (j, k)
-        for (int i = 0; i < inst->dimension; i++)
-        {
-            if (edge_list[i].flag == 0)
-            {
-                pos = i;
-                break;
-            }
-        }
-        if (pos == -1)
-            print_error("Error extra_mileage: Cannot insert new edge, pos = -1");
-
-        // deactivate and activate edges in the solution
-        sol[xpos(edge_list[selected_edge].prev, edge_list[selected_edge].next, inst)] = 0.0;
-        sol[xpos(edge_list[selected_edge].prev, selected_node, inst)] = 1.0;
-        sol[xpos(selected_node, edge_list[selected_edge].next, inst)] = 1.0;
-
-        // Insert the new edge (selected_edge.next, selected_node) in the circuit
-        edge_list[pos].flag = 1;
-        edge_list[pos].dist = dist(edge_list[selected_edge].next, selected_node, inst);
-        edge_list[pos].prev = edge_list[selected_edge].next;
-        edge_list[pos].next = selected_node;
-
-        // Replace edge selected_edge with the edge (selected_edge.prev, selected_node)
-        edge_list[selected_edge].dist = dist(edge_list[selected_edge].prev, selected_node, inst);
-        edge_list[selected_edge].next = selected_node;
-        node_list[selected_node].flag = 1; // Add node in the circuit
+        succ[selected_node] = succ[idx_edge];
+        succ_dist[selected_node] = dist(selected_node, succ[idx_edge], inst);
+        succ[idx_edge] = selected_node;
+        succ_dist[idx_edge] = dist(idx_edge, selected_node, inst);
 
         obj += min_value; // Update objective value
     }
 
-    printf("Best objective value for starting node %d: %f\n", starting_node + 1, obj);
+    printf("Objective value for starting node %d: %f\n", starting_node + 1, obj);
 
-    free(node_list);
-    free(edge_list);
     return obj;
 }
 
-double extra_mileage(instance *inst, int starting_node)
+// TO CHECK BETTER
+double extra_mileage_furthest_starting_nodes(instance *inst, int *succ)
 {
+    double obj = 0;                                                        // Objective value
+    double *succ_dist = (double *)calloc(inst->dimension, sizeof(double)); // array of the distance between the node i and succ[i]
 
-    double obj = 0; // Objective value
-
-    node *node_list = (node *)calloc(inst->dimension, sizeof(node));
-    edge *edge_list = (edge *)calloc(inst->dimension, sizeof(edge));
-
-    // initialization
     for (int i = 0; i < inst->dimension; i++)
     {
-        node_list[i].x = inst->nodes[i].x;
-        node_list[i].y = inst->nodes[i].y;
-
-        node_list[i].flag = 0; // The circuit has no nodes
-        edge_list[i].flag = 0; // The circuit has no edges
+        succ[i] = -1;
     }
 
-    node_list[starting_node].flag = 1; // Insert node start in the circuit
-
-    double max = 0; // Find node at maximum distance from first node
-    int idx = starting_node;
+    // Find node at maximum distance from first node
+    double max = 0;
+    double distance;
+    int node1, node2;
     for (int i = 0; i < inst->dimension; i++)
     {
-        if (i != starting_node)
+        for (int j = 0; j < inst->dimension; j++)
         {
-            double distance = dist(starting_node, i, inst);
-            if (max < distance)
+            if (i != j)
             {
-                max = distance;
-                idx = i;
-            }
-        }
-    }
-
-    //    printf("Initial arc: (%d, %d)\n", starting_node, idx);
-
-    node_list[idx].flag = 1; // Insert it in the circuit
-
-    double distance = dist(starting_node, idx, inst); // Update objective value
-    obj += 2 * distance;                              // starting_node->idx->starting_node
-
-    edge_list[0].dist = distance; // Initialize edges in the circuit
-    edge_list[0].prev = starting_node;
-    edge_list[0].next = idx;
-    edge_list[0].flag = 1;
-
-    edge_list[1].dist = distance;
-    edge_list[1].prev = starting_node;
-    edge_list[1].next = idx;
-    edge_list[1].flag = 1;
-
-    srand(time(0));
-    double random_number;
-
-    int done = 1;
-    int iter = 0;
-    while (!done)
-    {
-        int k;
-        random_number = rand() / ((double)RAND_MAX);
-
-        switch (inst->model_type)
-        {
-        case 1: // Nearest insertion
-            k = nearest_insertion(inst, inst->dimension, node_list, random_number);
-            break;
-        case 2: // Farthest insertion
-            k = farthest_insertion(inst, inst->dimension, node_list, random_number);
-            break;
-        }
-
-        // a->b
-        // min delta(a,b,k)
-        // delta(a,b,k) = Cak + Cbk - Cab
-
-        //        printf("k: %d \n", k);
-
-        double min_value = CPX_INFBOUND; // Insertion of node k in the circuit
-        int index;                       // edge that corresponds to the smallest extra mileage to add the node k to the circuit
-
-        for (int i = 0;
-             i < inst->dimension; i++)
-        { // For every edge in the circuit find the one with minimum extra mileage
-            // Extra mileage: c_i_k + c_k_j - c_i_j
-            if (edge_list[i].flag == 1)
-            {
-                double extra_mileage =
-                    dist(edge_list[i].prev, k, inst) + dist(k, edge_list[i].next, inst) - edge_list[i].dist;
-                if (extra_mileage < min_value)
+                distance = dist(i, j, inst);
+                if (distance > max)
                 {
-                    min_value = extra_mileage;
-                    index = i;
+                    max = distance;
+                    node1 = i;
+                    node2 = j;
                 }
             }
         }
+    }
 
-        //        printf("edge: (%d,%d) \n", edge_list[index].prev, edge_list[index].next);
+    succ[node1] = node2;
+    succ[node2] = node1;
+    succ_dist[node1] = distance;
+    succ_dist[node2] = distance;
+    obj += 2 * distance; // starting_node1->node2->node1
 
-        int pos = -1; // Find position for edge (j, k)
-        for (int i = 0; i < inst->dimension; i++)
+    // add inst->dimension - 2 nodes
+    for (int iter = 0; iter < inst->dimension - 2; iter++)
+    {
+        double min_value = CPX_INFBOUND; // Insertion of node selected_node in the circuit
+        int idx_edge;                    // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
+        int selected_node;               // node to add in the circuit
+
+        // for each uncovered node and for each edge in the circuit, compute the extra mileage
+        for (int k = 0; k < inst->dimension; k++)
         {
-            if (edge_list[i].flag == 0)
+            for (int i = 0; i < inst->dimension; i++)
             {
-                pos = i;
-                break;
+                if (succ[k] == -1 && succ[i] != -1)
+                {
+                    // k: node not in the circuit (it has no successor)
+                    // (i, succ[i]): edge
+                    double extra_mileage = dist(i, k, inst) + dist(succ[i], k, inst) - succ_dist[i];
+                    if (extra_mileage < min_value)
+                    {
+                        min_value = extra_mileage;
+                        idx_edge = i; // (i, succ[i])
+                        selected_node = k;
+                    }
+                }
             }
         }
-        if (pos == -1)
-            print_error("Error extra_mileage: Cannot insert new edge, pos = -1");
-        //        printf("pos: %d \n", pos);
-
-        edge_list[pos].flag = 1; // Insert edge (j, k) in the circuit
-        edge_list[pos].dist = dist(edge_list[index].next, k, inst);
-        edge_list[pos].prev = edge_list[index].next;
-        edge_list[pos].next = k;
-
-        edge_list[index].dist = dist(edge_list[index].prev, k, inst); // Replace edge (i, j) with edge (i, k)
-        edge_list[index].next = k;
-
-        node_list[k].flag = 1; // Update nodes in circuit
+        succ[selected_node] = succ[idx_edge];
+        succ_dist[selected_node] = dist(selected_node, succ[idx_edge], inst);
+        succ[idx_edge] = selected_node;
+        succ_dist[idx_edge] = dist(idx_edge, selected_node, inst);
 
         obj += min_value; // Update objective value
-
-        for (int i = 0; i < inst->dimension; i++)
-        { // Check if there are still nodes out of the circuit,
-            // otherwise end while loop
-            if (node_list[i].flag == 0)
-            {
-                done = 0;
-                break;
-            }
-        }
-
-        //        for (int i = 0; i < inst->dimension; i++) {
-        //            printf("best edges: (%d, %d) \n", edge_list[i].prev, edge_list[i].next);
-        //        }
-        // TODO try to print each added edge as debug
     }
 
-    printf("Best objective value for starting node %d: %f\n", starting_node + 1, obj);
-
-    for (int i = 0; i < inst->dimension; i++)
-    {
-        int prev = edge_list[i].prev;
-        int next = edge_list[i].next;
-        printf("(i, j) = (%d, %d) \n", prev, next);
-        inst->best_sol[xpos(prev, next, inst)] = 1.0;
-        inst->edges[i] = edge_list[i];
-    }
-
-    free(node_list);
-    free(edge_list);
     return obj;
 }
-
-int nearest_insertion(instance *inst, int n, node *node_list, double random_number)
-{
-
-    double *distances = (double *)calloc(n,
-                                         sizeof(double)); // Store the minimum distances of each node from the circuit
-    // If flag = 0, then it means that the node already belongs to the circuit
-
-    for (int i = 0; i < n; i++)
-    {                       // Initialize distances
-        distances[i] = 0.0; // Use flag to keep track of the distance of node i from the circuit
-    }
-
-    for (int i = 0; i < n; i++)
-    { // Compute distances
-        if (node_list[i].flag == 0)
-        {
-            double distance_i_circuit = CPX_INFBOUND;
-            for (int j = 0; j < n; j++)
-            { // Compute distance of node i from the circuit
-                if (node_list[j].flag == 1.0 && i != j)
-                {
-                    double distance_i_j = dist(i, j, inst);
-                    if (distance_i_j < distance_i_circuit)
-                    {
-                        distance_i_circuit = distance_i_j;
-                    }
-                }
-            }
-            distances[i] = distance_i_circuit;
-        }
-    }
-    //    for (int i = 0; i < n; i++) {
-    //        printf("distances: %f \n", distances[i]);
-    //    }
-
-    int k; // Node to be added to the circuit
-
-    int count = 0; // Count how many nodes are not in the circuit
-    for (int i = 0; i < n; i++)
-    {
-        if (distances[i] != 0.0)
-        {
-            count++;
-        }
-    }
-
-    //printf("count: %d \n", count);
-
-    if (random_number <= 0.5 ||
-        count < 3)
-    { // GRASP: 50% of the times (if there are sufficient nodes out of the circuit)
-        // pick k among the 3 nodes at minimum distance from the circuit (using equal probability)
-        double min_distance = CPX_INFBOUND;
-        for (int i = 0; i < n; i++)
-        {
-            double d = distances[i];
-            if (d != 0.0 && d < min_distance)
-            {
-                min_distance = d;
-                k = i;
-            }
-        }
-
-        //printf("k is %d \n", k);
-    }
-    else
-    {
-        double min_distance = CPX_INFBOUND;
-        int k1, k2, k3;
-        for (int i = 0; i < n; i++)
-        {
-            double d = distances[i];
-            if (d != 0.0 && d < min_distance)
-            {
-                min_distance = d;
-                k1 = i;
-            }
-        }
-        distances[k1] = 0.0; // Make the distance equal to 0 so that it's not picked again as minimum distance
-
-        min_distance = CPX_INFBOUND;
-        for (int i = 0; i < n; i++)
-        {
-            double d = distances[i];
-            if (d != 0.0 && d < min_distance)
-            {
-                min_distance = d;
-                k2 = i;
-            }
-        }
-        distances[k2] = 0.0;
-
-        min_distance = CPX_INFBOUND;
-        for (int i = 0; i < n; i++)
-        {
-            double d = distances[i];
-            if (d != 0.0 && d < min_distance)
-            {
-                min_distance = d;
-                k3 = i;
-            }
-        }
-
-        random_number = rand() / ((double)RAND_MAX); // Randomly pick one of the 3 values of k computed
-        if (random_number <= 0.33)
-        {
-            k = k1;
-        }
-        else if (random_number <= 0.66)
-        {
-            k = k2;
-        }
-        else
-        {
-            k = k3;
-        }
-
-        //printf("k is %d taken from %d, %d, %d \n", k, k1, k2, k3);
-    }
-
-    free(distances);
-    return k;
-}
-
-int farthest_insertion(instance *inst, int n, node *node_list, double random_number)
-{
-
-    double *distances = (double *)calloc(n,
-                                         sizeof(double)); // Store the minimum distances of each node from the circuit
-    // If flag = 0, then it means that the node already belongs to the circuit
-
-    for (int i = 0; i < n; i++)
-    {                     // Initialize distances
-        distances[i] = 0; // Use flag to keep track of the distance of node i from the circuit
-    }
-
-    for (int i = 0; i < n; i++)
-    { // Compute distances
-        if (node_list[i].flag == 0)
-        {
-            double distance_i_circuit = CPX_INFBOUND;
-            for (int j = 0; j < n; j++)
-            { // Compute distance of node i from the circuit
-                if (node_list[j].flag == 1.0 && i != j)
-                {
-                    double distance_i_j = dist(i, j, inst);
-                    if (distance_i_j < distance_i_circuit)
-                    {
-                        distance_i_circuit = distance_i_j;
-                    }
-                }
-            }
-            distances[i] = distance_i_circuit;
-        }
-    }
-    /*
-    for (int i = 0; i < n; i++) {
-    printf("distances: %f \n", distances[i]);
-    }
-    */
-
-    int k; // Node to be added to the circuit
-    random_number = rand() / ((double)RAND_MAX);
-
-    int count = 0; // Count how many nodes are not in the circuit
-    for (int i = 0; i < n; i++)
-    {
-        if (distances[i] != 0.0)
-        {
-            count++;
-        }
-    }
-
-    //printf("count: %d \n", count);
-
-    if (random_number <= 0.5 ||
-        count < 3)
-    { // GRASP: 50% of the times (if there are sufficient nodes out of the circuit)
-        // pick k among the 3 nodes at maximum distance from the circuit (using equal probability)
-        double max_distance = 0.0;
-        for (int i = 0; i < n; i++)
-        {
-            double d = distances[i];
-            if (d > max_distance)
-            {
-                max_distance = d;
-                k = i;
-            }
-        }
-    }
-    else
-    {
-        double max_distance = 0.0;
-        int k1, k2, k3;
-        for (int i = 0; i < n; i++)
-        {
-            double d = distances[i];
-            if (d > max_distance)
-            {
-                max_distance = d;
-                k1 = i;
-            }
-        }
-        distances[k1] = 0.0; // Make the distance equal to 0 so that it's not picked again as maximum distance
-
-        max_distance = 0.0;
-        for (int i = 0; i < n; i++)
-        {
-            double d = distances[i];
-            if (d > max_distance)
-            {
-                max_distance = d;
-                k2 = i;
-            }
-        }
-        distances[k2] = 0.0;
-
-        max_distance = 0.0;
-        for (int i = 0; i < n; i++)
-        {
-            double d = distances[i];
-            if (d > max_distance)
-            {
-                max_distance = d;
-                k3 = i;
-            }
-        }
-
-        random_number = rand() / ((double)RAND_MAX); // Randomly pick one of the 3 values of k computed
-        if (random_number <= 0.33)
-        {
-            k = k1;
-        }
-        else if (random_number <= 0.66)
-        {
-            k = k2;
-        }
-        else
-        {
-            k = k3;
-        }
-    }
-
-    //printf("k: %d \n", k);
-
-    free(distances);
-
-    return k;
-}
-
-// double two_opt(instance *inst)
-// {
-//     for (int a = 0; a < inst->dimension; a++)
-//     {
-//         for (int b = 0; b < inst->dimension; b++)
-//         {
-//             if (inst)
-//         }
-//     }
-// }

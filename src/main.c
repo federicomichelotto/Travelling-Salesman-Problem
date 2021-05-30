@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv)
 {
-    // check folders exist
+    // check that folders exist
     checkFolders();
 
     double time_elapsed;
