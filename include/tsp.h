@@ -217,7 +217,8 @@ int farthest_insertion(instance *inst, int n, node *node_list, double random_num
 
 // REFINEMENT HEURISTIC
 // to use to refine a solution, we assume that inside inst->best_sol there is a valid solution, and the selected edges are in inst->edges
-double two_opt(instance *inst);
+double two_opt(instance *inst, int maxMoves);
+int reverse_successors(instance *inst, int start, int end);
 
 // Some useful functions
 double gather_solution(instance *inst, const double *xstar, int type);
