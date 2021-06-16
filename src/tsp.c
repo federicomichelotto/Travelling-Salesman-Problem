@@ -2204,7 +2204,7 @@ int two_opt_v2(instance *inst)
     // For each couple of edges (a,c) and (b,d) so that they are not subsequent,
     // If the given solution does not have any crossing: return 0, else return #crossing found;
     int iter = 1;
-    do
+    while(1)
     {
         double min_delta = DBL_MAX;
         double min_true_delta = DBL_MAX;
@@ -2247,7 +2247,7 @@ int two_opt_v2(instance *inst)
         // update incumbent
         inst->z_best += min_true_delta;
         iter++;
-    } while (1);
+    }
     if (iter == 1)
         return 0;
     return iter - 1;
