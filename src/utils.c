@@ -295,7 +295,7 @@ void initialize_instance(instance *inst)
     inst->succ = NULL;
 
     inst->weights = NULL;
-    inst->integer_costs = 1;
+    inst->integer_costs = 0;
     inst->z_best = -1.0;
 
     inst->timestamp_start = 0.0;

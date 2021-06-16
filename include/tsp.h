@@ -9,6 +9,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <float.h>
+
 
 // Data Structures
 typedef struct
@@ -129,7 +131,8 @@ static const char *math_model_name[] = {
 static const char *heuristic_model_name[] = {
     "GREEDY",
     "EXTRA-MILEAGE",
-    "EXTRA-MILEAGE FURTHEST STARTING NODES"};
+    "EXTRA-MILEAGE FURTHEST STARTING NODES",
+    "TABU SEARCH"};
 
 static const char *optimal_model_full_name[] = {
     "Basic model w/o SEC",
@@ -152,7 +155,9 @@ static const char *math_model_full_name[] = {
 static const char *heuristic_model_full_name[] = {
     "Nearest Neighbors (Greedy)",
     "Extra-mileage",
-    "Extra-mileage furthest starting nodes"};
+    "Extra-mileage furthest starting nodes",
+    "Tabu Search"};
+
 
 // TSP solver
 int optimal_solver(instance *inst);
@@ -217,11 +222,16 @@ int farthest_insertion(instance *inst, int n, node *node_list, double random_num
 
 // REFINEMENT HEURISTIC
 // to use to refine a solution, we assume that inside inst->best_sol there is a valid solution, and the selected edges are in inst->edges
-double two_opt(instance *inst, int maxMoves);
-int reverse_successors(instance *inst, int start, int end);
+int two_opt(instance *inst, int maxMoves);
+int two_opt_v2(instance *inst);
+int reverse_successors(int *succ, int size, int start, int end);
+
+//META HEURISTIC
+void tabu_search();
 
 // Some useful functions
 double gather_solution(instance *inst, const double *xstar, int type);
+double euc_dist(int i, int j, instance *inst);
 
 // Retrieve the distance among each node of the instance
 double dist(int i, int j, instance *inst);
@@ -249,5 +259,7 @@ int xpos(int i, int j, instance *inst);     // position in the model for undirec
 int xpos_dir(int i, int j, instance *inst); // position in the model for directed graphs
 int upos(int i, instance *inst);            // position in the model of i-th u-variable
 int ypos(int i, int j, instance *inst);     // position in the model of y-variable for the arc (i,j)
+
+
 
 #endif //TSP_H
