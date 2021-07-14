@@ -2197,6 +2197,7 @@ int two_opt(instance *inst, int maxMoves)
     return !optimal;
 }
 
+// move applied on the most negative delta
 int two_opt_v2(instance *inst)
 {
     print_message("Inside 2-opt_v2 function");
@@ -2218,7 +2219,7 @@ int two_opt_v2(instance *inst)
                 if (inst->succ[i] == j || i == inst->succ[j])
                     continue;
 
-                double delta = euc_dist(i, j, inst) + euc_dist(inst->succ[i], inst->succ[j], inst) - euc_dist(i, inst->succ[i], inst) - euc_dist(j, inst->succ[j], inst);
+                double delta = dist(i, j, inst) + dist(inst->succ[i], inst->succ[j], inst) - dist(i, inst->succ[i], inst) - dist(j, inst->succ[j], inst);
                 double true_delta = dist(i, j, inst) + dist(inst->succ[i], inst->succ[j], inst) - dist(i, inst->succ[i], inst) - dist(j, inst->succ[j], inst);
                 if (delta < min_delta)
                 {
@@ -2319,7 +2320,7 @@ void tabu_search(instance *inst)
                 if (tabu_list[i] > th || tabu_list[temp_succ[i]] > th || tabu_list[j] > th || tabu_list[temp_succ[j]] > th)
                     continue;
 
-                double delta = euc_dist(i, j, inst) + euc_dist(temp_succ[i], temp_succ[j], inst) - euc_dist(i, temp_succ[i], inst) - euc_dist(j, temp_succ[j], inst);
+                double delta = dist(i, j, inst) + dist(temp_succ[i], temp_succ[j], inst) - dist(i, temp_succ[i], inst) - dist(j, temp_succ[j], inst);
 
                 if (delta <= min_delta)
                 {
@@ -2367,11 +2368,4 @@ void tabu_search(instance *inst)
     printf("best incumbent = %f, best iter = %d\n", inst->z_best, best_iter);
     free(temp_succ);
     free(tabu_list);
-}
-
-double euc_dist(int i, int j, instance *inst)
-{
-    double dx = inst->nodes[i].x - inst->nodes[j].x;
-    double dy = inst->nodes[i].y - inst->nodes[j].y;
-    return sqrt(dx * dx + dy * dy);
 }

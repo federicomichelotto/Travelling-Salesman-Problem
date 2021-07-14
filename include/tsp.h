@@ -231,7 +231,6 @@ void tabu_search();
 
 // Some useful functions
 double gather_solution(instance *inst, const double *xstar, int type);
-double euc_dist(int i, int j, instance *inst);
 
 // Retrieve the distance among each node of the instance
 double dist(int i, int j, instance *inst);
