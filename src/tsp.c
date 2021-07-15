@@ -1946,40 +1946,43 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ)
     // TODO implement GRASP
 
     double obj = 0.0;
+    int *selected = (int *)calloc(inst->dimension, sizeof(int));
     // initialize succ
     for (int i = 0; i < inst->dimension; i++)
         succ[i] = -1;
 
+    selected[starting_node] = 1;
     int current = starting_node; // Index of the current node
-
     // select inst->dimension - 1 edges
     for (int count = 0; count < inst->dimension - 1; count++)
     {
         double min_dist = CPX_INFBOUND; // Initializing the minimum distance
-        int min = -1;                   // Index of the closest node
-        // select the closest node w.r.t. to the current node
+        int min_node = -1;              // Index of the closest node
+                                        // select the closest node w.r.t. to the current node
         for (int i = 0; i < inst->dimension; i++)
         {
-            if (i != current && succ[i] == -1) // i has not been selected yet
+            if (i != current && selected[i] == 0) // i has not been selected yet
             {
                 double distance = dist(current, i, inst);
                 if (distance < min_dist)
                 {
                     min_dist = distance;
-                    min = i;
+                    min_node = i;
                 }
             }
         }
-        if (min == -1)
-            print_error("min == -1");
+        if (min_node == -1)
+            print_error("min_node == -1");
         // add edge
-        succ[current] = min;
+        succ[current] = min_node;
+        selected[min_node] = 1;
         // change current node
-        current = min;
+        current = min_node;
         obj += min_dist;
     }
     // close the circuit
     succ[current] = starting_node;
+    obj += dist(current, starting_node, inst);
     printf("Best objective value for starting node %d: %f\n", starting_node + 1, obj);
 
     return obj;
@@ -2201,30 +2204,28 @@ int two_opt(instance *inst, int maxMoves)
 int two_opt_v2(instance *inst)
 {
     print_message("Inside 2-opt_v2 function");
-
+    printf("Initial incument = %f\n", inst->z_best);
     // For each couple of edges (a,c) and (b,d) so that they are not subsequent,
     // If the given solution does not have any crossing: return 0, else return #crossing found;
     int iter = 1;
-    while(1)
+    while (1)
     {
         double min_delta = DBL_MAX;
-        double min_true_delta = DBL_MAX;
         int a, b;
         for (int i = 0; i < inst->dimension; i++)
         {
             for (int j = 0; j < inst->dimension; j++)
             {
+                // look for two nodes that are not connected
                 if (i == j)
                     continue;
                 if (inst->succ[i] == j || i == inst->succ[j])
                     continue;
 
                 double delta = dist(i, j, inst) + dist(inst->succ[i], inst->succ[j], inst) - dist(i, inst->succ[i], inst) - dist(j, inst->succ[j], inst);
-                double true_delta = dist(i, j, inst) + dist(inst->succ[i], inst->succ[j], inst) - dist(i, inst->succ[i], inst) - dist(j, inst->succ[j], inst);
                 if (delta < min_delta)
                 {
                     min_delta = delta;
-                    min_true_delta = true_delta;
                     a = i;
                     b = j;
                 }
@@ -2232,11 +2233,12 @@ int two_opt_v2(instance *inst)
         }
         if (min_delta == DBL_MAX)
             print_error("Error in tabu search delta computation");
-        if (min_delta >= 0)
+        if (min_delta >= -1e-5)
             break;
 
         int c = inst->succ[a];
         int d = inst->succ[b];
+
 
         // reverse the path from c to b
         if (reverse_successors(inst->succ, inst->dimension, c, b))
@@ -2246,8 +2248,10 @@ int two_opt_v2(instance *inst)
         inst->succ[a] = b;
         inst->succ[c] = d;
         // update incumbent
-        inst->z_best += min_true_delta;
+        inst->z_best += min_delta;
         iter++;
+        printf("new incumbent = %f (delta = %f)\n", inst->z_best, min_delta);
+        save_and_plot_solution(inst, inst->dimension);
     }
     if (iter == 1)
         return 0;
