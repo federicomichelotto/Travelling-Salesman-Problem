@@ -31,6 +31,8 @@ typedef struct
     int solver;           // 0 : optimal, 1 : math, 2 : heuristic
     int interactive;      // 0: none plot is displayed, 1: all plots are printed
     int saveplots;        // 0: save only the final plot, 1: save all plots
+    int grasp;            // 0: GRASP OFF, 1 : GRASP ON
+    int grasp_choices;    // # of possible random choices
 
 } parameter;
 
@@ -211,7 +213,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter);
 
 // CONSTRUCTIVE HEURISTIC
-double nearest_neighbours(instance *inst, int starting_node, int *succ);
+double nearest_neighbours(instance *inst, int starting_node, int *succ, int options);
 
 double extra_mileage(instance *inst, int starting_node, int *succ);
 double extra_mileage_furthest_starting_nodes(instance *inst, int *succ);
@@ -228,6 +230,13 @@ int reverse_successors(int *succ, int size, int start, int end);
 
 //META HEURISTIC
 void tabu_search();
+double genetic(instance *inst, int size, int epoch);
+double random_individuals(instance *inst, int seed, int *individual, int optimize);
+double compute_average_fitness(const double *fitness, int size);
+double compute_champion(const double *fitness, int size);
+
+void convert_to_successor(int *list, int *succ, int n);
+void convert_to_list(int *succ, int *list, int n);
 
 // Some useful functions
 double gather_solution(instance *inst, const double *xstar, int type);

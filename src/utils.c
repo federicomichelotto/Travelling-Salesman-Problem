@@ -78,25 +78,37 @@ void parse_command_line(int argc, char **argv, instance *inst)
             if (strcmp(argv[i], "--ticks") == 0)
             {
                 inst->param.ticks = 1;
+                continue;
             }
             if (strcmp(argv[i], "--interactive") == 0)
             {
                 inst->param.interactive = 1;
+                continue;
             }
 
             if (strcmp(argv[i], "--saveplots") == 0)
             {
                 inst->param.saveplots = 1;
+                continue;
             }
 
             if (strcmp(argv[i], "--math") == 0)
             {
                 inst->param.solver = 1;
+                continue;
             }
 
             if (strcmp(argv[i], "--heur") == 0)
             {
                 inst->param.solver = 2;
+                continue;
+            }
+
+            if (strcmp(argv[i], "--grasp") == 0)
+            {
+                inst->param.grasp = 1;
+                inst->param.grasp_choices = atoi(argv[++i]);
+                continue;
             }
         }
 
@@ -289,6 +301,8 @@ void initialize_instance(instance *inst)
     inst->param.solver = 0; // default
     inst->param.interactive = 0;
     inst->param.saveplots = 0;
+    inst->param.grasp = 0;
+    inst->param.grasp_choices = 1;  // default base case 1 possible choice
 
     inst->dimension = -1;
     inst->nodes = NULL;
@@ -369,6 +383,12 @@ void print_command_line(instance *inst)
         printf("--interactive (ACTIVE -> %d)\n", inst->param.interactive);
     }
 
+    if (inst->param.grasp == 1)
+    {
+        printf("--grasp (ACTIVE -> %d)\n", inst->param.grasp);
+        printf("--grasp_choices (%d)\n", inst->param.grasp_choices);
+    }
+
     if (inst->param.saveplots == 1)
     {
         printf("--saveplots (ACTIVE -> %d)\n", inst->param.saveplots);
@@ -427,6 +447,7 @@ void print_help()
     printf("--saveplots     : used to save all the solutions' plots (by default only the final solution's plot is saved)\n");
     printf("--math          : used to set the math-heuristic solver (optional)\n");
     printf("--heur          : used to set the heuristic solver (optional)\n");
+    printf("--grasp <value> : used to set GRASP approach and possible choices (optional)\n");
     printf("-m <model>      : used to set the model type (based on the solver)\n");
     printf("-s <seed>       : used to set the seed\n");
     printf("-v <value>      : used to set the verbosity, from QUIET (0) up to DEBUG (4)\n");

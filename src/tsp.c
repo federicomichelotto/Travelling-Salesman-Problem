@@ -709,11 +709,13 @@ int heuristic_solver(instance *inst)
     case 0: // Nearest Neighbours
         for (int i = 0; i < inst->dimension; i++)
         {
-            obj_i = nearest_neighbours(inst, i, succ_i);
+            if (inst->param.grasp == 1) obj_i = nearest_neighbours(inst, i, succ_i, inst->param.grasp_choices);
+            else obj_i = nearest_neighbours(inst, i, succ_i, 1);
+
             if (obj_i < min_obj)
             {
                 min_obj = obj_i;
-                inst->z_best = obj_i; // TODO vedere se ha senso tenerlo
+                inst->z_best = obj_i;
                 for (int j = 0; j < inst->dimension; j++)
                     inst->succ[j] = succ_i[j];
                 save_and_plot_solution(inst, i + 1);
@@ -722,7 +724,6 @@ int heuristic_solver(instance *inst)
         printf("2-opt: %d crossings found\n", two_opt_v2(inst));
         save_and_plot_solution(inst, inst->dimension);
         printf("Best objective value: %f\n", min_obj);
-        // TODO usata per debug, poi si può cancellare o capire cosa se ne vuole fare
         printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
         break;
     case 1: // Extra Mileage
@@ -732,7 +733,7 @@ int heuristic_solver(instance *inst)
             if (obj_i < min_obj)
             {
                 min_obj = obj_i;
-                inst->z_best = obj_i; // TODO vedere se ha senso tenerlo
+                inst->z_best = obj_i;
                 for (int j = 0; j < inst->dimension; j++)
                     inst->succ[j] = succ_i[j];
                 save_and_plot_solution(inst, i + 1);
@@ -756,7 +757,10 @@ int heuristic_solver(instance *inst)
         printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
         break;
     case 3: // Tabu Search
-        min_obj = nearest_neighbours(inst, 0, inst->succ);
+
+        if (inst->param.grasp == 1) min_obj = nearest_neighbours(inst, 0, inst->succ, inst->param.grasp_choices);
+        else min_obj = nearest_neighbours(inst, 0, inst->succ, 1);
+
         inst->z_best = min_obj;
         tabu_search(inst);
         printf("Best objective value: %f\n", min_obj);
@@ -1941,47 +1945,90 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     }
 }
 
-double nearest_neighbours(instance *inst, int starting_node, int *succ)
+double nearest_neighbours(instance *inst, int starting_node, int *succ, int options)
 {
-    // TODO implement GRASP
-
     double obj = 0.0;
+
     int *selected = (int *)calloc(inst->dimension, sizeof(int));
-    // initialize succ
-    for (int i = 0; i < inst->dimension; i++)
-        succ[i] = -1;
+
+    // Successor array initialization
+    for (int i = 0; i < inst->dimension; i++) succ[i] = -1;
 
     selected[starting_node] = 1;
     int current = starting_node; // Index of the current node
-    // select inst->dimension - 1 edges
-    for (int count = 0; count < inst->dimension - 1; count++)
-    {
-        double min_dist = CPX_INFBOUND; // Initializing the minimum distance
-        int min_node = -1;              // Index of the closest node
-                                        // select the closest node w.r.t. to the current node
-        for (int i = 0; i < inst->dimension; i++)
-        {
-            if (i != current && selected[i] == 0) // i has not been selected yet
+
+    if (options > 1) printf("GRASP approach selected, available option for each node %d", options);
+
+    // Build the circuit adding inst->dimension - 1 edges
+    for (int count = 0; count < inst->dimension - 1; count++) {
+
+        // Check available nodes (remember to ignore the current one)
+        if (inst->dimension - count - 1 < options) {
+            printf("Too many choices (%d) w.r.t. available nodes (%d). Available choices are now (%d)\n", options, inst->dimension - count - 1,inst->dimension - count-1);
+            options = inst->dimension - count - 1;
+            int a = -1;
+            for (int i = 0; i < inst->dimension; i++) if(succ[i] == -1) a++;
+            printf("Nodes not yet selected are %d\n", a);
+        }
+
+        double min_dist[options];         // Minimum distances
+        int min_node[options];            // Closest nodes indices
+
+        for (int i = 0; i < options; ++i) {
+            min_dist[i] = CPX_INFBOUND;
+            min_node[i] = -1;
+        }
+
+        int *chosen = (int *)calloc(inst->dimension, sizeof(int));
+        int k = 0;
+
+        // While a choice can be made, select the closest node
+        while (k < options){
+            // select the closest node w.r.t. to the current node
+            for (int i = 0; i < inst->dimension; i++)
             {
-                double distance = dist(current, i, inst);
-                if (distance < min_dist)
+                if (i != current && selected[i] == 0 && chosen[i] == 0) // i has not been selected yet
                 {
-                    min_dist = distance;
-                    min_node = i;
+                    double distance = dist(current, i, inst);
+                    if (distance < min_dist[k])
+                    {
+                        min_dist[k] = distance;
+                        min_node[k] = i;
+                    }
                 }
             }
+
+            chosen[min_node[k]] = 1;  // i-th node was chosen as closest
+            k++;
         }
-        if (min_node == -1)
-            print_error("min_node == -1");
-        // add edge
-        succ[current] = min_node;
-        selected[min_node] = 1;
-        // change current node
-        current = min_node;
-        obj += min_dist;
+
+        for (int j = 0; j < options; ++j) {
+            printf("%d : %f\n", min_node[j], min_dist[j]);
+        }
+        printf("------------\n");
+
+        // Minimum node random selection
+        srand(time(0));
+        int h = rand() % options;
+
+        if (min_node[h] == -1)
+            print_error("min_node[h] == -1");
+
+        // Add edge current node - random node at minimum distance
+        succ[current] = min_node[h];
+        selected[min_node[h]] = 1;
+
+        // Update current node
+        current = min_node[h];
+
+        // Update current incumbent
+        obj += min_dist[h];
     }
-    // close the circuit
+
+    // Close circuit
     succ[current] = starting_node;
+
+    // Update incumbent
     obj += dist(current, starting_node, inst);
     printf("Best objective value for starting node %d: %f\n", starting_node + 1, obj);
 
@@ -2334,6 +2381,7 @@ void tabu_search(instance *inst)
                 }
             }
         }
+
         if (min_delta == DBL_MAX)
             print_error("Error in tabu search delta computation");
 
@@ -2373,3 +2421,103 @@ void tabu_search(instance *inst)
     free(temp_succ);
     free(tabu_list);
 }
+
+// TODO : FINISH GENETIC ALGORITHM
+
+double genetic(instance *inst, int size, int epochs) {
+
+    int **population = (int **) calloc(size, sizeof(int **));
+    double *fitness = (double *) calloc(size, sizeof(double *));
+    int *individual = (int *) calloc(inst->dimension, sizeof(int));
+
+    double *epoch_avg_fitness = (double *) calloc(epochs, sizeof(double *));
+    double *epoch_champion = (double *) calloc(epochs, sizeof(double *));
+
+    // Initialize population
+    for (int i = 0; i < size; i++) {
+
+        // Generate random individuals
+        if (i < size * 0.8) fitness[i] = random_individuals(inst, i, individual, 1);
+        else fitness[i] = random_individuals(inst, i, individual, 0);
+
+        population[i] = individual;
+    }
+
+    // For each epoch
+    for (int k = 0; k < epochs; k++) {
+        epoch_avg_fitness[k] = compute_average_fitness(fitness, size);
+        epoch_champion[k] = compute_champion(fitness, size);
+
+        printf("%f\n", epoch_avg_fitness[k]);
+        printf("%f\n", epoch_champion[k]);
+    }
+
+    free(population);
+
+    return 0;
+
+}
+
+double random_individuals(instance *inst, int seed, int *individual, int optimize) {
+
+    if (inst->param.grasp == 1) inst->z_best  = nearest_neighbours(inst, seed, inst->succ, inst->param.grasp_choices);
+    else inst->z_best  = nearest_neighbours(inst, seed, inst->succ, 1);
+
+    // Willing to optimize current chromosome
+    if (optimize == 1) two_opt_v2(inst);
+
+    double fitness = inst->z_best;
+
+    convert_to_list(inst->succ, individual, inst->dimension);
+
+    return fitness;
+
+}
+
+void convert_to_successor(int *list, int *succ, int n){
+    // From node list to successor
+    succ[0] = list[0];
+    for (int k = 1; k < n; k++) {
+        succ[list[k - 1]] = list[k];
+    }
+}
+
+void convert_to_list(int *succ, int *list, int n){
+    // From successor to node list
+    list[0] = succ[0];
+    int next = succ[0];
+    for (int i = 1; i < n; i++) {
+        list[i] = succ[next];
+        next = succ[next];
+    }
+
+}
+
+double compute_average_fitness(const double *fitness, int size) {
+
+    double sum = 0;
+
+    for (int i = 0; i < size; i++) sum += fitness[i];
+
+    return sum / size;
+
+}
+
+double compute_champion(const double *fitness, int size) {
+
+    int index = 0;
+    double min = CPX_INFBOUND;
+
+    for (int i = 1; i < size; i++) if (fitness[i] < min) index = i;
+
+    return index;
+
+}
+
+void mutation(int *individual){}
+
+void crossover(int *parent1, int *parent2, int *offspring){}
+
+void repair_chromosome(int *offspring){}
+
+void evolve(){}
