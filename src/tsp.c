@@ -2190,7 +2190,9 @@ int two_opt(instance *inst, int maxMoves)
     print_message("Inside 2-opt function");
     int optimal = 0;
     int moves = 0;
+    int iter = 0;
     double incumbent = inst->z_best;
+    printf("Initial incument = %f\n", inst->z_best);
 
     // For each couple of edges (a,b) and (c,d) so that they are not subsequent,
     // Compute d(a,c) + d(b,d)
@@ -2219,13 +2221,11 @@ int two_opt(instance *inst, int maxMoves)
 
                 if (newDist < originalDist)
                 { // crossing
-                    printf("Edge#1 : (%d,%d)\tEdge#2 : (%d,%d)\n", a + 1, b + 1, c + 1, d + 1);
-                    printf("Old distance : %f\n", originalDist);
-                    printf("New distance : %f\n", newDist);
-                    printf("---------------------------------------------------------------\n");
 
                     // update inc
-                    incumbent = incumbent - originalDist + newDist;
+                    double delta = newDist - originalDist;
+                    incumbent = incumbent + delta;
+                    printf("%d° iteration - new incumbent = %f (delta = %f)\n", iter + 1, incumbent, delta);
 
                     // reverse tour
                     if (reverse_successors(inst->succ, inst->dimension, b, c))
@@ -2241,10 +2241,11 @@ int two_opt(instance *inst, int maxMoves)
             if (!optimal)
                 break;
         }
+        iter++;
     }
 
     inst->z_best = incumbent;
-    return !optimal;
+    return iter - 1;
 }
 
 // move applied on the most negative delta
@@ -2296,8 +2297,8 @@ int two_opt_v2(instance *inst)
         inst->succ[c] = d;
         // update incumbent
         inst->z_best += min_delta;
+        printf("%d° iteration - new incumbent = %f (delta = %f)\n", iter, inst->z_best, min_delta);
         iter++;
-        printf("new incumbent = %f (delta = %f)\n", inst->z_best, min_delta);
         save_and_plot_solution(inst, inst->dimension);
     }
     if (iter == 1)
