@@ -540,6 +540,7 @@ int save_and_plot_solution(instance *inst, int iter)
             pclose(gnuplotPipe); // execute the commands
             free(plot);
             free(out);
+            free(model_name);
         }
 
         if (inst->param.interactive)

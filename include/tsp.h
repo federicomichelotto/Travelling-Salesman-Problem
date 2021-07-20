@@ -81,6 +81,11 @@ typedef struct
 
 } instance;
 
+typedef struct {
+    int *chromosome;
+    double fitness;
+} population;
+
 typedef struct
 {
     instance *inst;
@@ -134,7 +139,8 @@ static const char *heuristic_model_name[] = {
     "GREEDY",
     "EXTRA-MILEAGE",
     "EXTRA-MILEAGE FURTHEST STARTING NODES",
-    "TABU SEARCH"};
+    "TABU SEARCH",
+    "GENETIC"};
 
 static const char *optimal_model_full_name[] = {
     "Basic model w/o SEC",
@@ -158,7 +164,8 @@ static const char *heuristic_model_full_name[] = {
     "Nearest Neighbors (Greedy)",
     "Extra-mileage",
     "Extra-mileage furthest starting nodes",
-    "Tabu Search"};
+    "Tabu Search",
+    "Genetic"};
 
 
 // TSP solver
@@ -229,11 +236,28 @@ int two_opt_v2(instance *inst);
 int reverse_successors(int *succ, int size, int start, int end);
 
 //META HEURISTIC
-void tabu_search();
+void tabu_search(instance *inst);
 double genetic(instance *inst, int size, int epoch);
-double random_individuals(instance *inst, int seed, int *individual, int optimize);
-double compute_average_fitness(const double *fitness, int size);
-double compute_champion(const double *fitness, int size);
+double random_initialization(instance *inst, int *individual, int seed, int optimize);
+void rank_individuals(population *individuals, int size);
+
+// Mutation
+double swap_mutation(instance *inst, int *chromosome, int i, int j);
+double scramble_mutation(instance *inst, int *chromosome, int i, int j);
+double inversion_mutation(instance *inst, int *chromosome, int i, int j);
+
+// Parent Selection
+void roulette_wheel_selection(population *individuals, int size, int *selection); // Fitness Proportionate
+void tournament_selection(population *individuals, int k, int size, int *selection); // Tournament Selection
+void rank_selection(population *individuals, int size, int *selection); // Rank Selection
+void random_selection(population *individuals, int size, int *selection); // Random Selection
+
+// Crossover
+void one_point_crossover(instance *inst, population parentA, population parentB, population offspring);
+void uniform_crossover(instance *inst, population parentA, population parentB, population offspring);
+
+double fitness_average(population *individuals, int size);
+double fitness_variability(population *individual, int size);
 
 void convert_to_successor(int *list, int *succ, int n);
 void convert_to_list(int *succ, int *list, int n);
