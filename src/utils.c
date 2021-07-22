@@ -490,11 +490,9 @@ int save_and_plot_solution(instance *inst, int iter)
         }
         fclose(temp);
 
-        FILE *gnuplotPipe = popen("gnuplot", "w"); // local gnuplotPipe to avoid conflicts with the global gnuplotPipe
-        if (inst->param.saveplots || iter == -1)
+        if (inst->param.saveplots || iter == -1) // save plot
         {
-
-            // save plot
+            FILE *gnuplotPipe = popen("gnuplot", "w"); // local gnuplotPipe to avoid conflicts with the global gnuplotPipe
             char *out = (char *)calloc(1000, sizeof(char));
             char *plot = (char *)calloc(1000, sizeof(char));
             char *model_name = (char *)calloc(100, sizeof(char));
@@ -543,9 +541,8 @@ int save_and_plot_solution(instance *inst, int iter)
             free(model_name);
         }
 
-        if (inst->param.interactive)
+        if (inst->param.interactive) // plot solution
         {
-            // plot solution
             // here we use a global gnuplotPipe to remain on the same window
             char *commandsForGnuplot[] = {"set title 'Solution plot'",
                                           "unset key",
