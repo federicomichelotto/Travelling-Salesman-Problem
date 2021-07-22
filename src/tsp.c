@@ -2377,8 +2377,6 @@ void tabu_search(instance *inst)
     // update time left
     double time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
 
-    int unit_time = ceil(inst->time_limit / 100);
-    int time_counter = 1;
     while (time_left > 0.5)
     {
         if (!(iter % 100))
