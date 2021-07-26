@@ -239,13 +239,8 @@ int reverse_successors(int *succ, int size, int start, int end);
 //META HEURISTIC
 void tabu_search(instance *inst);
 double genetic(instance *inst, int size, int epoch);
-double random_initialization(instance *inst, int *individual, int seed, int optimize);
-void rank_individuals(population *individuals, int size);
-
-// Mutation
-double swap_mutation(instance *inst, int *chromosome, int i, int j);
-double scramble_mutation(instance *inst, int *chromosome, int i, int j);
-double inversion_mutation(instance *inst, int *chromosome, int i, int j);
+population random_individual(instance *inst, int seed, int optimize);
+void refine_population(instance *inst, population *individuals, int size);
 
 // Parent Selection
 void roulette_wheel_selection(population *individuals, int size, int *selection); // Fitness Proportionate
@@ -257,11 +252,17 @@ void random_selection(population *individuals, int size, int *selection); // Ran
 void one_point_crossover(instance *inst, population parentA, population parentB, population offspring);
 void uniform_crossover(instance *inst, population parentA, population parentB, population offspring);
 
-double fitness_average(population *individuals, int size);
-double fitness_variability(population *individual, int size);
+// Mutation
+double swap_mutation(instance *inst, int *chromosome, int i, int j);
+double scramble_mutation(instance *inst, int *chromosome, int i, int j);
+double inversion_mutation(instance *inst, int *chromosome, int i, int j);
 
-void convert_to_successor(int *list, int *succ, int n);
-void convert_to_list(int *succ, int *list, int n);
+// Survivor selection
+void survivor_selection(population *individuals, population *offsprings, int population_size, int offspring_size);
+
+population epoch_champion(instance *inst, population *individuals, int size);
+void epoch_average_fitness(population *individuals, double *average, int size);
+double epoch_percent_deviation(population *individuals, int size);
 
 // Some useful functions
 double gather_solution(instance *inst, const double *xstar, int type);

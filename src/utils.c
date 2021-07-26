@@ -291,6 +291,8 @@ void parse_instance(instance *inst)
 
 void initialize_instance(instance *inst)
 {
+    srand(time(NULL));     // Initialize random seed for the computation
+
     inst->model_type = 0;
     inst->time_limit = CPX_INFBOUND;
     inst->param.seed = 1;
