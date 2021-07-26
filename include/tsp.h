@@ -222,8 +222,9 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 // CONSTRUCTIVE HEURISTIC
 double nearest_neighbours(instance *inst, int starting_node, int *succ, int options);
 
-double extra_mileage(instance *inst, int starting_node, int *succ);
+double extra_mileage(instance *inst, int *succ, int starting_node);
 double extra_mileage_furthest_starting_nodes(instance *inst, int *succ);
+int add_node_extra_mileage(instance *inst, int *succ, int node);
 
 int nearest_insertion(instance *inst, int n, node *node_list, double random_number);
 

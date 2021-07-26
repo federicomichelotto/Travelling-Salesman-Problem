@@ -734,7 +734,7 @@ int heuristic_solver(instance *inst)
     case 1: // Extra Mileage
         for (int i = 0; i < inst->dimension; i++)
         {
-            obj_i = extra_mileage(inst, i, succ_i);
+            obj_i = extra_mileage(inst, succ_i, i);
             if (obj_i < min_obj)
             {
                 min_obj = obj_i;
@@ -2062,7 +2062,33 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ, int opti
     return obj;
 }
 
-double extra_mileage(instance *inst, int starting_node, int *succ)
+// node: node to add in the circuit
+int add_node_extra_mileage(instance *inst, int *succ, int node)
+{
+    double min_extra_mileage = DBL_MAX;
+    int min_i = -1;
+    // compute the extra mileage to add the node "node"
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        if (succ[i] != -1) // node i is part of the circuit
+        {
+            double extra_mileage = dist(i, node, inst) + dist(succ[i], node, inst) - dist(i, succ[i], inst);
+            if (extra_mileage < min_extra_mileage)
+            {
+                min_extra_mileage = extra_mileage;
+                min_i = i; // represent the edge (i, succ[i])
+            }
+        }
+    }
+    if (min_i == -1)
+        print_error("Error add_node_extra_mileage.");
+
+    succ[node] = succ[min_i];
+    succ[min_i] = node;
+    return min_extra_mileage;
+}
+
+double extra_mileage(instance *inst, int *succ, int starting_node)
 {
 
     double obj = 0;                                                        // Objective value
@@ -2100,9 +2126,9 @@ double extra_mileage(instance *inst, int starting_node, int *succ)
     for (int iter = 0; iter < inst->dimension - 2; iter++)
     {
 
-        double min_value = CPX_INFBOUND; // Insertion of node selected_node in the circuit
-        int idx_edge;                    // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
-        int selected_node;               // node to add in the circuit
+        double min_extra_mileage = DBL_MAX; // Insertion of node selected_node in the circuit
+        int min_i = -1;                     // (min_i, succ[min_i]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
+        int selected_node;                  // node to add in the circuit
 
         // for each uncovered node and for each edge in the circuit, compute the extra mileage
         for (int k = 0; k < inst->dimension; k++)
@@ -2114,21 +2140,25 @@ double extra_mileage(instance *inst, int starting_node, int *succ)
                     // k: node not in the circuit (it has no successor)
                     // (i, succ[i]): edge
                     double extra_mileage = dist(i, k, inst) + dist(succ[i], k, inst) - succ_dist[i];
-                    if (extra_mileage < min_value)
+                    if (extra_mileage < min_extra_mileage)
                     {
-                        min_value = extra_mileage;
-                        idx_edge = i; // (i, succ[i])
+                        min_extra_mileage = extra_mileage;
+                        min_i = i; // (i, succ[i])
                         selected_node = k;
                     }
                 }
             }
         }
-        succ[selected_node] = succ[idx_edge];
-        succ_dist[selected_node] = dist(selected_node, succ[idx_edge], inst);
-        succ[idx_edge] = selected_node;
-        succ_dist[idx_edge] = dist(idx_edge, selected_node, inst);
 
-        obj += min_value; // Update objective value
+        if (min_i == -1)
+            print_error("Error add_node_extra_mileage.");
+
+        succ[selected_node] = succ[min_i];
+        succ_dist[selected_node] = dist(selected_node, succ[min_i], inst);
+        succ[min_i] = selected_node;
+        succ_dist[min_i] = dist(min_i, selected_node, inst);
+
+        obj += min_extra_mileage; // Update objective value
     }
 
     printf("Objective value for starting node %d: %f\n", starting_node + 1, obj);
@@ -2384,12 +2414,12 @@ void tabu_search(instance *inst)
             if (tenure == 20)
             {
                 tenure = inst->dimension / 10;
-                printf("*** INTENSIFICATION PHASE activated, time left = %f seconds ***\n",time_left);
+                printf("*** INTENSIFICATION PHASE activated, time left = %f seconds ***\n", time_left);
             }
             else
             {
                 tenure = 20;
-                printf("*** DIVERSIFICATION PHASE activated, time left = %f seconds ***\n",time_left);
+                printf("*** DIVERSIFICATION PHASE activated, time left = %f seconds ***\n", time_left);
             }
         }
 
@@ -2631,13 +2661,15 @@ double random_initialization(instance *inst, int *individual, int seed, int opti
 
     // Willing to optimize current chromosome
     if (optimize == 1)
-         two_opt(inst, 5);
-//        two_opt_v2(inst);
+        two_opt(inst, 5);
+    //        two_opt_v2(inst);
 
-    for (int i = 0; i < inst->dimension ; ++i) individual[i] = inst->succ[i];
+    for (int i = 0; i < inst->dimension; ++i)
+        individual[i] = inst->succ[i];
 
     printf("\n");
-    for (int k = 0; k < inst->dimension; k++) printf("%d ", individual[k]);
+    for (int k = 0; k < inst->dimension; k++)
+        printf("%d ", individual[k]);
 
     // Return individual fitness
     return inst->z_best;
@@ -2857,10 +2889,11 @@ void one_point_crossover(instance *inst, population parentA, population parentB,
     int *selected = (int *)calloc(inst->dimension, sizeof(int));
 
     // Extra mileage repair
-    for (int k = 0; k < inst->dimension; k++) offspring.chromosome[k] = -1;
+    for (int k = 0; k < inst->dimension; k++)
+        offspring.chromosome[k] = -1;
 
     // Select a crossover point w.r.t. parent fitness
-//    int crossover_point = floor(inst->dimension / (parentA.fitness + parentB.fitness) * parentA.fitness);
+    //    int crossover_point = floor(inst->dimension / (parentA.fitness + parentB.fitness) * parentA.fitness);
     int crossover_point = rand() % inst->dimension;
     int starting_point = rand() % inst->dimension;
 
@@ -2885,23 +2918,24 @@ void one_point_crossover(instance *inst, population parentA, population parentB,
 
     temp = current;
 
-    while(next != starting_point){
+    while (next != starting_point)
+    {
 
         next = parentB.chromosome[temp];
 
-        if(selected[next] == 0) {
+        if (selected[next] == 0)
+        {
 
             offspring.chromosome[current] = next;
             selected[next] = 1;
             current = next;
             temp = current;
-
-        } else {
+        }
+        else
+        {
 
             temp = parentB.chromosome[next];
-
         }
-
     }
 
     // Closing the circuit
@@ -2910,10 +2944,13 @@ void one_point_crossover(instance *inst, population parentA, population parentB,
 
     double *succ_dist = (double *)calloc(inst->dimension, sizeof(double)); // array of the distance between the node i and succ[i]
 
-    for (int i = 0; i < inst->dimension; i++) succ_dist[i] = dist(i, offspring.chromosome[i], inst);
+    for (int i = 0; i < inst->dimension; i++)
+        succ_dist[i] = dist(i, offspring.chromosome[i], inst);
 
-    for (int j = 0; j < inst->dimension; j++) {
-        if (selected[j] == 0) {
+    for (int j = 0; j < inst->dimension; j++)
+    {
+        if (selected[j] == 0)
+        {
             double min_value = CPX_INFBOUND; // Insertion of node selected_node in the circuit
             int idx_edge;                    // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
             int selected_node;               // node to add in the circuit
@@ -2945,13 +2982,16 @@ void one_point_crossover(instance *inst, population parentA, population parentB,
     }
 
     printf("\nParent A\n");
-    for (int k = 0; k < inst->dimension; k++) printf("%d ", parentA.chromosome[k]);
+    for (int k = 0; k < inst->dimension; k++)
+        printf("%d ", parentA.chromosome[k]);
     printf("\n------------------------------------------------\n");
     printf("Parent B\n");
-    for (int k = 0; k < inst->dimension; k++) printf("%d ", parentB.chromosome[k]);
+    for (int k = 0; k < inst->dimension; k++)
+        printf("%d ", parentB.chromosome[k]);
     printf("\n------------------------------------------------\n");
     printf("Child\n");
-    for (int k = 0; k < inst->dimension; k++) printf("%d ", offspring.chromosome[k]);
+    for (int k = 0; k < inst->dimension; k++)
+        printf("%d ", offspring.chromosome[k]);
 
     // Compute mutation fitness
     for (int k = 0; k < inst->dimension - 1; k++)
