@@ -2503,7 +2503,6 @@ double genetic(instance *inst, int size2, int epochs2)
     // get timestamp
     struct timespec timestamp;
 
-
     int size, children_size;
     printf("How many individual should have your population: ");
     scanf("%d", &size);
@@ -2551,9 +2550,9 @@ double genetic(instance *inst, int size2, int epochs2)
     population *champion = (population *)calloc(epochs, sizeof(population));
     champion[epoch].chromosome = (int *)calloc(inst->dimension, sizeof(int));
 
-
     // Since there's time left or fitness isn't too stable
-    while (time_left > 0.5){
+    while (time_left > 0.5)
+    {
 
         printf("\n\tEPOCH #%d", epoch);
 
@@ -2597,7 +2596,7 @@ double genetic(instance *inst, int size2, int epochs2)
                 j = parent[0];
             }
 
-            printf("\n\t\tCrossover #%d between parent %d and %d", k + 1, i,j);
+            printf("\n\t\tCrossover #%d between parent %d and %d", k + 1, i, j);
             one_point_crossover(inst, individuals[i], individuals[j], offsprings[k]);
         }
 
@@ -2629,7 +2628,7 @@ double genetic(instance *inst, int size2, int epochs2)
         printf("\n\t- Survivor selection ... ");
 
         survivor_selection(individuals, offsprings, size, children_size);
-        refine_population(inst, individuals, size);
+        //refine_population(inst, individuals, size);
 
         printf("\n\t- Summary ... ");
 
@@ -2639,10 +2638,13 @@ double genetic(instance *inst, int size2, int epochs2)
         printf("\n\t\t- Champion : %f", champion[epoch].fitness);
         printf("\n\t\t- Average fitness : %f", average[epoch]);
 
-        if (epoch != 0 && average[epoch] >= average[epoch-1]) no_improvement++;
-        else no_improvement = 0;
+        if (epoch != 0 && average[epoch] >= average[epoch - 1])
+            no_improvement++;
+        else
+            no_improvement = 0;
 
-        if (no_improvement > 5) {
+        if (no_improvement > 5)
+        {
             printf("No improvement were found in the last five epoch.");
             break;
         }
@@ -2652,8 +2654,10 @@ double genetic(instance *inst, int size2, int epochs2)
         inst->timestamp_finish = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
         // update time limit
         time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
+        time_left = 0; // TEST: JUST ONE EPOCH
 
-        if (time_left > 0.5){
+        if (time_left > 0.5)
+        {
 
             epochs++;
 
@@ -2666,12 +2670,10 @@ double genetic(instance *inst, int size2, int epochs2)
             epoch++;
         }
 
-
         // Free memory
 
         free(parent);
         free(offsprings);
-
     }
 
     printf("\nSUMMARY");
@@ -2687,11 +2689,12 @@ double genetic(instance *inst, int size2, int epochs2)
     return 0;
 }
 
-population random_individual(instance *inst,  int seed, int optimize){
+population random_individual(instance *inst, int seed, int optimize)
+{
 
     population individual;
     individual.fitness = 0.0;
-    individual.chromosome = (int*) calloc(inst->dimension, sizeof(int));
+    individual.chromosome = (int *)calloc(inst->dimension, sizeof(int));
 
     if (inst->param.grasp == 1)
         inst->z_best = nearest_neighbours(inst, seed % inst->dimension, inst->succ, inst->param.grasp_choices);
@@ -2701,61 +2704,64 @@ population random_individual(instance *inst,  int seed, int optimize){
     // Willing to optimize current chromosome
     if (optimize == 1)
         two_opt(inst, 5);
-//        two_opt_v2(inst);
+    //        two_opt_v2(inst);
 
     //
     individual.fitness = inst->z_best;
-    for (int k = 0; k < inst->dimension; k++) individual.chromosome[k] = inst->succ[k];
+    for (int k = 0; k < inst->dimension; k++)
+        individual.chromosome[k] = inst->succ[k];
 
     return individual;
 }
 
-void refine_population(instance *inst, population *individuals, int size){
+void refine_population(instance *inst, population *individuals, int size)
+{
 
     printf("\n\t- Survivor refinement ... ");
 
-    for (int i = 0; i < size; ++i){
+    for (int i = 0; i < size; ++i)
+    {
 
         inst->z_best = individuals[i].fitness;
-        for (int k = 0; k < inst->dimension; k++) inst->succ[k] = individuals[i].chromosome[k];
+        for (int k = 0; k < inst->dimension; k++)
+            inst->succ[k] = individuals[i].chromosome[k];
 
         two_opt(inst, 25);
 
         individuals[i].fitness = inst->z_best;
-        for (int k = 0; k < inst->dimension; k++) individuals[i].chromosome[k] = inst->succ[k];
-
+        for (int k = 0; k < inst->dimension; k++)
+            individuals[i].chromosome[k] = inst->succ[k];
     }
-
 }
 
+void survivor_selection(population *individuals, population *offsprings, int population_size, int offspring_size) {}
 
-void survivor_selection(population *individuals, population *offsprings, int population_size, int offspring_size){}
-
-population epoch_champion(instance *inst, population *individuals, int size){
+population epoch_champion(instance *inst, population *individuals, int size)
+{
 
     population champion;
     champion.fitness = 0.0;
-    champion.chromosome = (int*) calloc(inst->dimension, sizeof(int));
+    champion.chromosome = (int *)calloc(inst->dimension, sizeof(int));
 
     // Find champion among all individual
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < size; i++)
+    {
 
         // Insert it in first position
-        if (individuals[i].fitness < individuals[0].fitness){
+        if (individuals[i].fitness < individuals[0].fitness)
+        {
 
             population temp = individuals[0];
             individuals[0] = individuals[i];
             individuals[i] = temp;
-
         }
     }
 
     // Save champion
     champion = individuals[0];
 
-//    printf("\nChampion %f", champion.fitness);
+    //    printf("\nChampion %f", champion.fitness);
     return champion;
-
 }
 
 void rank_individuals(population *individuals, int size)
@@ -2794,74 +2800,6 @@ double swap_mutation(instance *inst, int *chromosome, int i, int j)
     int gene = chromosome[i];
     chromosome[i] = chromosome[j];
     chromosome[j] = gene;
-
-    // Compute mutation fitness
-    for (int k = 0; k < inst->dimension - 1; k++)
-        fitness += dist(chromosome[k], chromosome[k + 1], inst);
-
-    // Compute last arc
-    fitness += dist(chromosome[0], chromosome[inst->dimension - 1], inst);
-
-    return fitness;
-}
-
-double scramble_mutation(instance *inst, int *chromosome, int i, int j)
-{
-
-    double fitness = 0.0;
-
-    if (i > j)
-    {
-        int tmp = i;
-        i = j;
-        j = tmp;
-    }
-
-    for (int k = abs(i - j) - 1; k > 0; k--)
-    {
-
-        // Pick a random index from 0 to k
-        int h = rand() % (k + 1);
-
-        // Swap current gene with random one picked
-        int gene = chromosome[k];
-        chromosome[k] = chromosome[h];
-        chromosome[h] = gene;
-    }
-
-    // Compute mutation fitness
-    for (int k = 0; k < inst->dimension - 1; k++)
-        fitness += dist(chromosome[k], chromosome[k + 1], inst);
-
-    // Compute last arc
-    fitness += dist(chromosome[0], chromosome[inst->dimension - 1], inst);
-
-    return fitness;
-}
-
-double inversion_mutation(instance *inst, int *chromosome, int i, int j)
-{
-
-    double fitness = 0.0;
-
-    if (i > j)
-    {
-        int tmp = i;
-        i = j;
-        j = tmp;
-    }
-
-    while (i < j)
-    {
-
-        // Swap arr[i] with the element at random index
-        int gene = chromosome[i];
-        chromosome[i] = chromosome[j];
-        chromosome[j] = gene;
-
-        i++;
-        j--;
-    }
 
     // Compute mutation fitness
     for (int k = 0; k < inst->dimension - 1; k++)
@@ -2977,119 +2915,8 @@ void one_point_crossover(instance *inst, population parentA, population parentB,
 
     // Select a crossover point w.r.t. parent fitness
     //    int crossover_point = floor(inst->dimension / (parentA.fitness + parentB.fitness) * parentA.fitness);
-    int crossover_point = rand() % inst->dimension;
+    int crossover_point = 1 + (rand() % (inst->dimension - 2)); // crossover_point between 1 and (inst->dimension - 1)
     int starting_point = rand() % inst->dimension;
-
-    printf("\ncrossover %d \nstarting %d", crossover_point, starting_point);
-
-
-    // Offspring generation
-
-    int current = starting_point;
-    int next = -1;
-    int temp = -1;
-
-    selected[starting_point] = 1;
-
-    // First parent sub-path
-    for (int i = 0; i < crossover_point; i++)
-    {
-        printf("\nOffspring : ");
-        for (int k = 0; k < inst->dimension; k++) printf("%d ", offspring.chromosome[k]);
-        printf("\nSelected : ");
-        for (int k = 0; k < inst->dimension; k++) printf("%d ", selected[k]);
-
-        printf("\nnext %d, temp %d, current %d", next, temp, current);
-        next = parentA.chromosome[current];
-        offspring.chromosome[current] = next;
-
-        // Set node as selected
-        selected[next] = 1;
-
-        // Move the current to the next available index
-        current = next;
-
-
-    }
-
-    printf("\n-------------------------------------------");
-
-    temp = current;
-
-    int i = 0;
-    while (next != starting_point)
-    {
-
-        printf("\nOffspring : ");
-        for (int k = 0; k < inst->dimension; k++) printf("%d ", offspring.chromosome[k]);
-        printf("\nSelected : ");
-        for (int k = 0; k < inst->dimension; k++) printf("%d ", selected[k]);
-//        printf("\nnext %d \nstarting %d", next, starting_point);
-
-//        if (i++ > inst->dimension) break;
-//        printf("\nnext %d, temp %d, current %d", next, temp, current);
-        next = parentB.chromosome[temp];
-
-        if (selected[next] == 0)
-        {
-
-            offspring.chromosome[current] = next;
-            selected[next] = 1;
-            current = next;
-            temp = next;
-        }
-        else
-        {
-            printf("\nnext %d already selected, jumping to %d", next, parentB.chromosome[next]);
-            temp = parentB.chromosome[next];
-        }
-
-
-    }
-
-
-    // Closing the circuit
-    offspring.chromosome[current] = starting_point;
-
-    double *succ_dist = (double *)calloc(inst->dimension, sizeof(double)); // array of the distance between the node i and succ[i]
-
-    for (int i = 0; i < inst->dimension; i++)
-        succ_dist[i] = dist(i, offspring.chromosome[i], inst);
-
-    for (int j = 0; j < inst->dimension; j++)
-    {
-        if (selected[j] == 0)
-        {
-            double min_value = CPX_INFBOUND; // Insertion of node selected_node in the circuit
-            int idx_edge;                    // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
-            int selected_node;               // node to add in the circuit
-
-            // for each uncovered node and for each edge in the circuit, compute the extra mileage
-            for (int k = 0; k < inst->dimension; k++)
-            {
-                for (int i = 0; i < inst->dimension; i++)
-                {
-                    if (offspring.chromosome[k] == -1 && offspring.chromosome[i] != -1)
-                    {
-                        // k: node not in the circuit (it has no successor)
-                        // (i, succ[i]): edge
-                        double extra_mileage = dist(i, k, inst) + dist(offspring.chromosome[i], k, inst) - succ_dist[i];
-                        if (extra_mileage < min_value)
-                        {
-                            min_value = extra_mileage;
-                            idx_edge = i; // (i, succ[i])
-                            selected_node = k;
-                        }
-                    }
-                }
-            }
-            offspring.chromosome[selected_node] = offspring.chromosome[idx_edge];
-            succ_dist[selected_node] = dist(selected_node, offspring.chromosome[idx_edge], inst);
-            offspring.chromosome[idx_edge] = selected_node;
-            succ_dist[idx_edge] = dist(idx_edge, selected_node, inst);
-        }
-    }
-
     printf("\nParent A\n");
     for (int k = 0; k < inst->dimension; k++)
         printf("%d ", parentA.chromosome[k]);
@@ -3098,19 +2925,148 @@ void one_point_crossover(instance *inst, population parentA, population parentB,
     for (int k = 0; k < inst->dimension; k++)
         printf("%d ", parentB.chromosome[k]);
     printf("\n------------------------------------------------\n");
-    printf("Child\n");
+    printf("\ncrossover %d \nstarting %d", crossover_point, starting_point);
+
+    // Offspring generation
+
+    int current = starting_point;
+    int next = -1;
+    int temp = -1;
+
+    selected[starting_point] = 1;
+    offspring.fitness = 0;
+    // First parent sub-path
+    for (int i = 0; i < crossover_point; i++)
+    {
+        // DEBUG
+        /*
+        printf("\nOffspring : ");
+        for (int k = 0; k < inst->dimension; k++)
+            printf("%d ", offspring.chromosome[k]);
+        printf("\nSelected : ");
+        for (int k = 0; k < inst->dimension; k++)
+            printf("%d ", selected[k]);
+        */
+        next = parentA.chromosome[current];
+        // DEBUG
+        // printf("\nnext %d, temp %d, current %d", next, temp, current);
+
+        offspring.chromosome[current] = next;
+        offspring.fitness += dist(current, next, inst); 
+
+        // Set node as selected
+        selected[next] = 1;
+
+        // Move the current to the next index
+        current = next;
+    }
+
+    printf("\n-------------------------------------------");
+
+    next = parentB.chromosome[current];
+    printf("\ncurrent %d, next, %d", current, next);
+
+    while (next != starting_point)
+    {
+        // DEBUG
+        /*
+        printf("\nOffspring : ");
+        for (int k = 0; k < inst->dimension; k++)
+            printf("%d ", offspring.chromosome[k]);
+        
+        printf("\nSelected : ");
+        for (int k = 0; k < inst->dimension; k++)
+            printf("%d ", selected[k]);
+        */
+
+        if (selected[next] == 0)
+        {
+            // select the node "next" as the successor of the node "current"
+            offspring.chromosome[current] = next;
+            offspring.fitness += dist(current, next, inst); 
+            selected[next] = 1;
+            current = next;
+            next = parentB.chromosome[current];
+        }
+        else
+        {
+            // advance the "next" pointer
+            printf(" node %d already selected", next);
+            next = parentB.chromosome[next];
+        }
+        // DEBUG
+        printf("\ncurrent %d, next %d", current, next);
+    }
+
+    // Closing the circuit
+    offspring.chromosome[current] = starting_point;
+    offspring.fitness += dist(current, starting_point, inst);
+
+    printf("\nChild (partial)\n");
     for (int k = 0; k < inst->dimension; k++)
         printf("%d ", offspring.chromosome[k]);
 
+    for (int j = 0; j < inst->dimension; j++)
+    {
+        if (selected[j] == 0)
+        {
+            offspring.fitness += add_node_extra_mileage(inst, offspring.chromosome, j);
+        }
+    }
+    // double *succ_dist = (double *)calloc(inst->dimension, sizeof(double)); // array of the distance between the node i and succ[i]
+
+    // for (int i = 0; i < inst->dimension; i++)
+    //     succ_dist[i] = dist(i, offspring.chromosome[i], inst);
+
+    // for (int j = 0; j < inst->dimension; j++)
+    // {
+    //     if (selected[j] == 0)
+    //     {
+    //         double min_value = CPX_INFBOUND; // Insertion of node selected_node in the circuit
+    //         int idx_edge;                    // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
+    //         int selected_node;               // node to add in the circuit
+
+    //         // for each uncovered node and for each edge in the circuit, compute the extra mileage
+    //         for (int k = 0; k < inst->dimension; k++)
+    //         {
+    //             for (int i = 0; i < inst->dimension; i++)
+    //             {
+    //                 if (offspring.chromosome[k] == -1 && offspring.chromosome[i] != -1)
+    //                 {
+    //                     // k: node not in the circuit (it has no successor)
+    //                     // (i, succ[i]): edge
+    //                     double extra_mileage = dist(i, k, inst) + dist(offspring.chromosome[i], k, inst) - succ_dist[i];
+    //                     if (extra_mileage < min_value)
+    //                     {
+    //                         min_value = extra_mileage;
+    //                         idx_edge = i; // (i, succ[i])
+    //                         selected_node = k;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         offspring.chromosome[selected_node] = offspring.chromosome[idx_edge];
+    //         succ_dist[selected_node] = dist(selected_node, offspring.chromosome[idx_edge], inst);
+    //         offspring.chromosome[idx_edge] = selected_node;
+    //         succ_dist[idx_edge] = dist(idx_edge, selected_node, inst);
+    //     }
+    // }
+
+    printf("\nChild\n");
+    for (int k = 0; k < inst->dimension; k++)
+        printf("%d ", offspring.chromosome[k]);
+
+/*
     // Compute mutation fitness
     for (int k = 0; k < inst->dimension - 1; k++)
         offspring.fitness += dist(offspring.chromosome[k], offspring.chromosome[k + 1], inst);
 
     // Compute last arc
     offspring.fitness += dist(offspring.chromosome[0], offspring.chromosome[inst->dimension - 1], inst);
+*/
 
-    free(selected);
-    free(succ_dist);
+    //free(selected);
+    //free(succ_dist);
 }
 
 void uniform_crossover(instance *inst, population parentA, population parentB, population offspring)
@@ -3131,10 +3087,11 @@ void uniform_crossover(instance *inst, population parentA, population parentB, p
     free(selected);
 }
 
-void epoch_average_fitness(population *individuals, double *average, int size){
+void epoch_average_fitness(population *individuals, double *average, int size)
+{
 
-    for (int i = 0; i < size; i++) *average += individuals[i].fitness / size;
-
+    for (int i = 0; i < size; i++)
+        *average += individuals[i].fitness / size;
 }
 
 double epoch_percent_deviation(population *individuals, int size)
@@ -3145,13 +3102,13 @@ double epoch_percent_deviation(population *individuals, int size)
     double percent_deviation = 0.0;
 
     epoch_average_fitness(individuals, &average, size);
-//    printf("\nAverage %f", average);
+    //    printf("\nAverage %f", average);
 
-    for (int i = 0; i < size; ++i) deviation += fabs(individuals[i].fitness - average);
+    for (int i = 0; i < size; ++i)
+        deviation += fabs(individuals[i].fitness - average);
     deviation = deviation / size;
 
     percent_deviation = deviation / average * 100;
-//    printf("\nDeviation %f", percent_deviation);
+    //    printf("\nDeviation %f", percent_deviation);
     return percent_deviation;
-
 }
