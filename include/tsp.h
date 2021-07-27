@@ -233,7 +233,7 @@ int farthest_insertion(instance *inst, int n, node *node_list, double random_num
 // REFINEMENT HEURISTIC
 // to use to refine a solution, we assume that inside inst->best_sol there is a valid solution, and the selected edges are in inst->edges
 int two_opt(instance *inst, int maxMoves);
-int two_opt_v2(instance *inst);
+int two_opt_v2(instance *inst, int maxMoves);
 int reverse_successors(int *succ, int size, int start, int end);
 
 //META HEURISTIC
@@ -251,7 +251,7 @@ void rank_selection(population *individuals, int size, int *selection); // Rank 
 void random_selection(population *individuals, int size, int *selection); // Random Selection
 
 // Crossover
-void one_point_crossover(instance *inst, population parentA, population parentB, population offspring);
+double one_point_crossover(instance *inst, population parentA, population parentB, int *chromosome);
 void uniform_crossover(instance *inst, population parentA, population parentB, population offspring);
 
 // Mutation
