@@ -241,6 +241,8 @@ void tabu_search(instance *inst);
 double genetic(instance *inst, int size, int epoch);
 population random_individual(instance *inst, int seed, int optimize);
 void refine_population(instance *inst, population *individuals, int size);
+void rank(population *individuals, int size);
+
 
 // Parent Selection
 void roulette_wheel_selection(population *individuals, int size, int *selection); // Fitness Proportionate
@@ -254,11 +256,9 @@ void uniform_crossover(instance *inst, population parentA, population parentB, p
 
 // Mutation
 double swap_mutation(instance *inst, int *chromosome, int i, int j);
-double scramble_mutation(instance *inst, int *chromosome, int i, int j);
-double inversion_mutation(instance *inst, int *chromosome, int i, int j);
 
 // Survivor selection
-void survivor_selection(population *individuals, population *offsprings, int population_size, int offspring_size);
+void survivor_selection(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
 
 population epoch_champion(instance *inst, population *individuals, int size);
 void epoch_average_fitness(population *individuals, double *average, int size);
