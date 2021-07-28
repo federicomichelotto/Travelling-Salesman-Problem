@@ -238,8 +238,8 @@ int reverse_successors(int *succ, int size, int start, int end);
 
 //META HEURISTIC
 void tabu_search(instance *inst);
-double genetic(instance *inst, int size, int epoch);
-population random_individual(instance *inst, int seed, int optimize);
+int genetic(instance *inst, int size, int epoch);
+void random_individual(instance *inst, population* individual, int seed, int optimize);
 void refine_population(instance *inst, population *individuals, int size);
 void rank(population *individuals, int size);
 
@@ -251,16 +251,15 @@ void rank_selection(population *individuals, int size, int *selection); // Rank 
 void random_selection(population *individuals, int size, int *selection); // Random Selection
 
 // Crossover
-double one_point_crossover(instance *inst, population parentA, population parentB, int *chromosome);
-void uniform_crossover(instance *inst, population parentA, population parentB, population offspring);
+void one_point_crossover(instance *inst, population* parentA, population* parentB, population *offspring);
 
 // Mutation
-double swap_mutation(instance *inst, int *chromosome, int i, int j);
+void swap_mutation(instance *inst, population *individual, int i, int j);
 
 // Survivor selection
 void survivor_selection(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
 
-population epoch_champion(instance *inst, population *individuals, int size);
+void epoch_champion(instance *inst, population *individuals, int size);
 void epoch_average_fitness(population *individuals, double *average, int size);
 double epoch_percent_deviation(population *individuals, int size);
 
