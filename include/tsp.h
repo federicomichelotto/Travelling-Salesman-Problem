@@ -241,13 +241,13 @@ void tabu_search(instance *inst);
 int genetic(instance *inst, int size, int epoch);
 void random_individual(instance *inst, population* individual, int seed, int optimize);
 void refine_population(instance *inst, population *individuals, int size);
-void rank(population *individuals, int size);
+void rank(instance * inst, population *individuals, int size);
 
 
 // Parent Selection
 void roulette_wheel_selection(population *individuals, int size, int *selection); // Fitness Proportionate
 void tournament_selection(population *individuals, int k, int size, int *selection); // Tournament Selection
-void rank_selection(population *individuals, int size, int *selection); // Rank Selection
+void rank_selection(instance * inst, population *individuals, int size, int *selection); // Rank Selection
 void random_selection(population *individuals, int size, int *selection); // Random Selection
 
 // Crossover
