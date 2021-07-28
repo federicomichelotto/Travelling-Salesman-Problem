@@ -2309,13 +2309,12 @@ int two_opt(instance *inst, int maxMoves)
 // move applied on the most negative delta
 int two_opt_v2(instance *inst, int maxMoves)
 {
-    print_message("Inside 2-opt_v2 function");
-    printf("Initial incumbent = %f\n", inst->z_best);
+    //print_message("Inside 2-opt_v2 function");
+    //printf("Initial incumbent = %f\n", inst->z_best);
     // For each couple of edges (a,c) and (b,d) so that they are not subsequent,
     // If the given solution does not have any crossing: return 0, else return #crossing found;
     int iter = 1;
-    int moves = 0;
-    while (1)
+    while (!maxMoves || iter <= maxMoves)
     {
         double min_delta = DBL_MAX;
         int a, b;
@@ -2348,20 +2347,14 @@ int two_opt_v2(instance *inst, int maxMoves)
 
         // reverse the path from c to b
         if (reverse_successors(inst->succ, inst->dimension, c, b))
-            print_error("Error in reverse_successors");
+            print_error("Error in reverse_successors in two_opt_v2");
 
         // make the move
         inst->succ[a] = b;
         inst->succ[c] = d;
-
-        if (maxMoves != 0)
-            moves++;
-        if (moves > maxMoves)
-            break;
-
         // update incumbent
         inst->z_best += min_delta;
-        printf("%d° iteration - new incumbent = %f (delta = %f)\n", iter, inst->z_best, min_delta);
+        //printf("%d° iteration - new incumbent = %f (delta = %f)\n", iter, inst->z_best, min_delta);
         iter++;
         save_and_plot_solution(inst, inst->dimension);
     }
@@ -2545,7 +2538,6 @@ int genetic(instance *inst, int size2, int epochs2)
 
     if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
         print_error("Error clock_gettime");
-    inst->timestamp_start = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
     inst->timestamp_finish = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
     // update time limit
     time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
@@ -2612,7 +2604,6 @@ int genetic(instance *inst, int size2, int epochs2)
             one_point_crossover(inst, &individuals[i], &individuals[j], &offsprings[k]);
         }
 
-
         // Mutate population
         // How much population is stressed
         double stress = rand() % 60;
@@ -2645,7 +2636,6 @@ int genetic(instance *inst, int size2, int epochs2)
 
         printf("\n\t- Summary .. \n");
 
-        champion[epoch].chromosome = (int *)calloc(inst->dimension, sizeof(int));
         epoch_champion(inst, individuals, size);
         for (int i = 0; i < inst->dimension; i++)
         {
@@ -2678,15 +2668,14 @@ int genetic(instance *inst, int size2, int epochs2)
         if (time_left > 0.5)
         {
 
+            // A new epoch it's about to start
             epochs++;
-
+            epoch++;
             printf("\n%d", epoch);
+            // realloc and alloc
             average = (double *)realloc(average, epochs * sizeof(double));
             champion = (population *)realloc(champion, epochs * sizeof(population));
             champion[epoch].chromosome = (int *)calloc(inst->dimension, sizeof(int));
-
-            // A new epoch it's about to start
-            epoch++;
         }
 
         // Free memory
@@ -2721,8 +2710,8 @@ void random_individual(instance *inst, population *individual, int seed, int opt
 
     // Willing to optimize current chromosome
     if (optimize == 1)
-        two_opt(inst, 5);
-    //        two_opt_v2(inst);
+        // two_opt(inst, 5);
+        two_opt_v2(inst, 5);
 
     individual->fitness = inst->z_best;
     for (int k = 0; k < inst->dimension; k++)
@@ -2740,7 +2729,7 @@ void refine_population(instance *inst, population *individuals, int size)
         for (int k = 0; k < inst->dimension; k++)
             inst->succ[k] = individuals[i].chromosome[k];
 
-        two_opt_v2(inst, 15);
+        two_opt_v2(inst, 0);
 
         individuals[i].fitness = inst->z_best;
         for (int k = 0; k < inst->dimension; k++)
@@ -2803,17 +2792,17 @@ void survivor_selection(instance *inst, population *individuals, population *off
     //         }
     //     }
     // }
+    //free(selected);
 
     for (int i = 0; i < offsprings_size; i++)
     {
-        int index =  1 + (rand() % (individuals_size - 1) );
+        int index = 1 + (rand() % (individuals_size - 1));
         // swap
         for (int k = 0; k < inst->dimension; k++)
             individuals[index].chromosome[k] = offsprings[i].chromosome[k];
         individuals[index].fitness = offsprings[i].fitness;
     }
     printf("finished\n");
-    //free(selected);
 }
 
 void epoch_champion(instance *inst, population *individuals, int size)
@@ -2846,9 +2835,6 @@ void epoch_champion(instance *inst, population *individuals, int size)
             }
         }
     }
-
-    // Return champion
-    //return individuals[0];
 }
 
 void rank(instance *inst, population *individuals, int size)
