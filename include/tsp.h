@@ -232,7 +232,8 @@ int farthest_insertion(instance *inst, int n, node *node_list, double random_num
 
 // REFINEMENT HEURISTIC
 // to use to refine a solution, we assume that inside inst->best_sol there is a valid solution, and the selected edges are in inst->edges
-int two_opt(instance *inst, int maxMoves);
+//int two_opt(instance *inst, int maxMoves);
+double two_opt(instance *inst, int *succ, int maxMoves);
 //int two_opt_v2(instance *inst, int maxMoves);
 double two_opt_v2(instance *inst, int *succ, int maxMoves);
 int reverse_successors(int *succ, int size, int start, int end);
@@ -259,7 +260,8 @@ void one_point_crossover(instance *inst, population* parentA, population* parent
 void swap_mutation(instance *inst, population *individual, int i, int j);
 
 // Survivor selection
-void survivor_selection(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
+void survivor_selection_A(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
+void survivor_selection_B(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
 
 void epoch_champion(instance *inst, population *individuals, int size);
 void epoch_average_fitness(population *individuals, double *average, int size);
