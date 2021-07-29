@@ -2543,18 +2543,18 @@ int genetic(instance *inst, int size2, int epochs2)
         }
 
         // Generate random individuals
-        if (i < size * 0.7)
-            if (i < (size * 0.7) * 0.6)
-                random_individual(inst, &individuals[i], i, 1);
-            else
-                random_individual_2(inst, &individuals[i], i, 1);
-
-        else {
-            if (i < (size * 0.3) * 0.6)
-                random_individual(inst, &individuals[i], i, 0);
-            else
+//        if (i < size * 0.7)
+//            if (i < (size * 0.7) * 0.6)
+//                random_individual(inst, &individuals[i], i, 1);
+//            else
+//                random_individual_2(inst, &individuals[i], i, 1);
+//
+//        else {
+//            if (i < (size * 0.3) * 0.6)
+//                random_individual(inst, &individuals[i], i, 0);
+//            else
                 random_individual_2(inst, &individuals[i], i, 0);
-        }
+//        }
 
     }
 
@@ -2599,16 +2599,16 @@ int genetic(instance *inst, int size2, int epochs2)
         {
 
             // Parent selection
-            if (epoch_percent_deviation(individuals, size) < 5)
-            {
-                tournament_selection(individuals, 10, size, parent);
-                //            roulette_wheel_selection(individuals,size,parent);
-            }
-            else
-            {
-                rank_selection(inst, individuals, size, parent);
-                //            random_selection(individuals,size,parent);
-            }
+//            if (epoch_percent_deviation(individuals, size) > 5)
+//            {
+                tournament_selection(individuals, 8, size, parent);
+//                roulette_wheel_selection(individuals,size,parent);
+//            }
+//            else
+//            {
+//                rank_selection(inst, individuals, size, parent);
+//                            random_selection(individuals,size,parent);
+//            }
 
             int i, j;
             if (individuals[parent[0]].fitness > individuals[parent[0]].fitness)
@@ -2807,6 +2807,7 @@ void survivor_selection_A(instance *inst, population *individuals, population *o
         int index = 1 + (rand() % (individuals_size - 1));
         // swap
         for (int k = 0; k < inst->dimension; k++)
+
             individuals[index].chromosome[k] = offsprings[i].chromosome[k];
         individuals[index].fitness = offsprings[i].fitness;
     }
@@ -2984,18 +2985,23 @@ void roulette_wheel_selection(population *individuals, int size, int *selection)
     for (int i = 0; i < size; i++)
         t_sum += individuals[i].fitness;
 
+//    printf("\nTotal %f\n", t_sum);
+
     // Select two parent
     for (int parent = 0; parent < 2; parent++)
     {
 
         double p_sum = 0.0;
-        int point = rand() % (int)floor(t_sum);
+        double point = ((double) rand() / (RAND_MAX));
+
+//        printf("Wheel point : %f\n", point);
 
         for (int i = 0; i < size; ++i)
         {
 
             // Compute pies wheel value (remember lower fitness means better solution)
-            p_sum += (1 - individuals[i].fitness / t_sum);
+            p_sum += (individuals[i].fitness / t_sum);
+//            printf("%d° partial sum : %f\n", i, p_sum);
 
             if (p_sum > point)
             {
