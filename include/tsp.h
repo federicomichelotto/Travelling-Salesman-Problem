@@ -233,13 +233,15 @@ int farthest_insertion(instance *inst, int n, node *node_list, double random_num
 // REFINEMENT HEURISTIC
 // to use to refine a solution, we assume that inside inst->best_sol there is a valid solution, and the selected edges are in inst->edges
 int two_opt(instance *inst, int maxMoves);
-int two_opt_v2(instance *inst, int maxMoves);
+//int two_opt_v2(instance *inst, int maxMoves);
+double two_opt_v2(instance *inst, int *succ, int maxMoves);
 int reverse_successors(int *succ, int size, int start, int end);
 
 //META HEURISTIC
 void tabu_search(instance *inst);
 int genetic(instance *inst, int size, int epoch);
 void random_individual(instance *inst, population* individual, int seed, int optimize);
+void random_individual_2(instance *inst, population* individual, int seed, int optimize);
 void refine_population(instance *inst, population *individuals, int size);
 void rank(instance * inst, population *individuals, int size);
 

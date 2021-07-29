@@ -562,42 +562,88 @@ int save_and_plot_solution(instance *inst, int iter)
     return 0;
 }
 
-int plot_solution_edges(int n_edges, node *nodes, edge *edges, FILE *gnuplotPipe)
+int save_and_plot_solution_general(instance *inst, int *succ, int iter)
 {
-    int newpipe = 0;
-    if (gnuplotPipe == NULL)
-    {
-        gnuplotPipe = popen("gnuplot", "w");
-        newpipe = 1;
-    }
-    // write solution to file
-    FILE *temp = fopen("data.temp", "w");
-    for (int i = 0; i < n_edges; i++)
-    {
-        //Write the coordinates of the two nodes inside a temporary file
-        fprintf(temp, "%lf %lf \n", nodes[edges[i].prev].x, nodes[edges[i].prev].y);   // first node
-        fprintf(temp, "%lf %lf \n\n", nodes[edges[i].next].x, nodes[edges[i].next].y); // second node
-        // double '\n' to create a new block of coordinates
-    }
-    fclose(temp);
 
-    // plot solution
-    char *commandsForGnuplot[] = {"set title 'Solution plot'",
-                                  "unset key",
-                                  "set autoscale",
-                                  "set ylabel 'Y'",
-                                  "set xlabel 'X'",
-                                  "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
-    int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
-    for (int i = 0; i < commands; i++)
+    if (inst->param.saveplots || inst->param.interactive || iter == -1)
     {
-        fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
-    }
+        // write solution to file
+        FILE *temp = fopen("data.temp", "w");
+        for (int i = 0; i < inst->dimension; i++)
+        {
+            //Write the coordinates of the two nodes inside a temporary file
+            fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[i].x, inst->nodes[i].y, inst->nodes[succ[i]].x, inst->nodes[succ[i]].y);
+            // double '\n' to create a new edge (block of coordinates)
+        }
+        fclose(temp);
 
-    if (newpipe)
-        pclose(gnuplotPipe);
-    else
-        fflush(gnuplotPipe);
+        if (inst->param.saveplots || iter == -1) // save plot
+        {
+            FILE *gnuplotPipe = popen("gnuplot", "w"); // local gnuplotPipe to avoid conflicts with the global gnuplotPipe
+            char *out = (char *)calloc(1000, sizeof(char));
+            char *plot = (char *)calloc(1000, sizeof(char));
+            char *model_name = (char *)calloc(100, sizeof(char));
+
+            switch (inst->param.solver)
+            {
+                case 0:
+                    strcpy(model_name, optimal_model_name[inst->model_type]);
+                    break;
+                case 1:
+                    strcpy(model_name, math_model_name[inst->model_type]);
+                    break;
+                case 2:
+                    strcpy(model_name, heuristic_model_name[inst->model_type]);
+                    break;
+            }
+
+            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg'", inst->param.name, model_name, iter);
+            sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
+            if (iter == -1) // final solution
+            {
+                sprintf(out, "set output '../output/plot/%s_%s_final.jpg'", inst->param.name, model_name);
+                sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'red' lw 1 notitle");
+            }
+
+            char *commandsForGnuplot[] = {
+                    "set title 'Solution plot'",
+                    "set terminal jpeg size 1024,768",
+                    out,
+                    "unset key",
+                    "set autoscale",
+                    "set ylabel 'Y'",
+                    "set xlabel 'X'",
+                    plot,
+                    "clear"};
+
+            int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
+
+            //Send commands to gnuplot one by one.
+            for (int i = 0; i < commands; i++)
+                fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]);
+
+            pclose(gnuplotPipe); // execute the commands
+            free(plot);
+            free(out);
+            free(model_name);
+        }
+
+        if (inst->param.interactive) // plot solution
+        {
+            // here we use a global gnuplotPipe to remain on the same window
+            char *commandsForGnuplot[] = {"set title 'Solution plot'",
+                                          "unset key",
+                                          "set autoscale",
+                                          "set ylabel 'Y'",
+                                          "set xlabel 'X'",
+                                          "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
+
+            int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
+            for (int i = 0; i < commands; i++)
+                fprintf(inst->gnuplotPipe, "%s \n", commandsForGnuplot[i]);
+            fflush(inst->gnuplotPipe); // execute the commands
+        }
+    }
     return 0;
 }
 

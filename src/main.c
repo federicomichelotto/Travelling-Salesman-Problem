@@ -29,8 +29,6 @@ int main(int argc, char **argv)
         print_error("No implemented solver selected");
     }
 
-    save_and_plot_solution(&inst, -1);
-
     time_elapsed = inst.timestamp_finish - inst.timestamp_start;
     if (inst.param.verbose >= QUIET)
         inst.param.ticks ? printf("TSP solved in %f ticks\n", time_elapsed) : printf("TSP solved in %f seconds\n", time_elapsed);
