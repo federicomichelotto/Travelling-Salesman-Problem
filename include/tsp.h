@@ -224,7 +224,7 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ, int opti
 
 double extra_mileage(instance *inst, int *succ, int starting_node);
 double extra_mileage_furthest_starting_nodes(instance *inst, int *succ);
-int add_node_extra_mileage(instance *inst, int *succ, int node);
+double add_node_extra_mileage(instance *inst, int *succ, int node);
 
 int nearest_insertion(instance *inst, int n, node *node_list, double random_number);
 
@@ -257,14 +257,15 @@ void random_selection(population *individuals, int size, int *selection); // Ran
 void one_point_crossover(instance *inst, population* parentA, population* parentB, population *offspring);
 
 // Mutation
-void swap_mutation(instance *inst, population *individual, int i, int j);
+void swap_genes(instance *inst, population *individual, int i, int j);
 
 // Survivor selection
 void survivor_selection_A(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
 void survivor_selection_B(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
 
-void epoch_champion(instance *inst, population *individuals, int size);
-void epoch_average_fitness(population *individuals, double *average, int size);
+//void epoch_champion(instance *inst, population *individuals, int size);
+//void epoch_average_fitness(population *individuals, double *average, int size);
+double epoch_champion_and_average(instance *inst, population *individuals, int size, population *champion);
 double epoch_percent_deviation(population *individuals, int size);
 
 // Some useful functions
