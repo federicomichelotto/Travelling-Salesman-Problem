@@ -2535,11 +2535,11 @@ int genetic(instance *inst, int size2, int epochs2)
     for (int i = 0; i < size; i++)
     {
 
-        if (i % (int)ceil(size / 10) == 0)
-        {
-            printf("#");
-            fflush(stdout);
-        }
+        // if (i % (int)ceil(size / 10) == 0)
+        // {
+        //     printf("#");
+        //     fflush(stdout);
+        // }
 
         // Generate random individuals
         //        if (i < size * 0.7)
@@ -2554,10 +2554,11 @@ int genetic(instance *inst, int size2, int epochs2)
         //            else
         //random_individual_2(inst, &individuals[i], i, 0);
         //        }
-        if (i < size * 0.5)
+        if (i < size * 0.8)
             random_individual(inst, &individuals[i], i, 1);
         else
             random_individual_2(inst, &individuals[i], i, 0);
+        printf("Individual %d generated\n", i + 1);
     }
     if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
         print_error("Error clock_gettime");
@@ -2575,20 +2576,19 @@ int genetic(instance *inst, int size2, int epochs2)
     printf("\nEVOLUTION STEP\n");
 
     int no_improvement = 0;
-    int epoch = 0;
     int epochs = 1;
 
     // Epochs
     double *average = (double *)calloc(1, sizeof(double));
 
     population *champion = (population *)calloc(1, sizeof(population));
-    champion[epoch].chromosome = (int *)calloc(inst->dimension, sizeof(int));
+    champion[epochs - 1].chromosome = (int *)calloc(inst->dimension, sizeof(int));
 
     // Since there's time left or fitness isn't too stable
     while (time_left > 0.5)
     {
 
-        printf("\n\tEPOCH #%d [%.2f sec]", epoch, time_left);
+        //printf("\n\tEPOCH #%d [%.2f sec]", epoch, time_left);
 
         population *offsprings = (population *)calloc(children_size, sizeof(population));
         for (int i = 0; i < children_size; i++)
@@ -2602,7 +2602,7 @@ int genetic(instance *inst, int size2, int epochs2)
         for (int k = 0; k < children_size; k++)
         {
             // Parent selection
-            printf("\n\t- Parent selection ... ");
+            //printf("\n\t- Parent selection ... ");
             int *parent = (int *)calloc(2, sizeof(int)); // array where the two parents are going to be stored
 
             // Parent selection
@@ -2629,12 +2629,12 @@ int genetic(instance *inst, int size2, int epochs2)
             //     j = parent[0];
             // }
 
-            printf("\n\t\tCrossover #%d between parent %d and %d", k + 1, parent[0], parent[1]);
+            //printf("\n\t\tCrossover #%d between parent %d and %d", k + 1, parent[0], parent[1]);
             one_point_crossover(inst, &individuals[parent[0]], &individuals[parent[1]], &offsprings[k]);
             free(parent);
         }
 
-        printf("\n\t- Survivor selection ... \n");
+        //printf("\n\t- Survivor selection ... \n");
 
         survivor_selection_A(inst, individuals, offsprings, size, children_size);
         // survivor_selection_B(inst, individuals, offsprings, size, children_size);
@@ -2645,61 +2645,52 @@ int genetic(instance *inst, int size2, int epochs2)
         // Mutate population
         // How much population is stressed
         double stress = rand() % 60;
-        printf("\n\t- Mutation occur on %4.2f%% of individuals ...", stress);
+        //printf("\n\t- Mutation occur on %4.2f%% of individuals ...", stress);
         int mutation_size = floor(size * stress / 100);
-
+        int count = 1;
+        count = (rand() % (int)(2 + inst->dimension / 100));
+        if (count > inst->dimension)
+            count = inst->dimension;
+        //printf("***#swaps = %d ***\n", count);
         for (int k = 0; k < mutation_size; k++)
         {
             int m = 1 + rand() % (size - 1); // pick randomly an individual (not the champion)
 
-            printf("\n\t\t- Individual %d : ", m);
-
-            int i = rand() % inst->dimension;
-            int j = rand() % inst->dimension;
-
-            if (i == j)
+            //printf("\n\t\t- Individual %d : ", m);
+            // if (no_improvement == 20)
+            // {
+            // count = (rand() % (int)(2 + inst->dimension / 100));
+            // if (count > inst->dimension)
+            //     count = inst->dimension;
+            // no_improvement = 0;
+            // printf("***#swaps = %d ***\n", count);
+            // }
+            for (int k = 0; k < count; k++)
             {
-                if (j == 0)
-                    j++;
-                else
-                    j--;
+                int i = rand() % inst->dimension;
+                int j = rand() % inst->dimension;
+
+                if (i == j)
+                {
+                    if (j == 0)
+                        j++;
+                    else
+                        j--;
+                }
+                swap_genes(inst, &individuals[m], i, j);
             }
-            swap_genes(inst, &individuals[m], i, j);
+        }
+        if (epochs % 20 == 0)
+        {
+            int m = 1 + rand() % (size - 1); // pick randomly an individual (not the champion)
+            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
+            individuals[m].fitness += two_opt_v2(inst, individuals[m].chromosome, 0);
+            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
+            no_improvement = 0;
         }
 
-        // How much population is stressed
-        // double stress = rand() % 60;
-        // printf("\n\t- Mutation occur on %4.2f%% of individuals ...", stress);
-        // int mutation_size = floor(size * stress / 100);
-
-        // for (int k = 0; k < mutation_size; k++)
-        // {
-        //     if (rand() % 2)
-        //     {
-        //         int m = 1 + rand() % (size - 1); // pick randomly an individual (not the champion)
-
-        //         int i = rand() % inst->dimension;
-        //         int j = rand() % inst->dimension;
-
-        //         if (i == j)
-        //         {
-        //             if (j == 0)
-        //                 j++;
-        //             else
-        //                 j--;
-        //         }
-        //         swap_genes(inst, &individuals[m], i, j);
-        //     }
-        //     else
-        //     {
-        //         int m = rand() % size; // pick randomly an individual
-        //         printf("one 2-opt move on individual %d...\n", m);
-        //         individuals[m].fitness += two_opt_v2(inst, individuals[m].chromosome, 1);
-        //     }
-        // }
-
-        printf("\n\t- Summary .. \n");
-        average[epoch] = epoch_champion_and_average(inst, individuals, size, &champion[epoch]); // put the champion in individuals[0]
+        //printf("\n\t- Summary .. \n");
+        average[epochs - 1] = epoch_champion_and_average(inst, individuals, size, &champion[epochs - 1]); // put the champion in individuals[0]
         // for (int i = 0; i < inst->dimension; i++)
         //     champion[epoch].chromosome[i] = individuals[0].chromosome[i];
         // champion[epoch].fitness = individuals[0].fitness;
@@ -2707,12 +2698,12 @@ int genetic(instance *inst, int size2, int epochs2)
         //epoch_average_fitness(individuals, &average[epoch], size);
 
         // Print champion solution inside current epoch
-        save_and_plot_solution_general(inst, champion[epoch].chromosome, epoch);
+        save_and_plot_solution_general(inst, champion[epochs - 1].chromosome, epochs - 1);
 
-        printf("\n\t\t- Champion : %f", champion[epoch].fitness);
-        printf("\n\t\t- Average fitness : %f", average[epoch]);
+        printf("\t- Champion's fitness : %f\n", champion[epochs - 1].fitness);
+        printf("\t- Average fitness : %f\n", average[epochs - 1]);
 
-        if (epoch != 0 && average[epoch] >= average[epoch - 1])
+        if (epochs != 1 && champion[epochs - 1].fitness == champion[epochs - 2].fitness)
             no_improvement++;
         else
             no_improvement = 0;
@@ -2731,13 +2722,12 @@ int genetic(instance *inst, int size2, int epochs2)
         if (time_left > 0.5)
         {
             // A new epoch it's about to start
+            printf("\nEPOCH %d:\n", epochs);
             epochs++;
-            epoch++;
-            printf("\nEPOCH %d:\n", epoch);
             // realloc and alloc
             average = (double *)realloc(average, epochs * sizeof(double));
             champion = (population *)realloc(champion, epochs * sizeof(population));
-            champion[epoch].chromosome = (int *)calloc(inst->dimension, sizeof(int));
+            champion[epochs - 1].chromosome = (int *)calloc(inst->dimension, sizeof(int));
         }
         // Free memory
         free(offsprings);
@@ -2747,8 +2737,6 @@ int genetic(instance *inst, int size2, int epochs2)
     printf("\n%-10s| %-15s| %-15s", "Epoch", "Average", "Champion");
     for (int e = 0; e < epochs; e++)
         printf("\n%-10d| %-15.4f| %-15.4f", e, average[e], champion[e].fitness);
-    champion[epochs - 1].fitness += two_opt_v2(inst, champion[epochs - 1].chromosome, 0);
-    printf("\nChampion's fitness after with 2-opt: %f\n", champion[epochs - 1].fitness);
 
     free(average);
     free(champion);
@@ -2779,7 +2767,8 @@ void random_individual(instance *inst, population *individual, int seed, int opt
     // {
     //     printf("\n\t\t- %4d° individual has fitness : %f (RI V1)", seed + 1, individual->fitness);
     // }
-    // individual->fitness += two_opt_v2(inst, individual->chromosome, 5);
+    // if (seed % 2)
+    //     individual->fitness += two_opt_v2(inst, individual->chromosome, 5);
 }
 
 void random_individual_2(instance *inst, population *individual, int seed, int optimize)
@@ -2896,8 +2885,8 @@ void survivor_selection_A(instance *inst, population *individuals, population *o
     for (int i = 0; i < offsprings_size; i++)
     {
         int index = 1 + (rand() % (individuals_size - 1)); // preserve the champion of the previous epoch
-        if (individuals[index].fitness > offsprings[i].fitness)
-        //if (rand() % 2)
+        //if (individuals[index].fitness > offsprings[i].fitness)
+        if (rand() % 2)
         {
             // add the offspring in the population
             free(individuals[index].chromosome);
@@ -2991,10 +2980,10 @@ double epoch_champion_and_average(instance *inst, population *individuals, int s
     // swap fitness
     individuals[champion_index].fitness = individuals[0].fitness;
     individuals[0].fitness = champion->fitness;
-    sum - individuals[0].fitness;
+    sum -= individuals[0].fitness;
     // OPTIMIZE the champion with two 2-opt moves
     individuals[0].fitness += two_opt_v2(inst, individuals[0].chromosome, 2);
-    sum + individuals[0].fitness;
+    sum += individuals[0].fitness;
 
     // SAVE THE CHAMPION
     // hard copy the champion's chromosome
@@ -3050,7 +3039,7 @@ void swap_genes(instance *inst, population *individual, int a, int b)
     // Contiguous node were selected, do not mutate
     if (individual->chromosome[a] == b || individual->chromosome[b] == a)
     {
-        printf("contiguous node found!");
+        //printf("contiguous node found!");
         return;
     }
 
@@ -3060,10 +3049,10 @@ void swap_genes(instance *inst, population *individual, int a, int b)
     // Compute the delta
     delta = dist(a, b, inst) + dist(c, d, inst) - dist(a, c, inst) - dist(b, d, inst);
 
-    if (delta < 0)
-        printf("improving mutation (%f) occurred between genes %d and %d \n", delta, a, b);
-    else
-        printf("worsening mutation (%f) occurred between genes %d and %d \n", delta, a, b);
+    // if (delta < 0)
+    //     printf("improving mutation (%f) occurred between genes %d and %d \n", delta, a, b);
+    // else
+    //     printf("worsening mutation (%f) occurred between genes %d and %d \n", delta, a, b);
 
     // Reverse the path from c to b
     if (reverse_successors(individual->chromosome, inst->dimension, c, b))
