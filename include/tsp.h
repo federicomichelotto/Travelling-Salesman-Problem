@@ -234,36 +234,38 @@ int farthest_insertion(instance *inst, int n, node *node_list, double random_num
 // to use to refine a solution, we assume that inside inst->best_sol there is a valid solution, and the selected edges are in inst->edges
 //int two_opt(instance *inst, int maxMoves);
 double two_opt(instance *inst, int *succ, int maxMoves);
+//int two_opt_v2(instance *inst, int maxMoves);
 double two_opt_v2(instance *inst, int *succ, int maxMoves);
 int reverse_successors(int *succ, int size, int start, int end);
 
 //META HEURISTIC
 void tabu_search(instance *inst);
-int genetic(instance *inst, int size, int epoch);
+int genetic_v2(instance *inst);
 void random_individual(instance *inst, population* individual, int seed, int optimize);
 void random_individual_2(instance *inst, population* individual, int seed, int optimize);
+void refine_population(instance *inst, population *individuals, int size);
 void rank(instance * inst, population *individuals, int size);
 
-void fast_population_refinement(instance * inst, population *individuals, int size, int moves);
-void deep_population_refinement(instance * inst, population *individuals, int size, int moves);
 
 // Parent Selection
+void general_alg(instance *inst, population *individuals, int k, int size);
 void roulette_wheel_selection(population *individuals, int size, int *selection); // Fitness Proportionate
 void tournament_selection(population *individuals, int k, int size, int *selection); // Tournament Selection
 void rank_selection(instance * inst, population *individuals, int size, int *selection); // Rank Selection
 void random_selection(population *individuals, int size, int *selection); // Random Selection
 
 // Crossover
-void one_point_crossover(instance *inst, population* individuals, population *offspring, int A, int B, int weighted);
+int one_point_crossover(instance *inst, population* parentA, population* parentB, population *offspring);
 
 // Mutation
-void swap_genes(instance *inst, population *individual);
+void swap_genes(instance *inst, population *individual, int n);
 
 // Survivor selection
 void survivor_selection_A(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
 void survivor_selection_B(instance *inst, population *individuals, population *offsprings, int individuals_size, int offsprings_size);
 
-double epoch_champion_and_average(instance *inst, population *individuals, int size, population *champion);
+void epoch_champion_and_average(instance *inst, population *individuals, int size, population *champion, double *average);
+double epoch_percent_deviation(population *individuals, int size);
 
 // Some useful functions
 double gather_solution(instance *inst, const double *xstar, int type);
