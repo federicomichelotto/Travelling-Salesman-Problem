@@ -351,10 +351,14 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
     else
     {
         // the candidate solution has not cycles but could have crossings... let's apply 2-opt
+        printf("*** the candidate solution has not cycles but could have crossings... let's apply 2-opt\n");
         double delta = two_opt_v2(inst, succ, 0);
+        printf("*** delta = %f\n", delta);
         if (delta < 0)
         {
             objval += delta;
+            printf("*** objval = %f\n", objval);
+
             // succ -> xstar
             int nnz = 0;
             int izero = 0;
@@ -382,6 +386,8 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
 
             if (CPXcallbackpostheursoln(context, nnz, index, xstar_succ, objval, CPXCALLBACKSOLUTION_CHECKFEAS))
                 print_error("CPXcallbackpostheursoln() error");
+            free(xstar_succ);
+            free(index);
         }
     }
     free(comp);
