@@ -351,14 +351,10 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
     else
     {
         // the candidate solution has not cycles but could have crossings... let's apply 2-opt
-        printf("*** the candidate solution has not cycles but could have crossings... let's apply 2-opt\n");
         double delta = two_opt_v2(inst, succ, 0);
-        printf("*** delta = %f\n", delta);
         if (delta < 0)
         {
             objval += delta;
-            printf("*** objval = %f\n", objval);
-
             // succ -> xstar
             int nnz = 0;
             int izero = 0;
@@ -367,17 +363,13 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
 
             for (int i = 0; i < inst->dimension; i++)
             {
-                if (i < succ[i])
-                {
-                    index[nnz] = xpos(i, succ[i], inst);
-                    xstar_succ[nnz++] = 1.0;
-                }
                 for (int j = i + 1; j < inst->dimension; j++)
                 {
-                    if (j == succ[i])
-                        continue;
                     index[nnz] = xpos(i, j, inst);
-                    xstar_succ[nnz++] = 0.0;
+                    if (j == succ[i])
+                        xstar_succ[nnz++] = 1.0;
+                    else
+                        xstar_succ[nnz++] = 0.0;
                 }
             }
             // sanity check
