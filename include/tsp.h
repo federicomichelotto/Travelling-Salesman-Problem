@@ -248,7 +248,7 @@ void rank(instance * inst, population *individuals, int size);
 
 
 // Parent Selection
-void general_alg(instance *inst, population *individuals, int k, int size);
+void general_alg(instance *inst, population *individuals, int k, int size, int children_size);
 void roulette_wheel_selection(population *individuals, int size, int *selection); // Fitness Proportionate
 void tournament_selection(population *individuals, int k, int size, int *selection); // Tournament Selection
 void rank_selection(instance * inst, population *individuals, int size, int *selection); // Rank Selection
