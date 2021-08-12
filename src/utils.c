@@ -104,6 +104,24 @@ void parse_command_line(int argc, char **argv, instance *inst)
                 continue;
             }
 
+            if (strcmp(argv[i], "--meta") == 0)
+            {
+                inst->param.solver = 3;
+                continue;
+            }
+
+            if (strcmp(argv[i], "--popsize") == 0)
+            { // population
+                inst->param.pop_size = atoi(argv[++i]);
+                continue;
+            }
+
+            if (strcmp(argv[i], "--offsize") == 0)
+            { // population
+                inst->param.off_size = atoi(argv[++i]);
+                continue;
+            }
+
             if (strcmp(argv[i], "--grasp") == 0)
             {
                 inst->param.grasp = 1;
@@ -306,6 +324,10 @@ void initialize_instance(instance *inst)
     inst->param.grasp = 0;
     inst->param.grasp_choices = 1;  // default base case 1 possible choice
 
+    // Genetic parameter
+    inst->param.pop_size = 100;
+    inst->param.off_size = 10;
+
     inst->dimension = -1;
     inst->nodes = NULL;
     inst->succ = NULL;
@@ -341,8 +363,9 @@ void free_instance(instance *inst)
     if (pclose(inst->gnuplotPipe) == -1)
         print_error("pclose error");
 
-    if (inst->param.solver != 2)
+    if (inst->param.solver != 2 && inst->param.solver != 3)
         free(inst->best_sol);
+
     free(inst->nodes);
     free(inst->succ);
     free(inst->weights);
@@ -375,6 +398,10 @@ void print_command_line(instance *inst)
     case 2:
         printf("-m %d (%s)\n", inst->model_type, heuristic_model_name[inst->model_type]);
         printf("--heur (HEURISTICS SOLVER) (ACTIVE -> %d)\n", inst->param.solver);
+        break;
+    case 3:
+        printf("-m %d (%s)\n", inst->model_type, meta_heuristic_model_name[inst->model_type]);
+        printf("--meta (META HEURISTICS SOLVER) (ACTIVE -> %d)\n", inst->param.solver);
         break;
     default:
         print_error("No implemented solver selected");
@@ -422,6 +449,9 @@ void print_instance(instance *inst)
     case 2:
         printf("Model type: %d (%s)\n", inst->model_type, heuristic_model_name[inst->model_type]);
         break;
+    case 3:
+        printf("Model type: %d (%s)\n", inst->model_type, meta_heuristic_model_name[inst->model_type]);
+        break;
     default:
         print_error("No implemented solver selected");
     }
@@ -449,6 +479,7 @@ void print_help()
     printf("--saveplots     : used to save all the solutions' plots (by default only the final solution's plot is saved)\n");
     printf("--math          : used to set the math-heuristic solver (optional)\n");
     printf("--heur          : used to set the heuristic solver (optional)\n");
+    printf("--meta          : used to set the meta-heuristic solver (optional)\n");
     printf("--grasp <value> : used to set GRASP approach and possible choices (optional)\n");
     printf("-m <model>      : used to set the model type (based on the solver)\n");
     printf("-s <seed>       : used to set the seed\n");
@@ -594,6 +625,9 @@ int save_and_plot_solution_general(instance *inst, int *succ, int iter)
                     break;
                 case 2:
                     strcpy(model_name, heuristic_model_name[inst->model_type]);
+                    break;
+                case 3:
+                    strcpy(model_name, meta_heuristic_model_name[inst->model_type]);
                     break;
             }
 

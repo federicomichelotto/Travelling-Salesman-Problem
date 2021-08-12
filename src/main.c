@@ -25,6 +25,9 @@ int main(int argc, char **argv)
     case 2:
         heuristic_solver(&inst) ? print_error("heuristic_solver() ") : print_message("All went good inside heuristic_solver()");
         break;
+    case 3:
+        meta_heuristic_solver(&inst) ? print_error("meta_heuristic_solver() ") : print_message("All went good inside meta_heuristic_solver()");
+        break;
     default:
         print_error("No implemented solver selected");
     }
@@ -43,6 +46,9 @@ int main(int argc, char **argv)
         break;
     case 2:
         generate_csv_record(inst.param.name, inst.param.seed, heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
+        break;
+    case 3:
+        generate_csv_record(inst.param.name, inst.param.seed, meta_heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
         break;
     default:
         print_error("No implemented solver selected");

@@ -1,6 +1,8 @@
 #include "../include/utils.h"
+
 #include "compact.c"
 #include "math_heuristic.c"
+#include "heuristic.c"
 #include "meta_heuristic.c"
 
 double dist(int i, int j, instance *inst)

@@ -34,6 +34,9 @@ typedef struct
     int grasp;            // 0: GRASP OFF, 1 : GRASP ON
     int grasp_choices;    // # of possible random choices
 
+    int pop_size;         // Genetic population size
+    int off_size;         // Genetic offsprings size
+
 } parameter;
 
 typedef struct
@@ -115,7 +118,8 @@ static const char *verbose_name[] = {
     "NORMAL",
     "VERBOSE",
     "NERD",
-    "DEBUG"};
+    "DEBUG"
+};
 
 static const char *optimal_model_name[] = {
     "STD",
@@ -129,18 +133,25 @@ static const char *optimal_model_name[] = {
     "GG_ORIGINAL",
     "BENDERS",
     "BENDERS (KRUSKAL)",
-    "CALLBACK"};
+    "CALLBACK"
+};
 
 static const char *math_model_name[] = {
     "HARD FIXING HEURISTIC",
-    "SOFT FIXING HEURISTIC"};
+    "SOFT FIXING HEURISTIC"
+};
 
 static const char *heuristic_model_name[] = {
     "GREEDY",
     "EXTRA-MILEAGE",
     "EXTRA-MILEAGE FURTHEST STARTING NODES",
+};
+
+static const char *meta_heuristic_model_name[] = {
     "TABU SEARCH",
-    "GENETIC"};
+    "GENETIC V1",
+    "GENETIC V2",
+};
 
 static const char *optimal_model_full_name[] = {
     "Basic model w/o SEC",
@@ -164,14 +175,20 @@ static const char *heuristic_model_full_name[] = {
     "Nearest Neighbors (Greedy)",
     "Extra-mileage",
     "Extra-mileage furthest starting nodes",
+};
+
+
+static const char *meta_heuristic_model_full_name[] = {
     "Tabu Search",
-    "Genetic"};
+    "Genetic"
+};
 
 
 // TSP solver
 int optimal_solver(instance *inst);
 int math_solver(instance *inst);
 int heuristic_solver(instance *inst);
+int meta_heuristic_solver(instance *inst);
 
 // Exact model builder
 void build_model(CPXENVptr env, CPXLPptr lp, instance *inst);
@@ -240,22 +257,27 @@ int reverse_successors(int *succ, int size, int start, int end);
 
 //META HEURISTIC
 void tabu_search(instance *inst);
+int genetic(instance *inst);
 int genetic_v2(instance *inst);
 void random_individual(instance *inst, population* individual, int seed, int optimize);
 void random_individual_2(instance *inst, population* individual, int seed, int optimize);
-void refine_population(instance *inst, population *individuals, int size);
 void rank(instance * inst, population *individuals, int size);
+
+void refine_population(instance *inst, population *individuals, int size);
+void fast_population_refinement(instance * inst, population *individuals, int size, int moves);
+void deep_population_refinement(instance * inst, population *individuals, int size, int moves);
 
 
 // Parent Selection
 void general_alg(instance *inst, population *individuals, int k, int size, int children_size);
-void roulette_wheel_selection(population *individuals, int size, int *selection); // Fitness Proportionate
+
+void roulette_wheel_selection(population *individuals, int size, int *selection); // Fitness Proportionate Selection
 void tournament_selection(population *individuals, int k, int size, int *selection); // Tournament Selection
 void rank_selection(instance * inst, population *individuals, int size, int *selection); // Rank Selection
 void random_selection(population *individuals, int size, int *selection); // Random Selection
 
 // Crossover
-int one_point_crossover(instance *inst, population* parentA, population* parentB, population *offspring);
+int one_point_crossover(instance *inst, population* individuals, population *offspring, int A, int B, int weighted);
 
 // Mutation
 void swap_genes(instance *inst, population *individual, int n);
@@ -266,6 +288,18 @@ void survivor_selection_B(instance *inst, population *individuals, population *o
 
 void epoch_champion_and_average(instance *inst, population *individuals, int size, population *champion, double *average);
 double epoch_percent_deviation(population *individuals, int size);
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Some useful functions
 double gather_solution(instance *inst, const double *xstar, int type);

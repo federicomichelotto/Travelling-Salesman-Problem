@@ -77,5 +77,6 @@ def main():
 	opt = parser.parseArgs()
 	parseScores(open(opt.input, 'r'), opt.output)
 
+
 if __name__ == '__main__':
 	main()
