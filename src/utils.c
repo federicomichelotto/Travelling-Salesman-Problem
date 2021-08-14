@@ -25,6 +25,12 @@ void parse_command_line(int argc, char **argv, instance *inst)
                 continue;
             }
 
+            if (strcmp(argv[i], "--nint_cost") == 0)
+            { // Time limit (seconds)
+                inst->integer_costs = 0;
+                continue;
+            }
+
             if (strcmp(argv[i], "-t") == 0)
             { // Time limit (seconds)
                 inst->time_limit = strtof(argv[++i], NULL);
@@ -333,7 +339,7 @@ void initialize_instance(instance *inst)
     inst->succ = NULL;
 
     inst->weights = NULL;
-    inst->integer_costs = 0;
+    inst->integer_costs = 1;
     inst->z_best = -1.0;
 
     inst->timestamp_start = 0.0;
@@ -520,14 +526,16 @@ void save_and_plot_solution_general(instance *inst, int *succ, int iter)
 {
     if (inst->param.saveplots || inst->param.interactive || iter == -1)
     {
-        struct timespec timestamp;
-        if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
-            print_error("Error clock_gettime");
-        double now = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
-        if (now - inst->timestamp_last_plot < 0.5)
-            return;
-        inst->timestamp_last_plot = now;
-
+        if (iter != -1)
+        {
+            struct timespec timestamp;
+            if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
+                print_error("Error clock_gettime");
+            double now = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
+            if (now - inst->timestamp_last_plot < 0.2)
+                return;
+            inst->timestamp_last_plot = now;
+        }
         // write solution to file
         //FILE *temp = fopen("data.temp", "w");
         char data_filename[30];
@@ -684,4 +692,11 @@ int IsPathExist(const char *s)
 {
     struct stat buffer;
     return !stat(s, &buffer);
+}
+
+void getTimeStamp(double *ts){
+    struct timespec timestamp;
+    if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
+        print_error("Error clock_gettime");
+    *ts = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
 }

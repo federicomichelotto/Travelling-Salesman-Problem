@@ -6,7 +6,8 @@ int math_solver(instance *inst)
     CPXLPptr lp = CPXcreateprob(env, &error, "MATH TSP");
 
     // get timestamp
-    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : CPXgettime(env, &inst->timestamp_start);
+    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : getTimeStamp(&inst->timestamp_start);
+
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
     inst->best_sol = (double *)calloc(inst->cols, sizeof(double));
@@ -113,7 +114,7 @@ int math_solver(instance *inst)
     printf("Lower bound: %lf\n", inst->best_lb);
 
     // get timestamp
-    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
+    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : getTimeStamp(&inst->timestamp_finish);
 
     // Plot optimal solution
     save_and_plot_solution(inst, -1);
@@ -124,17 +125,16 @@ int math_solver(instance *inst)
     return 0;
 }
 
-
-
 void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_limit_iter, double fix_ratio)
 {
     int iter = 1;
     while (1)
     {
         // update time left
-        inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
-        double time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
-        if (time_left <= 0.5)
+        double ts_current;
+        inst->param.ticks ? CPXgetdettime(env, &ts_current) : getTimeStamp(&ts_current);
+        double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
+        if (time_left <= 0.5 + inst->param.ticks * 500)
             return;
         if (time_left <= time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
@@ -202,9 +202,10 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     while (1)
     {
         // update time left
-        inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
-        double time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
-        if (time_left <= 0.5)
+        double ts_current;
+        inst->param.ticks ? CPXgetdettime(env, &ts_current) : getTimeStamp(&ts_current);
+        double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
+        if (time_left <= 0.5 + inst->param.ticks * 500)
             return;
         if (time_left <= time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);

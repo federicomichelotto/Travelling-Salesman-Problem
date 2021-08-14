@@ -5,7 +5,8 @@ int optimal_solver(instance *inst)
     CPXENVptr env = CPXopenCPLEX(&error);
     CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
     // get timestamp
-    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : CPXgettime(env, &inst->timestamp_start);
+
+    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : getTimeStamp(&inst->timestamp_start);
 
     build_model(env, lp, inst);
     inst->cols = CPXgetnumcols(env, lp);
@@ -34,6 +35,9 @@ int optimal_solver(instance *inst)
 
     if (CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC)) // Set opportunistic mode
         print_error("CPXPARAM_Parallel error");
+
+    // if (CPXsetintparam(env, CPX_PARAM_THREADS, 1)) // Set one thread
+    //     print_error("CPX_PARAM_THREADS error");
 
     // CPLEX's precision setting
     if (CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0)) // very important if big-M is present
@@ -77,6 +81,9 @@ int optimal_solver(instance *inst)
         { // Benders
             benders(env, lp, inst);
             // no need to gather the solution because benders update inst->succ directly
+
+            CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
+            CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
         }
         else
         {
@@ -94,7 +101,7 @@ int optimal_solver(instance *inst)
     printf("Lower bound: %lf\n", inst->best_lb);
 
     // get timestamp
-    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
+    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : getTimeStamp(&inst->timestamp_finish);
 
     // Plot optimal solution
     save_and_plot_solution(inst, -1);
@@ -809,9 +816,10 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
     while (!done)
     {
         // update time left
-        inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : CPXgettime(env, &inst->timestamp_finish);
-        double time_left = inst->time_limit - (inst->timestamp_finish - inst->timestamp_start);
-        if (time_left <= 0.5)
+        double ts_current;
+        inst->param.ticks ? CPXgetdettime(env, &ts_current) : getTimeStamp(&ts_current);
+        double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
+        if (time_left <= 0.5 + inst->param.ticks * 500)
             return;
         CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
 
@@ -832,8 +840,10 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
             findConnectedComponents(xstar, inst, inst->succ, comp, &c, &length_comp);
         else if (inst->model_type == 10)
             findConnectedComponents_kruskal(xstar, inst, inst->succ, comp, &c, &length_comp);
-
-        printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d \tTIME LEFT: %f\n", ++it, c, time_left);
+        char str[10] = "TIME";
+        if (inst->param.ticks)
+            sprintf(str, "TICKS");
+        printf("\nITERATION: %d\tCONNECTED COMPONENTS FOUND: %d \t%s LEFT: %f\n", ++it, c, str, time_left);
 
         if (c == 1)
         {

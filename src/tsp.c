@@ -96,7 +96,6 @@ int upos(int i, instance *inst)
 
 int ypos(int i, int j, instance *inst)
 {
-
     if (i < 0)
         print_error("Negative index is not valid!");
     return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i * inst->dimension + j;
@@ -155,7 +154,6 @@ double gather_solution(instance *inst, const double *xstar, int type)
         }
     }
 }
-
 
 void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
 {
@@ -344,10 +342,8 @@ void basic_model_directed(CPXENVptr env, CPXLPptr lp, instance *inst)
     free(rname);
 }
 
-
 static int CPXPUBLIC callback_driver(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
 {
-    instance *inst = (instance *)userhandle;
     if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE)
         return callback_candidate(context, contextid, userhandle);
     if (contextid == CPX_CALLBACKCONTEXT_RELAXATION)
@@ -461,9 +457,9 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
 
 static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
 {
-    double ticks = 0;
-    CPXcallbackgetinfodbl(context, CPXCALLBACKINFO_DETTIME, &ticks);
-    if (!((int)ticks % 10))
+    int node = 0;
+    CPXcallbackgetinfoint(context, CPXCALLBACKINFO_NODEUID, &node);
+    if (!(node % 10))
         return 0;
     instance *inst = (instance *)userhandle;
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
@@ -565,7 +561,6 @@ int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
     free(value);
     return 0;
 }
-
 
 void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp,
                              int **length_comp)

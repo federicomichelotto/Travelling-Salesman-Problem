@@ -26,5 +26,6 @@ int generate_csv_record(char *instance_name, int seed, const char *model, double
 
 int checkFolders();
 int IsPathExist(const char *s);
+void getTimeStamp(double *ts);
 
 #endif //UTILS_H
