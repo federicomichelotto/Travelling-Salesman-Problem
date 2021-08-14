@@ -33,6 +33,10 @@ int meta_heuristic_solver(instance *inst)
 
     case 1: // Genetic V1
         genetic(inst);
+        save_and_plot_solution(inst, -1);
+
+        printf("Best objective value (optimized by genetic algorithm): %f\n", inst->z_best);
+
         break;
     case 2: // Genetic V2
         genetic_v2(inst);
@@ -258,7 +262,7 @@ int genetic(instance *inst)
 
         // Mutate population
         // How much population is stressed
-        double stress = rand() % 60;
+        double stress = (rand() %  (60 - 20 + 1)) + 20;
         printf("\n\t- Mutation occur on %4.2f%% of individuals ... \n", stress);
         int mutation_size = floor(size * stress / 100);
 
@@ -297,13 +301,16 @@ int genetic(instance *inst)
 
         if (no_improvement == 20)
         {
-             printf("\tWARNING : No improvement were found in the last %d epochs. Starting quick optimization\n", no_improvement);
-            printf("\tStarting quick optimization... \n");
+             printf("\tWARNING : No improvement were found in the last %d epochs.\n", no_improvement);
+            printf("\tStarting quick optimization... ");
+            fflush(stdout);
             fast_population_refinement(inst, individuals, size, 20);
             printf("\tComplete\n");
 
             no_improvement = 0;
         }
+
+        if (epochs > 1000) break;
 
         if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
             print_error("Error clock_gettime");
@@ -332,6 +339,8 @@ int genetic(instance *inst)
     printf("\n%-10s| %-15s| %-15s", "Epoch", "Average", "Champion");
     for (int e = 0; e < epochs; e++)
         printf("\n%-10d| %-15.4f| %-15.4f", e, average[e], champion[e].fitness);
+
+    inst->z_best = champion[epochs-1].fitness;
 
     free(average);
     free(champion);
@@ -789,11 +798,12 @@ void survivor_selection_B(instance *inst, population *individuals, population *o
         //            printf("%d ", selected[j]);
         //        }
 
-        if (individuals[r].fitness > offsprings[i].fitness)
+        if (offsprings[i].fitness < individuals[r].fitness )
         {
             if ((rand() % 100) < 75)
             {
-                individuals[r].chromosome = individuals[i].chromosome;
+                free(individuals[r].chromosome);
+                individuals[r].chromosome = offsprings[i].chromosome;
                 individuals[r].fitness = offsprings[i].fitness;
             }
         }
@@ -801,7 +811,8 @@ void survivor_selection_B(instance *inst, population *individuals, population *o
         {
             if ((rand() % 100) < 25)
             {
-                individuals[r].chromosome = individuals[i].chromosome;
+                free(individuals[r].chromosome);
+                individuals[r].chromosome = offsprings[i].chromosome;
                 individuals[r].fitness = offsprings[i].fitness;
             }
         }

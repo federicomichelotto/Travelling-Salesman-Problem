@@ -379,7 +379,7 @@ double two_opt(instance *inst, int *succ, int maxMoves)
     int optimal = 0;
     int moves = 0;
     int iter = 0;
-    double incumbent = inst->z_best;
+    double total_delta = 0.0;
     // if (inst->param.verbose >= DEBUG)
     //     printf("Initial incumbent = %f\n", inst->z_best);
 
@@ -415,9 +415,9 @@ double two_opt(instance *inst, int *succ, int maxMoves)
 
                     // update inc
                     double delta = newDist - originalDist;
-                    incumbent = incumbent + delta;
-                    // if (inst->param.verbose >= DEBUG)
-                    //     printf("%d° iteration - new incumbent = %f (delta = %f)\n", iter + 1, incumbent, delta);
+                    total_delta += delta;
+//                     if (inst->param.verbose >= DEBUG)
+//                         printf("%d° iteration - total delta = %f (delta = %f)\n", iter + 1, total_delta, delta);
 
                     // reverse tour
                     if (reverse_successors(succ, inst->dimension, b, c))
@@ -437,7 +437,7 @@ double two_opt(instance *inst, int *succ, int maxMoves)
         save_and_plot_solution_general(inst, succ, iter);
     }
 
-    return incumbent;
+    return total_delta;
 }
 
 // move applied on the most negative delta
