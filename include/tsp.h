@@ -75,6 +75,10 @@ typedef struct
     double time_limit; // Specifies the maximum time allowed within the execution
     double timestamp_start;
     double timestamp_finish;
+
+    double timestamp_last_plot;
+    int plot_counter;
+
     int model_type;   // Specifies the type of the model
     double z_best;    // Value of the best solution available (incumbent)
     double best_lb;   // best lower bound

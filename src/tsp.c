@@ -447,6 +447,7 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
 
             if (CPXcallbackpostheursoln(context, nnz, index, xstar_succ, objval, CPXCALLBACKSOLUTION_CHECKFEAS))
                 print_error("CPXcallbackpostheursoln() error");
+            printf("[callback_candidate] Posted a new solution to CPLEX with incumbent: %f\n", objval);
             free(xstar_succ);
             free(index);
         }

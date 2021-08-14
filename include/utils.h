@@ -18,8 +18,8 @@ void print_error(const char *err);
 void print_error_status(const char *err, int e);
 void print_message(const char *msg);
 
-int save_and_plot_solution(instance *inst, int iter);
-int save_and_plot_solution_general(instance *inst, int *succ, int iter);
+void save_and_plot_solution(instance *inst, int iter);
+void save_and_plot_solution_general(instance *inst, int *succ, int iter);
 
 int generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension);
 int generate_csv_record(char *instance_name, int seed, const char *model, double z_best, double time_elapsed, int run);

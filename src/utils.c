@@ -309,7 +309,7 @@ void parse_instance(instance *inst)
 
 void initialize_instance(instance *inst)
 {
-    srand(time(NULL));     // Initialize random seed for the computation
+    srand(time(NULL)); // Initialize random seed for the computation
 
     inst->model_type = 0;
     inst->time_limit = CPX_INFBOUND;
@@ -322,7 +322,7 @@ void initialize_instance(instance *inst)
     inst->param.interactive = 0;
     inst->param.saveplots = 0;
     inst->param.grasp = 0;
-    inst->param.grasp_choices = 1;  // default base case 1 possible choice
+    inst->param.grasp_choices = 1; // default base case 1 possible choice
 
     // Genetic parameter
     inst->param.pop_size = 100;
@@ -338,6 +338,9 @@ void initialize_instance(instance *inst)
 
     inst->timestamp_start = 0.0;
     inst->timestamp_finish = 0.0;
+
+    inst->timestamp_last_plot = 0.0;
+    inst->plot_counter = 0;
 
     strcpy(inst->param.input_file, "NULL");
     strcpy(inst->param.name, "NULL");
@@ -508,17 +511,32 @@ void print_message(const char *msg)
     fflush(NULL);
 }
 
-int save_and_plot_solution(instance *inst, int iter)
+void save_and_plot_solution(instance *inst, int iter)
 {
+    save_and_plot_solution_general(inst, inst->succ, iter);
+}
 
+void save_and_plot_solution_general(instance *inst, int *succ, int iter)
+{
     if (inst->param.saveplots || inst->param.interactive || iter == -1)
     {
+        struct timespec timestamp;
+        if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
+            print_error("Error clock_gettime");
+        double now = timestamp.tv_sec + timestamp.tv_nsec * pow(10, -9);
+        if (now - inst->timestamp_last_plot < 0.5)
+            return;
+        inst->timestamp_last_plot = now;
+
         // write solution to file
-        FILE *temp = fopen("data.temp", "w");
+        //FILE *temp = fopen("data.temp", "w");
+        char data_filename[30];
+        sprintf(data_filename, "data_temp/data_%d", inst->plot_counter++);
+        FILE *temp = fopen(data_filename, "w");
         for (int i = 0; i < inst->dimension; i++)
         {
             //Write the coordinates of the two nodes inside a temporary file
-            fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[i].x, inst->nodes[i].y, inst->nodes[inst->succ[i]].x, inst->nodes[inst->succ[i]].y);
+            fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[i].x, inst->nodes[i].y, inst->nodes[succ[i]].x, inst->nodes[succ[i]].y);
             // double '\n' to create a new edge (block of coordinates)
         }
         fclose(temp);
@@ -544,11 +562,14 @@ int save_and_plot_solution(instance *inst, int iter)
             }
 
             sprintf(out, "set output '../output/plot/%s_%s_%d.jpg'", inst->param.name, model_name, iter);
-            sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
+            // sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
+            sprintf(plot, "plot '%s' with linespoints pt 7 lc rgb 'blue' lw 1 notitle", data_filename);
+
             if (iter == -1) // final solution
             {
                 sprintf(out, "set output '../output/plot/%s_%s_final.jpg'", inst->param.name, model_name);
-                sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'red' lw 1 notitle");
+                // sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'red' lw 1 notitle");
+                sprintf(plot, "plot '%s' with linespoints pt 7 lc rgb 'red' lw 1 notitle", data_filename);
             }
 
             char *commandsForGnuplot[] = {
@@ -576,13 +597,15 @@ int save_and_plot_solution(instance *inst, int iter)
 
         if (inst->param.interactive) // plot solution
         {
-            // here we use a global gnuplotPipe to remain on the same window
+            char plot_str[150];
+            sprintf(plot_str, "plot '%s' with linespoints pt 7 lc rgb 'blue' lw 1", data_filename);
             char *commandsForGnuplot[] = {"set title 'Solution plot'",
+                                          "set term wxt noraise",
                                           "unset key",
                                           "set autoscale",
                                           "set ylabel 'Y'",
                                           "set xlabel 'X'",
-                                          "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
+                                          plot_str};
 
             int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
             for (int i = 0; i < commands; i++)
@@ -590,95 +613,6 @@ int save_and_plot_solution(instance *inst, int iter)
             fflush(inst->gnuplotPipe); // execute the commands
         }
     }
-    return 0;
-}
-
-int save_and_plot_solution_general(instance *inst, int *succ, int iter)
-{
-
-    if (inst->param.saveplots || inst->param.interactive || iter == -1)
-    {
-        // write solution to file
-        FILE *temp = fopen("data.temp", "w");
-        for (int i = 0; i < inst->dimension; i++)
-        {
-            //Write the coordinates of the two nodes inside a temporary file
-            fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[i].x, inst->nodes[i].y, inst->nodes[succ[i]].x, inst->nodes[succ[i]].y);
-            // double '\n' to create a new edge (block of coordinates)
-        }
-        fclose(temp);
-
-        if (inst->param.saveplots || iter == -1) // save plot
-        {
-            FILE *gnuplotPipe = popen("gnuplot", "w"); // local gnuplotPipe to avoid conflicts with the global gnuplotPipe
-            char *out = (char *)calloc(1000, sizeof(char));
-            char *plot = (char *)calloc(1000, sizeof(char));
-            char *model_name = (char *)calloc(100, sizeof(char));
-
-            switch (inst->param.solver)
-            {
-                case 0:
-                    strcpy(model_name, optimal_model_name[inst->model_type]);
-                    break;
-                case 1:
-                    strcpy(model_name, math_model_name[inst->model_type]);
-                    break;
-                case 2:
-                    strcpy(model_name, heuristic_model_name[inst->model_type]);
-                    break;
-                case 3:
-                    strcpy(model_name, meta_heuristic_model_name[inst->model_type]);
-                    break;
-            }
-
-            sprintf(out, "set output '../output/plot/%s_%s_%d.jpg'", inst->param.name, model_name, iter);
-            sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1 notitle");
-            if (iter == -1) // final solution
-            {
-                sprintf(out, "set output '../output/plot/%s_%s_final.jpg'", inst->param.name, model_name);
-                sprintf(plot, "plot 'data.temp' with linespoints pt 7 lc rgb 'red' lw 1 notitle");
-            }
-
-            char *commandsForGnuplot[] = {
-                    "set title 'Solution plot'",
-                    "set terminal jpeg size 1024,768",
-                    out,
-                    "unset key",
-                    "set autoscale",
-                    "set ylabel 'Y'",
-                    "set xlabel 'X'",
-                    plot,
-                    "clear"};
-
-            int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
-
-            //Send commands to gnuplot one by one.
-            for (int i = 0; i < commands; i++)
-                fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]);
-
-            pclose(gnuplotPipe); // execute the commands
-            free(plot);
-            free(out);
-            free(model_name);
-        }
-
-        if (inst->param.interactive) // plot solution
-        {
-            // here we use a global gnuplotPipe to remain on the same window
-            char *commandsForGnuplot[] = {"set title 'Solution plot'",
-                                          "unset key",
-                                          "set autoscale",
-                                          "set ylabel 'Y'",
-                                          "set xlabel 'X'",
-                                          "plot 'data.temp' with linespoints pt 7 lc rgb 'blue' lw 1"};
-
-            int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
-            for (int i = 0; i < commands; i++)
-                fprintf(inst->gnuplotPipe, "%s \n", commandsForGnuplot[i]);
-            fflush(inst->gnuplotPipe); // execute the commands
-        }
-    }
-    return 0;
 }
 
 int generate_path(char *path, char *folder, char *type, const char *model, char *filename, int seed, char *extension)
@@ -740,6 +674,9 @@ int checkFolders()
             if (mkdir("../output/plot", 0777))
                 print_error("error creating plot folder");
     }
+    if (!IsPathExist("data_temp"))
+        if (mkdir("data_temp", 0777))
+            print_error("error creating temp folder");
     return 0;
 }
 
