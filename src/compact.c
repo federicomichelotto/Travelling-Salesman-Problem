@@ -39,6 +39,9 @@ int optimal_solver(instance *inst)
     // if (CPXsetintparam(env, CPX_PARAM_THREADS, 1)) // Set one thread
     //     print_error("CPX_PARAM_THREADS error");
 
+    if (CPXsetintparam(env, CPX_PARAM_CLONELOG, -1)) // CPLEX does not clone log files. (off)
+        print_error("CPXPARAM_Output_CloneLog error");
+
     // CPLEX's precision setting
     if (CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0)) // very important if big-M is present
         print_error("CPX_PARAM_EPINT error");
@@ -708,6 +711,7 @@ void GG_lazy_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
     free(rname);
 }
 
+// original Gavish and Graves formulation (tightened)
 void GG_original(CPXENVptr env, CPXLPptr lp, instance *inst)
 {
     basic_model_directed(env, lp, inst);
@@ -743,7 +747,7 @@ void GG_original(CPXENVptr env, CPXLPptr lp, instance *inst)
         }
     }
 
-    // Add in-flow out-flow differential constraints for nodes h > 0: sum_i (1.0 * y_ih) + sum_i (- 1.0 * y_hi) = 1
+    // Add in-flow out-flow differential constraints for each node h > 0: sum_i (1.0 * y_ih) + sum_i (- 1.0 * y_hi) = 1
     for (int h = 1; h < inst->dimension; h++) // exludes node 0
     {
         double rhs = 1.0;
@@ -776,12 +780,14 @@ void GG_original(CPXENVptr env, CPXLPptr lp, instance *inst)
             print_error("wrong CPXchgcoef [degree]");
     }
 
-    // original linking constraints: y_ij <= (n-1)x_ij for each i != j
+    // original linking constraints (tightened):
+    // if i=0 OR j=0 : y_ij <= (n-1)x_ij for each i != j
+    // else :          y_ij <= (n-2)x_ij for each i != j
     for (int i = 0; i < inst->dimension; i++) // exludes node 0
     {
         for (int j = 0; j < inst->dimension; j++)
         {
-            if (i == j)
+            if (i == j || j == 0)
                 continue;
             double rhs = 0.0;
             char sense = 'L';
@@ -792,13 +798,16 @@ void GG_original(CPXENVptr env, CPXLPptr lp, instance *inst)
 
             if (CPXchgcoef(env, lp, row, ypos(i, j, inst), 1.0)) // 1.0 * y_ij
                 print_error("wrong CPXchgcoef [degree]");
-            if (i == 0)
+            if (i == 0) // note that for j=0 y_ij = 0 by definition
             {
-                if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 1 - inst->dimension)) // - (1 - nnodes) * x_ij
+                if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 1 - inst->dimension)) // (1 - nnodes) * x_ij
                     print_error("wrong CPXchgcoef [degree]");
             }
-            else if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 2 - inst->dimension)) // - (2 - nnodes) * x_ij
-                print_error("wrong CPXchgcoef [degree]");
+            else
+            {
+                if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 2 - inst->dimension)) // (2 - nnodes) * x_ij
+                    print_error("wrong CPXchgcoef [degree]");
+            }
         }
     }
 
