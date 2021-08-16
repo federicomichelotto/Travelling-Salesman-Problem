@@ -22,19 +22,11 @@ int math_solver(instance *inst)
     if (CPXsetintparam(env, CPX_PARAM_RANDOMSEED, inst->param.seed)) // Set seed
         print_error("CPX_PARAM_RANDOMSEED error");
 
-    if (inst->param.ticks)
-    {
-        if (CPXsetdblparam(env, CPX_PARAM_DETTILIM, inst->time_limit))
-            print_error("CPX_PARAM_DETTILIM error");
-    }
-    else
-    {
-        if (CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit))
-            print_error("CPX_PARAM_TILIM error");
-    }
-
     if (CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC)) // Set opportunistic mode
         print_error("CPXPARAM_Parallel error");
+
+    if (CPXsetintparam(env, CPX_PARAM_CLONELOG, -1)) // CPLEX does not clone log files. (off)
+        print_error("CPXPARAM_Output_CloneLog error");
 
     // CPLEX's precision setting
     if (CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0)) // very important if big-M is present
