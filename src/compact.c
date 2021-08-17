@@ -828,7 +828,7 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
         double ts_current;
         inst->param.ticks ? CPXgetdettime(env, &ts_current) : getTimeStamp(&ts_current);
         double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
-        if (time_left <= 0.5 + inst->param.ticks * 500)
+        if (time_left < inst->param.time_threshold)
             return;
         CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
 

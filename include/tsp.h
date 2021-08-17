@@ -26,14 +26,15 @@ typedef struct
     int seed;             // Seed given to cplex
     int run;              // Number of current run
     int verbose;          // verbosity level [0,4]
-    int callback_counter; // #callback's called
     int ticks;            // flag: 0->seconds, 1->ticks
     int solver;           // 0 : optimal, 1 : math, 2 : heuristic
     int interactive;      // 0: none plot is displayed, 1: all plots are printed
     int saveplots;        // 0: save only the final plot, 1: save all plots
     int grasp;            // 0: GRASP OFF, 1 : GRASP ON
     int grasp_choices;    // # of possible random choices
+    int opt;
 
+    double time_threshold;
     int pop_size;         // Genetic population size
     int off_size;         // Genetic offsprings size
 
@@ -146,7 +147,8 @@ static const char *math_model_name[] = {
 };
 
 static const char *heuristic_model_name[] = {
-    "GREEDY",
+    "NEAREST NEIGHBOURS",
+    "GRASP NEAREST NEIGHBOURS + 2-OPT ",
     "EXTRA-MILEAGE",
     "EXTRA-MILEAGE FURTHEST STARTING NODES",
 };
@@ -176,7 +178,8 @@ static const char *math_model_full_name[] = {
     "Soft fixing heuristic"};
 
 static const char *heuristic_model_full_name[] = {
-    "Nearest Neighbors (Greedy)",
+    "Nearest Neighbours (Greedy)",
+    "GRASP Nearest Neighbours (Greedy) + 2-opt",
     "Extra-mileage",
     "Extra-mileage furthest starting nodes",
 };

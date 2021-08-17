@@ -134,6 +134,11 @@ void parse_command_line(int argc, char **argv, instance *inst)
                 inst->param.grasp_choices = atoi(argv[++i]);
                 continue;
             }
+            if (strcmp(argv[i], "--opt") == 0)
+            {
+                inst->param.opt = 1;
+                continue;
+            }
         }
 
         print_command_line(inst);
@@ -322,17 +327,18 @@ void initialize_instance(instance *inst)
     inst->param.seed = 1;
     inst->param.run = 0;
     inst->param.verbose = NORMAL;
-    inst->param.callback_counter = 0;
     inst->param.ticks = 0;
     inst->param.solver = 0; // default
     inst->param.interactive = 0;
     inst->param.saveplots = 0;
     inst->param.grasp = 0;
     inst->param.grasp_choices = 1; // default base case 1 possible choice
+    inst->param.opt = 0;
 
     // Genetic parameter
     inst->param.pop_size = 100;
     inst->param.off_size = 10;
+    inst->param.time_threshold = 1.0 + inst->param.ticks * 1000;
 
     inst->dimension = -1;
     inst->nodes = NULL;
@@ -694,7 +700,8 @@ int IsPathExist(const char *s)
     return !stat(s, &buffer);
 }
 
-void getTimeStamp(double *ts){
+void getTimeStamp(double *ts)
+{
     struct timespec timestamp;
     if (clock_gettime(CLOCK_REALTIME, &timestamp) == -1)
         print_error("Error clock_gettime");

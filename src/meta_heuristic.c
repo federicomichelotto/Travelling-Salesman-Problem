@@ -13,10 +13,7 @@ int meta_heuristic_solver(instance *inst)
     switch (inst->model_type)
     {
     case 0: // Tabu Search
-        if (inst->param.grasp == 1)
-            min_obj = nearest_neighbours(inst, 0, inst->succ, inst->param.grasp_choices);
-        else
-            min_obj = nearest_neighbours(inst, 0, inst->succ, 1);
+        min_obj = nearest_neighbours(inst, 0, inst->succ, inst->param.grasp_choices);
 
         save_and_plot_solution(inst, 1);
         inst->z_best = min_obj;
@@ -628,23 +625,8 @@ void random_individual(instance *inst, population *individual, int seed, int opt
     individual->fitness = 0.0;
     individual->chromosome = (int *)calloc(inst->dimension, sizeof(int));
 
-    //if (inst->param.grasp == 1)
-    individual->fitness = nearest_neighbours(inst, seed % inst->dimension, individual->chromosome, 1 + rand() % 3);
+    individual->fitness = nearest_neighbours(inst, seed % inst->dimension, individual->chromosome, inst->param.grasp_choices);
 
-    //else
-    //    individual->fitness = nearest_neighbours(inst, seed % inst->dimension, individual->chromosome, 1);
-
-    // Willing to optimize current chromosome
-    // if (optimize == 1)
-    // {
-    //     individual->fitness += two_opt_v2(inst, individual->chromosome, 5);
-    //     printf("\n\t\t- %4d° individual has fitness : %f (OPT) (RI V1)", seed + 1, individual->fitness);
-    // }
-    // else
-    // {
-    //     printf("\n\t\t- %4d° individual has fitness : %f (RI V1)", seed + 1, individual->fitness);
-    // }
-    //if (seed % 2)
     if (optimize == 1)
     {
         printf("fitness(pre two_opt) = %f, ", individual->fitness);
@@ -694,11 +676,9 @@ void random_individual_2(instance *inst, population *individual, int seed, int o
     //    for (int k = 0; k < inst->dimension; k++) printf("%d ", individual->chromosome[k]);
     //    printf("\nFitness : %f \n", individual->fitness);
 
-    int maxMoves = 50;
-
     if (optimize == 1)
     {
-        individual->fitness += two_opt(inst, individual->chromosome, maxMoves);
+        individual->fitness += two_opt(inst, individual->chromosome, 50);
     }
 }
 

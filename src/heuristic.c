@@ -16,11 +16,7 @@ int heuristic_solver(instance *inst)
     case 0: // Nearest Neighbours
         for (int i = 0; i < inst->dimension; i++)
         {
-            if (inst->param.grasp == 1)
-                obj_i = nearest_neighbours(inst, i, succ_i, inst->param.grasp_choices);
-            else
-                obj_i = nearest_neighbours(inst, i, succ_i, 1);
-
+            obj_i = nearest_neighbours(inst, i, succ_i, inst->param.grasp_choices);
             printf("Best objective value for node %d: %f\n", i + 1, obj_i);
 
             if (obj_i < min_obj)
@@ -32,14 +28,29 @@ int heuristic_solver(instance *inst)
                 save_and_plot_solution(inst, i + 1);
             }
         }
+        if (inst->param.opt)
+            inst->z_best += two_opt_v2(inst, inst->succ, 0);
 
-        inst->z_best += two_opt_v2(inst, inst->succ, 0);
-        save_and_plot_solution(inst, inst->dimension);
+        save_and_plot_solution(inst, -1);
 
-        printf("Best objective value: %f\n", min_obj);
-        printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
+        printf("\nBest objective value: %f\n", min_obj);
+        if (inst->param.opt)
+            printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
         break;
-    case 1: // Extra Mileage
+    case 1: // GRASP Nearest Neighbours + 2-opt
+        min_obj = nearest_neighbours(inst, rand() % inst->dimension, succ_i, inst->param.grasp_choices);
+        for (int j = 0; j < inst->dimension; j++)
+            inst->succ[j] = succ_i[j];
+        inst->z_best = min_obj;
+        inst->z_best += two_opt_v2(inst, inst->succ, 0);
+
+        save_and_plot_solution(inst, -1);
+        
+        printf("\nBest objective value: %f\n", min_obj);
+        if (inst->param.opt)
+            printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
+        break;
+    case 2: // Extra Mileage
         for (int i = 0; i < inst->dimension; i++)
         {
             obj_i = extra_mileage(inst, succ_i, i);
@@ -52,25 +63,28 @@ int heuristic_solver(instance *inst)
                 save_and_plot_solution(inst, i + 1);
             }
         }
+        if (inst->param.opt)
+            inst->z_best += two_opt_v2(inst, inst->succ, 0);
 
-        inst->z_best += two_opt_v2(inst, inst->succ, 0);
-        save_and_plot_solution(inst, inst->dimension);
+        save_and_plot_solution(inst, -1);
 
-        printf("Best objective value: %f\n", min_obj);
-        printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
+        printf("\nBest objective value: %f\n", min_obj);
+        if (inst->param.opt)
+            printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
         break;
-    case 2: // Extra Mileage with furthest starting nodes
+    case 3: // Extra Mileage with furthest starting nodes
         min_obj = extra_mileage_furthest_starting_nodes(inst, succ_i);
         inst->z_best = min_obj;
         for (int j = 0; j < inst->dimension; j++)
             inst->succ[j] = succ_i[j];
-        save_and_plot_solution(inst, 1);
+        if (inst->param.opt)
+            inst->z_best += two_opt_v2(inst, inst->succ, 0);
 
-        inst->z_best += two_opt_v2(inst, inst->succ, 0);
-        save_and_plot_solution(inst, 2);
+        save_and_plot_solution(inst, -1);
 
-        printf("Best objective value: %f\n", min_obj);
-        printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
+        printf("\nBest objective value: %f\n", min_obj);
+        if (inst->param.opt)
+            printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
         break;
 
     default:
@@ -395,7 +409,7 @@ double two_opt(instance *inst, int *succ, int maxMoves)
                     double ts_current;
                     getTimeStamp(&ts_current);
                     double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
-                    if (time_left < 5)
+                    if (time_left < 1.0)
                         return total_delta;
                 }
                 if (i == j)
@@ -466,7 +480,7 @@ double two_opt_v2(instance *inst, int *succ, int maxMoves)
                     double ts_current;
                     getTimeStamp(&ts_current);
                     double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
-                    if (time_left < 5)
+                    if (time_left < 1.0)
                         return total_delta;
                 }
                 // look for two nodes that are not connected

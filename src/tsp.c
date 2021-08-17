@@ -88,7 +88,6 @@ int xpos_dir(int i, int j, instance *inst)
 
 int upos(int i, instance *inst)
 {
-
     if (i < 0)
         print_error("Negative index is not valid!");
     return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i;
@@ -366,12 +365,6 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
     instance *inst = (instance *)userhandle;
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
     double objval = CPX_INFBOUND;
-    /*
-    if (inst->param.verbose >= NORMAL)
-    {
-        printf("*** callback #%d (candidate)\n", ++(inst->param.callback_counter));
-    }
-    */
     if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->cols - 1, &objval))
         print_error("CPXcallbackgetcandidatepoint error");
 
@@ -410,17 +403,11 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
             // reject the solution and adds one cut
             if (CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value))
                 print_error("CPXcallbackrejectcandidate() error");
-            /*
-            if (inst->param.verbose >= DEBUG)
-            {
-                printf("### added a SEC constraint \n");
-            }
-            */
             free(index);
             free(value);
         }
     }
-    else
+    else if (inst->param.opt)
     {
         // the candidate solution has not connected components but could have crossings... let's apply 2-opt
         double delta = two_opt_v2(inst, succ, 0);
@@ -452,7 +439,8 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
 
             if (CPXcallbackpostheursoln(context, nnz, index, xstar_succ, objval, CPXCALLBACKSOLUTION_CHECKFEAS))
                 print_error("CPXcallbackpostheursoln() error");
-            printf("[callback_candidate] Posted a new solution to CPLEX with incumbent: %f\n", objval);
+            if (inst->param.verbose >= DEBUG)
+                printf("[callback_candidate] Posted a new solution to CPLEX with incumbent: %f\n", objval);
             free(xstar_succ);
             free(index);
         }
@@ -474,12 +462,7 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
     double objval = CPX_INFBOUND;
     double const eps = 0.1;
-    /*
-    if (inst->param.verbose >= NORMAL)
-    {
-        printf("*** callback #%d (relaxation) \n", ++(inst->param.callback_counter));
-    }
-    */
+
     if (CPXcallbackgetrelaxationpoint(context, xstar, 0, inst->cols - 1, &objval))
         print_error("CPXcallbackgetrelaxationpoint error");
 
