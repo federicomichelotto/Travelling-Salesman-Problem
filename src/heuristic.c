@@ -386,7 +386,6 @@ double two_opt(instance *inst, int *succ, int maxMoves)
     // If all couples where considered and no changes were needed --> optimal == 1;
     while (!optimal && (moves < maxMoves))
     {
-        optimal = 1;
         for (int i = 0; i < inst->dimension; i++)
         {
             for (int j = 0; j < inst->dimension; j++)
@@ -405,6 +404,9 @@ double two_opt(instance *inst, int *succ, int maxMoves)
                     continue;
                 if (succ[i] == -1 || succ[j] == -1)
                     continue;
+
+                optimal = 1;
+
                 int a = i;
                 int b = succ[a];
                 int c = j;

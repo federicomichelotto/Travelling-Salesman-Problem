@@ -184,7 +184,8 @@ static const char *heuristic_model_full_name[] = {
 
 static const char *meta_heuristic_model_full_name[] = {
     "Tabu Search",
-    "Genetic"
+    "Genetic",
+    "Genetic V2",
 };
 
 

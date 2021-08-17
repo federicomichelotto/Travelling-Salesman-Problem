@@ -145,9 +145,8 @@ void tabu_search(instance *inst)
         iter++;
 
         // update time_left
-        double ts_current;
         getTimeStamp(&ts_current);
-        double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
+        time_left = inst->time_limit - (ts_current - inst->timestamp_start);
     }
     free(temp_succ);
     free(tabu_list);
