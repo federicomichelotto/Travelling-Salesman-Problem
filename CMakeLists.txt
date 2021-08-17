@@ -23,7 +23,8 @@ elseif (UNIX AND NOT APPLE)
 
     # To link CPLEX libraries and directories stored inside Blade, you must uncomment the following line
     # the latest version installed in the cluster is 12.10 (but obviously you can choose another one)
-    #    set(CPLEX_HOME /nfsd/opt/CPLEX12.10/cplex)
+#    set(CPLEX_HOME /nfsd/opt/CPLEX12.10/cplex)
+#    set(CONCORDELIB /home/miliamikel/concorde)
 
     # To link CPLEX libraries and directories stored inside your personal Linux distro just set the right path
     set(CPLEX_HOME /opt/ibm/ILOG/CPLEX_Studio201/cplex)

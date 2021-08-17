@@ -1,16 +1,31 @@
 #!/bin/bash
 
-cd ../build || exit
+# Local variable
+#SOLVER=("comp" "iter" "math" "heur" "meta")
+SOLVER=("comp")
 
-for file in ../data/compact/*; do
-  nodes=$(echo "$file" | grep -o -E '[0-9]+')
-  if [ "$nodes" -le 110 ]; then # -eq , -le, -lt, -ge, -gt
-    for model in {1..5}; do
-      for i in {1..5}; do
-        if [ -f "$file" ]; then
-          ./tsp -f "$file" -t 600 -m $model -v 2 -s $i -r $i
-        fi
-      done
+# Move into build folder
+for solver in "${SOLVER[@]}"; do
+
+  if [ "$solver" == "comp" ]; then
+    for m in {1..8}; do
+      sbatch "$solver"-tsp.slurm -m $m
     done
+
+  elif [ "$solver" == "iter" ]; then
+    sbatch "$solver"-tsp.slurm
+
+  elif [ "$solver" == "math" ]; then
+    sbatch "$solver"-tsp.slurm
+
+  elif [ "$solver" == "heur" ]; then
+    sbatch "$solver"-tsp.slurm
+
+  elif [ "$solver" == "meta" ]; then
+    sbatch "$solver"-tsp.slurm
+
+  else
+    echo "Solver not found"
+
   fi
 done
