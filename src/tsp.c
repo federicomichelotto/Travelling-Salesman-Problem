@@ -103,43 +103,52 @@ int ypos(int i, int j, instance *inst)
 
 double gather_solution(instance *inst, const double *xstar, int type)
 {
-    int n_edges = 0;
     if (type == 0) // undirected graph
     {
+        int n_edges = 0;
         for (int i = 0; i < inst->dimension; i++)
         {
             inst->succ[i] = -1;
         }
+        int *selected = calloc(inst->dimension, sizeof(int));
         int init = 0;
         int node = 0;
-        for (int i = 0; i < inst->dimension; i++)
+        selected[node] = 1;
+        while (n_edges < inst->dimension)
         {
-            if (i == node || inst->succ[i] == node)
-                continue;
-            if (xstar[xpos(node, i, inst)] > 0.5)
+            for (int i = 0; i < inst->dimension; i++)
             {
-                inst->succ[node] = i;
-                if (++n_edges == inst->dimension)
-                    break;
-                node = i;
-                if (i == init)
+                if (i == node)
+                    continue;
+                if (xstar[xpos(node, i, inst)] > 0.5 && selected[i] == 0) // succ[i] != node ??
                 {
-                    // look for a new connected component
-                    for (int j = 0; j < inst->dimension; j++)
-                    {
-                        if (inst->succ[j] != -1)
-                        { // node not visited yet
-                            node = j;
-                            break;
-                        }
-                    }
+                    inst->succ[node] = i;
+                    selected[i] = 1;
+                    n_edges++;
+                    node = i;
+                    i = -1; // restart the loop from i=0
                 }
-                i = -1; // restart the loop from i=0
+            }
+            // close the circuit
+            inst->succ[node] = init;
+            if (++n_edges == inst->dimension)
+                break;
+            // look for a new connected component
+            for (int j = 0; j < inst->dimension; j++)
+            {
+                if (selected[j] == 0) // node not visited yet
+                {
+                    node = j;
+                    init = j;
+                    selected[node] = 1;
+                    break;
+                }
             }
         }
     }
     else if (type == 1) // directed graph
     {
+        int n_edges = 0;
         for (int i = 0; i < inst->dimension; i++)
         {
             for (int j = 0; j < inst->dimension; j++)
