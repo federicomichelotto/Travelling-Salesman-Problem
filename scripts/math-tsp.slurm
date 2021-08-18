@@ -20,8 +20,8 @@ BUILD=build
 
 function run_instances() {
 
-  for file in ../data/math/*; do
-    for i in {1..5}; do
+  for file in ../data/tests/math/*; do
+    for i in {1..4}; do
         echo "Submitted the $i-th run of model ${SLURM_ARRAY_TASK_ID} for instance $file"
         srun ./tsp -f "$file" --math --ticks -t 1020000 -m "${SLURM_ARRAY_TASK_ID}" -v 4 -s $i -r $i
     done

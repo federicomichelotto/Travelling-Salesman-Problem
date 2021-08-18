@@ -40,7 +40,7 @@ done
 
 function run_instances() {
 
-  for file in ../data/comp/*; do
+  for file in ../data/tests/comp/*; do
     for i in {1..5}; do
         echo "Submitted the $i-th run of model $MODEL for instance $file"
         srun ./tsp -f "$file" --ticks -t 1020000 -m "$MODEL" -v 4 -s $i -r $i

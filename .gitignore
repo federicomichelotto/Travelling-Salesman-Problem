@@ -52,7 +52,8 @@ Mkfile.old
 dkms.conf
 
 # Mandatory do not import the dataset folder
-data
+data/opt
+data/random
 cmake-build-debug
 build
 output

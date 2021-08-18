@@ -20,7 +20,7 @@ BUILD=build
 
 function run_instances() {
 
-  for file in ../data/iter/*; do
+  for file in ../data/tests/iter/*; do
     for i in {1..4}; do
 
         echo "Submitted the $i-th run of model ${SLURM_ARRAY_TASK_ID} for instance $file"
