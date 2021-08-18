@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name tsp_meta
-#SBATCH --output tsp_meta_%A_%a.out
-#SBATCH --error tsp_meta_%A_%a.err
+#SBATCH --job-name tsp_gen1
+#SBATCH --output tsp_gen1_%j.out
+#SBATCH --error tsp_gen1_%j.err
 
 #SBATCH --mail-type ALL
 #SBATCH --mail-user mikele.milia@studenti.unipd.it
@@ -12,7 +12,6 @@
 #SBATCH -p allgroups
 #SBATCH -t 5-00:00:00
 #SBATCH --mem 16GB
-#SBATCH --array=0,1
 
 # Setup my personal project folder
 DIRECTORY=/home/miliamikel/tsp
@@ -21,10 +20,10 @@ BUILD=build
 function run_instances() {
 
   for file in ../data/tests/meta/*; do
-    for i in {1..2}; do
-        echo "Submitted the $i-th run of model ${SLURM_ARRAY_TASK_ID} for instance $file"
-        srun ./tsp -f "$file" --meta -t 3600 -m "${SLURM_ARRAY_TASK_ID}" -v 4 -s $i -r $i
-        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 -m "${SLURM_ARRAY_TASK_ID}" -v 4 -s $i -r $i
+    for i in {3..4}; do
+        echo "Submitted the $i-th run of GENETIC 1 for instance $file"
+        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 --popsize 1000 --offsize 100 --parsel 1 --sursel 0  -m 1 -v 4 -s $i -r $i
+        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 --popsize 1000 --offsize 100 --parsel 1 --sursel 1  -m 1 -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))"
     done
   done
 

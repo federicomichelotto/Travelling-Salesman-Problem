@@ -163,7 +163,7 @@ int genetic(instance *inst)
     population *individuals = (population *)calloc(size, sizeof(population));
 
     printf("\nGENERATION STEP");
-    printf("\n\t%d individuals will be generated (# = %d individuals generated): ", size, (int)ceil(size / 10));
+    printf("\n\t%d individuals will be generated (# = %d individuals generated)\n", size, (int)ceil(size / 10));
 
     // Population
     for (int i = 0; i < size; i++)
@@ -176,13 +176,14 @@ int genetic(instance *inst)
         // }
 
         // Generate random individuals
-        //        if (i < size * 0.2)
-        //            random_individual(inst, &individuals[i], i, 1);
-        //        else if (i >= size * 0.2 && i < size * 0.5)
-        //            random_individual(inst, &individuals[i], i, 0);
-        //        else
-        random_individual_2(inst, &individuals[i], i, 0);
-        //        printf("Individual %d generated\n", i + 1);
+        printf("\n\tINDIVIDUAL #%5d FITNESS -> ", i + 1);
+
+        if (i < size * 0.15)
+            random_individual(inst, &individuals[i], i, 1);
+        else if (i >= size * 0.15 && i < size * 0.5)
+            random_individual(inst, &individuals[i], i, 0);
+        else
+            random_individual_2(inst, &individuals[i], i, 0);
     }
 
     // update time_left
@@ -216,27 +217,47 @@ int genetic(instance *inst)
         }
 
         // Offspring generation
-        printf("\t- Offspring generation ... \n");
+        printf("\t- Generation of %d offspring ... \n", children_size);
         for (int k = 0; k < children_size; k++)
         {
             // Parent selection
             int *parent = (int *)calloc(2, sizeof(int)); // array where the two parents are going to be stored
 
-            //            tournament_selection(individuals, 3, size, parent);
-            //            roulette_wheel_selection(individuals,size,parent);
-            //            rank_selection(inst, individuals, size, parent);
-            random_selection(individuals, size, parent);
+            switch (inst->param.par_sel) {
+                case 0:
+                    tournament_selection(individuals, 3, size, parent);
+                    break;
+                case 1:
+                    roulette_wheel_selection(individuals,size,parent);
+                    break;
+                case 2:
+                    rank_selection(inst, individuals, size, parent);
+                    break;
+                case 3:
+                    random_selection(individuals, size, parent);
+                    break;
+                default:
+                    print_error("Parent selection algorithm not found");
+            }
 
             //            printf("\t\t+ Crossover #%d between parent %d and %d\n", k + 1, parent[0], parent[1]);
-            one_point_crossover(inst, individuals, &offsprings[k], parent[0], parent[1], 0);
+            one_point_crossover(inst, individuals, &offsprings[k], parent[0], parent[1], 1);
 
             free(parent);
         }
 
         printf("\n\t- Survivor selection ... \n");
 
-        survivor_selection_A(inst, individuals, offsprings, size, children_size);
-        // survivor_selection_B(inst, individuals, offsprings, size, children_size);
+        switch (inst->param.sur_sel) {
+            case 0:
+                survivor_selection_A(inst, individuals, offsprings, size, children_size);
+                break;
+            case 1:
+                 survivor_selection_B(inst, individuals, offsprings, size, children_size);
+                break;
+            default:
+                print_error("Survival selection algorithm not found");
+        }
 
         // Mutate population
         // How much population is stressed
@@ -627,11 +648,12 @@ void random_individual(instance *inst, population *individual, int seed, int opt
 
     individual->fitness = nearest_neighbours(inst, seed % inst->dimension, individual->chromosome, inst->param.grasp_choices);
 
+    printf("BASE [%f]", individual->fitness);
+    fflush(stdout);
     if (optimize == 1)
     {
-        printf("fitness(pre two_opt) = %f, ", individual->fitness);
-        fflush(stdout);
         individual->fitness += two_opt_v2(inst, individual->chromosome, 30);
+        printf(" | OPTIMIZED [%f]", individual->fitness);
         save_and_plot_solution_general(inst, individual->chromosome, seed);
     }
 }

@@ -123,17 +123,30 @@ void parse_command_line(int argc, char **argv, instance *inst)
             }
 
             if (strcmp(argv[i], "--offsize") == 0)
-            { // population
+            { // children
                 inst->param.off_size = atoi(argv[++i]);
                 continue;
             }
 
+            if (strcmp(argv[i], "--parsel") == 0)
+            {
+                inst->param.par_sel = atoi(argv[++i]);
+                continue;
+            }
+
+            if (strcmp(argv[i], "--sursel") == 0)
+            {
+                inst->param.sur_sel = atoi(argv[++i]);
+                continue;
+            }
+
+
             if (strcmp(argv[i], "--grasp") == 0)
             {
-                inst->param.grasp = 1;
                 inst->param.grasp_choices = atoi(argv[++i]);
                 continue;
             }
+
             if (strcmp(argv[i], "--opt") == 0)
             {
                 inst->param.opt = 1;
@@ -331,13 +344,15 @@ void initialize_instance(instance *inst)
     inst->param.solver = 0; // default
     inst->param.interactive = 0;
     inst->param.saveplots = 0;
-    inst->param.grasp = 0;
     inst->param.grasp_choices = 1; // default base case 1 possible choice
     inst->param.opt = 0;
 
     // Genetic parameter
     inst->param.pop_size = 100;
     inst->param.off_size = 10;
+    inst->param.par_sel = 0;  // default tournament selection
+    inst->param.sur_sel = 0;  // default random survivor
+
     inst->param.time_threshold = 1.0 + inst->param.ticks * 1000;
 
     inst->dimension = -1;
@@ -427,11 +442,9 @@ void print_command_line(instance *inst)
         printf("--interactive (ACTIVE -> %d)\n", inst->param.interactive);
     }
 
-    if (inst->param.grasp == 1)
-    {
-        printf("--grasp (ACTIVE -> %d)\n", inst->param.grasp);
-        printf("--grasp_choices (%d)\n", inst->param.grasp_choices);
-    }
+    if (inst->param.grasp_choices > 1)
+        printf("--grasp (ACTIVE -> %d)\n", inst->param.grasp_choices);
+
 
     if (inst->param.saveplots == 1)
     {

@@ -21,7 +21,7 @@ BUILD=build
 function run_instances() {
 
   for file in ../data/tests/heur/*; do
-    for i in {1..2}; do
+    for i in {21..22}; do
         echo "Submitted the $i-th run of model ${SLURM_ARRAY_TASK_ID} for instance $file"
         srun ./tsp -f "$file" --heur --opt -t 3600 -m "${SLURM_ARRAY_TASK_ID}" -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))"
         srun ./tsp -f "$file" --heur --grasp 3 --opt -t 3600 -m "${SLURM_ARRAY_TASK_ID}" -v 4 -s "$(( i +30 ))" -r "$(( i +30 ))"

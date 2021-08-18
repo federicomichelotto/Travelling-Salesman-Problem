@@ -30,13 +30,14 @@ typedef struct
     int solver;           // 0 : optimal, 1 : math, 2 : heuristic
     int interactive;      // 0: none plot is displayed, 1: all plots are printed
     int saveplots;        // 0: save only the final plot, 1: save all plots
-    int grasp;            // 0: GRASP OFF, 1 : GRASP ON
-    int grasp_choices;    // # of possible random choices
+    int grasp_choices;    // if GRASP ON, assume value greater than one
     int opt;
 
     double time_threshold;
     int pop_size;         // Genetic population size
     int off_size;         // Genetic offsprings size
+    int par_sel;         // Genetic offsprings size
+    int sur_sel;         // Genetic offsprings size
 
 } parameter;
 

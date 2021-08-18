@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Local variable
-#SOLVER=("comp" "iter" "math" "heur" "meta")
+#SOLVER=("comp" "iter" "math" "heur" "tabu" "gene")
+GENETIC=("gen1" "gen2" "gen3" "gen4")
 SOLVER=("comp")
 
 # Move into build folder
@@ -21,8 +22,13 @@ for solver in "${SOLVER[@]}"; do
   elif [ "$solver" == "heur" ]; then
     sbatch "$solver"-tsp.slurm
 
-  elif [ "$solver" == "meta" ]; then
+  elif [ "$solver" == "tabu" ]; then
     sbatch "$solver"-tsp.slurm
+
+  elif [ "$solver" == "gene" ]; then
+    for genetic in "${GENETIC[@]}"; do
+      sbatch "$genetic"-tsp.slurm
+    done
 
   else
     echo "Solver not found"
