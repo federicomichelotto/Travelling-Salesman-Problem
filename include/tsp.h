@@ -98,6 +98,9 @@ typedef struct {
 typedef struct
 {
     instance *inst;
+    int ecount;
+    int *elist;
+    double *x;
     CPXCALLBACKCONTEXTptr context;
 } doit_fn_input;
 
