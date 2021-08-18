@@ -747,15 +747,15 @@ void survivor_selection_B(instance *inst, population *individuals, population *o
 {
 
     rank(inst, individuals, individuals_size);
-    rank(inst, offsprings, offsprings_size);
+//    rank(inst, offsprings, offsprings_size);
 
     //      All individuals are splitted in three classes
     //      - high_ranked : 30% individuals
     //      - mid_ranked  : 60% individuals
     //      - low_ranked  : 10% individuals
 
-    int upper_bound = floor(individuals_size * 0.3);
-    int lower_bound = floor(upper_bound + individuals_size * 0.6);
+    int upper_bound = floor(individuals_size * 0.15);
+    int lower_bound = floor(upper_bound + individuals_size * 0.7);
 
     //    printf("\nlower %d", lower_bound);
     //    printf("\nupper %d", upper_bound);
@@ -790,7 +790,7 @@ void survivor_selection_B(instance *inst, population *individuals, population *o
         }
         else
         {
-            if ((rand() % 100) < 25)
+            if ((rand() % 100) < 35)
             {
                 free(individuals[r].chromosome);
                 individuals[r].chromosome = offsprings[i].chromosome;

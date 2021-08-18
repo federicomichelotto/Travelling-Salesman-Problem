@@ -2,7 +2,7 @@
 
 # Local variable
 #SOLVER=("comp" "iter" "math" "heur" "tabu" "gene")
-GENETIC=("gen1" "gen2" "gen3" "gen4")
+GENETIC=("gen0" "gen1" "gen2" "gen3")
 SOLVER=("comp")
 
 # Move into build folder

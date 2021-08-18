@@ -20,7 +20,7 @@ BUILD=build
 function run_instances() {
 
   for file in ../data/tests/meta/*; do
-    for i in {3..4}; do
+    for i in {103..104}; do
         echo "Submitted the $i-th run of GENETIC 1 for instance $file"
         srun ./tsp -f "$file" --meta -t 3600 --grasp 3 --popsize 1000 --offsize 100 --parsel 1 --sursel 0  -m 1 -v 4 -s $i -r $i
         srun ./tsp -f "$file" --meta -t 3600 --grasp 3 --popsize 1000 --offsize 100 --parsel 1 --sursel 1  -m 1 -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))"
