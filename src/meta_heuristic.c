@@ -302,14 +302,11 @@ int genetic(instance *inst)
             printf("\tWARNING : No improvement were found in the last %d epochs.\n", no_improvement);
             printf("\tStarting quick optimization... ");
             fflush(stdout);
-            fast_population_refinement(inst, individuals, size, 20);
+            fast_population_refinement(inst, individuals, size, 30);
             printf("\tComplete\n");
 
             no_improvement = 0;
         }
-
-        if (epochs > 1000)
-            break;
 
         // update time_left
         ts_current;
