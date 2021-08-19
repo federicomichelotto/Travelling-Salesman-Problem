@@ -384,7 +384,7 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
             int nnz = 0;
             int izero = 0;
             char sense = 'L';
-            double rhs = length_comp[mycomp] - 1.0; // in order to have |S|-1 in the end
+            double rhs = length_comp[mycomp] - 1.0; // |S|-1
             int *index = (int *)calloc(inst->cols, sizeof(int));
             double *value = (double *)calloc(inst->cols, sizeof(double));
 
@@ -454,9 +454,10 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
 
 static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
 {
-    int node = 0;
-    CPXcallbackgetinfoint(context, CPXCALLBACKINFO_NODEUID, &node);
-    if (!(node % 10))
+    //printf("*** Inside callback_relaxation\n");
+    int node_depth = 0;
+    CPXcallbackgetinfoint(context, CPXCALLBACKINFO_NODEDEPTH, &node_depth);
+    if (!node_depth)
         return 0;
     instance *inst = (instance *)userhandle;
     double *xstar = (double *)malloc(inst->cols * sizeof(double));
@@ -470,30 +471,41 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     int *comp = (int *)calloc(inst->dimension, sizeof(int));
     int *length_comp = (int *)calloc(inst->dimension, sizeof(int));
     // list of edges in "node format"
-    int elist[2 * inst->cols]; // [0,1, 0,2, 0,3, ...]
+    int *elist = malloc(2 * inst->cols * sizeof(int)); // [0,1, 0,2, 0,3, ...]
 
     int loader = 0;
+    int ecount = 0; // edge count
+    double *x = malloc(inst->cols * sizeof(double));
     for (int i = 0; i < inst->dimension; i++)
     {
         for (int j = i + 1; j < inst->dimension; j++)
         {
-            // CHECK xstar > 0 (eps)
-            // CCxstar
-            elist[loader++] = i;
-            elist[loader++] = j;
+            if (xstar[xpos(i, j, inst)] > eps)
+            {
+                elist[loader++] = i;
+                elist[loader++] = j;
+                x[ecount++] = xstar[xpos(i, j, inst)];
+            }
         }
     }
+    // realloc
+    x = realloc(x, ecount * sizeof(double));
+    elist = realloc(elist, 2 * ecount * sizeof(int));
+    //printf("*** ecount = %d\n", ecount);
 
-    if (CCcut_connect_components(inst->dimension, inst->cols, elist, xstar, &ncomp, &length_comp, &comp))
+    if (CCcut_connect_components(inst->dimension, ecount, elist, x, &ncomp, &length_comp, &comp))
         print_error("CCcut_connect_components error");
 
-    doit_fn_input in;
-    in.context = context;
-    in.inst = inst;
-
-    if (ncomp == 1)
+    //printf("*** ncomp = %d\n", ncomp);
+    if (ncomp == 1) // CCcut_violated_cuts() assumes graph is connected
     {
-        if (CCcut_violated_cuts(inst->dimension, inst->cols, elist, xstar, 2 - eps, doit_fn_concorde, (void *)&in))
+        doit_fn_input in;
+        in.ecount = ecount;
+        in.elist = elist;
+        in.x = x;
+        in.context = context;
+        in.inst = inst;
+        if (CCcut_violated_cuts(inst->dimension, ecount, elist, x, 2 - eps, doit_fn_concorde, (void *)&in))
             print_error("CCcut_violated_cuts error");
     }
 
@@ -504,34 +516,43 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
 }
 
 // double cutval = value of the cut
-// int cutcount = number of nodes in the cut (rhs + 1 ?)
-// int ∗cut = the array of the members of the cut (indeces of the nodes in the cut?)
+// int cutcount = number of nodes in the cut
+// int ∗cut = the array of the members of the cut (indices of the nodes in the cut) =>
+// => the nodes of one of the two connected components (look cut_st.c of the concorde library)
 int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
 {
+
     doit_fn_input *input = (doit_fn_input *)in;
+
+    // DEBUG
+    // printf("*** Inside doit_fn_concorde\n");
+    // printf("#### cutval: %f ", cutval);
+    // printf("#### cutcount: %d \n", cutcount);
+    // for (int i = 0; i < cutcount; i++)
+    //     printf("%d,", cut[i]);
+    // printf("\n");
+    // for (int i = 0; i < input->ecount; i++)
+    // {
+    //     printf("x[%d,%d] = %f\n", input->elist[2 * i], input->elist[2 * i + 1], input->x[i]);
+    // }
+
+    // SEC for the current connected component
+    double *value = (double *)calloc(cutcount * (cutcount - 1) / 2, sizeof(double));
+    int *index = (int *)calloc(cutcount * (cutcount - 1) / 2, sizeof(int));
+
     double rhs = cutcount - 1.0;
     int nnz = 0;
     char sense = 'L';
     int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
     int local = 0;
     int izero = 0;
-    /*
-    if (input->inst->param.verbose >= DEBUG)
-    {
-        printf("#### cutval: %f ", cutval);
-        printf("#### cutcount: %d \n", cutcount);
-        for (int i = 0; i < cutcount; i++)
-            printf("cut[%d] = %d\n", i, cut[i]);
-    }
-    */
-    double *value = (double *)calloc(cutcount * (cutcount - 1) / 2, sizeof(double));
-    int *index = (int *)calloc(cutcount * (cutcount - 1) / 2, sizeof(int));
 
-    // CHECK THIS
     for (int i = 0; i < cutcount; i++)
     {
         for (int j = 0; j < cutcount; j++)
         {
+            if (i == j)
+                continue;
             if (cut[i] < cut[j])
             {
                 index[nnz] = xpos(cut[i], cut[j], input->inst);
@@ -539,16 +560,13 @@ int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
             }
         }
     }
-    // TODO: CHECK nnz = cutcount*(cutcount-1)/2
+    // SANITY CHECK
+    if (nnz != cutcount * (cutcount - 1) / 2)
+        print_error("nnz != cutcount*(cutcount-1)/2");
 
     if (CPXcallbackaddusercuts(input->context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local))
         print_error("CPXcallbackaddusercuts() error"); // add user cut
-    /*
-    if (input->inst->param.verbose >= DEBUG)
-    {
-        printf("### added a user cut \n");
-    }
-    */
+
     free(index);
     free(value);
     return 0;
