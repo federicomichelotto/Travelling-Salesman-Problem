@@ -9,8 +9,12 @@ SOLVER=("comp")
 for solver in "${SOLVER[@]}"; do
 
   if [ "$solver" == "comp" ]; then
-    for m in {1..8}; do
-      sbatch "$solver"-tsp.slurm -m $m
+    for m in {1,2,5,8}; do
+      sbatch "$solver"-32-tsp.slurm -m $m
+    done
+
+    for m in {3,4,6,7}; do
+      sbatch "$solver"-64-tsp.slurm -m $m
     done
 
   elif [ "$solver" == "iter" ]; then

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name tsp_comp
+#SBATCH --job-name tsp_comp_32
 #SBATCH --output tsp_comp_%j.out
 #SBATCH --error tsp_comp_%j.err
 
