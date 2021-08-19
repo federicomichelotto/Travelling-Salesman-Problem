@@ -13,8 +13,8 @@ int meta_heuristic_solver(instance *inst)
     switch (inst->model_type)
     {
     case 0: // Tabu Search
-        min_obj = nearest_neighbours(inst, 0, inst->succ, inst->param.grasp_choices);
 
+        min_obj = nearest_neighbours(inst, 0, inst->succ, inst->param.grasp_choices);
         save_and_plot_solution(inst, 1);
         inst->z_best = min_obj;
         tabu_search(inst);
@@ -59,8 +59,9 @@ void tabu_search(instance *inst)
     double incumbent = inst->z_best; // current incumbent
     int iter = 1;
     int best_iter = 1;
-    int tenure = inst->dimension / 10;
-    printf("Initial phase: INTENSIFICATION PHASE\n");
+    int tenure = 20;
+    printf("Initial Incumbent = %f\n", incumbent);
+    printf("Initial phase: INTENSIFICATION PHASE\n\n");
 
     // update time_left
     double ts_current;
@@ -69,7 +70,7 @@ void tabu_search(instance *inst)
 
     while (time_left > 0.5)
     {
-        if (!(iter % 100))
+        if (!(iter % 1000))
         {
             if (tenure == 20)
             {
@@ -97,6 +98,7 @@ void tabu_search(instance *inst)
                 int th = iter - tenure;
                 if (th < 0)
                     th = 0;
+                // to proceed none of the four nodes involved in the move must be a tabu node
                 if (tabu_list[i] > th || tabu_list[temp_succ[i]] > th || tabu_list[j] > th || tabu_list[temp_succ[j]] > th)
                     continue;
 
@@ -127,11 +129,13 @@ void tabu_search(instance *inst)
         // update incumbent
         incumbent += min_delta;
 
-        if (min_delta > 0)
+        if (min_delta >= 0)
+        {
             tabu_list[d] = iter; // add the node in the tabu list
+        }
         if (incumbent < inst->z_best)
         {
-            printf("new incumbent found = %f\n", incumbent);
+            printf("\nNEW INCUMBENT FOUND = %f\n\n", incumbent);
             best_iter = iter;
             inst->z_best = incumbent;
             // save best solution
@@ -139,6 +143,8 @@ void tabu_search(instance *inst)
                 inst->succ[j] = temp_succ[j];
             save_and_plot_solution(inst, iter);
         }
+        else if (inst->param.verbose >= DEBUG)
+            printf("*current incumbent = %f (delta = %f)\n", incumbent, min_delta);
         iter++;
 
         // update time_left
@@ -223,21 +229,22 @@ int genetic(instance *inst)
             // Parent selection
             int *parent = (int *)calloc(2, sizeof(int)); // array where the two parents are going to be stored
 
-            switch (inst->param.par_sel) {
-                case 0:
-                    tournament_selection(individuals, 3, size, parent);
-                    break;
-                case 1:
-                    roulette_wheel_selection(individuals,size,parent);
-                    break;
-                case 2:
-                    rank_selection(inst, individuals, size, parent);
-                    break;
-                case 3:
-                    random_selection(individuals, size, parent);
-                    break;
-                default:
-                    print_error("Parent selection algorithm not found");
+            switch (inst->param.par_sel)
+            {
+            case 0:
+                tournament_selection(individuals, 3, size, parent);
+                break;
+            case 1:
+                roulette_wheel_selection(individuals, size, parent);
+                break;
+            case 2:
+                rank_selection(inst, individuals, size, parent);
+                break;
+            case 3:
+                random_selection(individuals, size, parent);
+                break;
+            default:
+                print_error("Parent selection algorithm not found");
             }
 
             //            printf("\t\t+ Crossover #%d between parent %d and %d\n", k + 1, parent[0], parent[1]);
@@ -248,15 +255,16 @@ int genetic(instance *inst)
 
         printf("\n\t- Survivor selection ... \n");
 
-        switch (inst->param.sur_sel) {
-            case 0:
-                survivor_selection_A(inst, individuals, offsprings, size, children_size);
-                break;
-            case 1:
-                 survivor_selection_B(inst, individuals, offsprings, size, children_size);
-                break;
-            default:
-                print_error("Survival selection algorithm not found");
+        switch (inst->param.sur_sel)
+        {
+        case 0:
+            survivor_selection_A(inst, individuals, offsprings, size, children_size);
+            break;
+        case 1:
+            survivor_selection_B(inst, individuals, offsprings, size, children_size);
+            break;
+        default:
+            print_error("Survival selection algorithm not found");
         }
 
         // Mutate population
@@ -744,7 +752,7 @@ void survivor_selection_B(instance *inst, population *individuals, population *o
 {
 
     rank(inst, individuals, individuals_size);
-//    rank(inst, offsprings, offsprings_size);
+    //    rank(inst, offsprings, offsprings_size);
 
     //      All individuals are splitted in three classes
     //      - high_ranked : 30% individuals

@@ -303,16 +303,6 @@ double epoch_percent_deviation(population *individuals, int size);
 
 
 
-
-
-
-
-
-
-
-
-
-
 // Some useful functions
 double gather_solution(instance *inst, const double *xstar, int type);
 
@@ -342,7 +332,6 @@ int xpos(int i, int j, instance *inst);     // position in the model for undirec
 int xpos_dir(int i, int j, instance *inst); // position in the model for directed graphs
 int upos(int i, instance *inst);            // position in the model of i-th u-variable
 int ypos(int i, int j, instance *inst);     // position in the model of y-variable for the arc (i,j)
-
 
 
 #endif //TSP_H

@@ -470,8 +470,8 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     int ncomp;
     int *comp = (int *)calloc(inst->dimension, sizeof(int));
     int *length_comp = (int *)calloc(inst->dimension, sizeof(int));
-    // list of edges in "node format"
-    int *elist = malloc(2 * inst->cols * sizeof(int)); // [0,1, 0,2, 0,3, ...]
+    // list of edges in "node format" [ i_1, j_1 , i_2, j_2, i_3, j_3, ...]
+    int *elist = malloc(2 * inst->cols * sizeof(int));
 
     int loader = 0;
     int ecount = 0; // edge count
@@ -480,7 +480,7 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     {
         for (int j = i + 1; j < inst->dimension; j++)
         {
-            if (xstar[xpos(i, j, inst)] > eps)
+            if (xstar[xpos(i, j, inst)] > eps) // just save the selected (also partially) edges
             {
                 elist[loader++] = i;
                 elist[loader++] = j;
