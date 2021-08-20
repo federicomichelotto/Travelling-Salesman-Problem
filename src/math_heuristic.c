@@ -66,7 +66,8 @@ int math_solver(instance *inst)
 
     // solution status of the problem
     int lpstat = CPXgetstat(env, lp);
-    printf("\tCPLEX status: %d\n", lpstat);
+    if (inst->param.verbose >= DEBUG)
+        printf("\tCPLEX status: %d\n", lpstat);
 
     if (lpstat == 108)
         print_error("Time limit exceeded; no integer solution");
@@ -97,18 +98,17 @@ int math_solver(instance *inst)
     else if (inst->model_type == 1)
     {
         if (inst->param.verbose >= NORMAL)
+        {
             printf("Initial incumbent: %f\n", inst->z_best);
+            printf("k = neighborhood size\n\n");
+        }
         // reset the node limit to default
         if (CPXsetintparam(env, CPX_PARAM_NODELIM, 2100000000))
             print_error("CPX_PARAM_NODELIM error");
         soft_fixing_heuristic(env, lp, inst, (int)inst->time_limit / 20);
     }
 
-    // if (inst->n_edges != inst->dimension)
-    //     print_error("not a tour.");
-
     printf("\nObjective value: %lf\n", inst->z_best);
-    printf("Lower bound: %lf\n", inst->best_lb);
 
     // get timestamp
     inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : getTimeStamp(&inst->timestamp_finish);
@@ -128,6 +128,9 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     int iter = 1;
     double gap;
     CPXgetdblparam(env, CPX_PARAM_EPGAP, &gap);
+    double ts_last_impr; // timestamp last improvment
+    inst->param.ticks ? CPXgetdettime(env, &ts_last_impr) : getTimeStamp(&ts_last_impr);
+
     while (1)
     {
         // update time left
@@ -138,12 +141,13 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             return;
         if (time_left < time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
-        if (inst->param.verbose >= DEBUG)
-            printf("*** time left = %f\n", time_left);
-        if (iter % 100 == 0)
-        {
-            printf("\nIteration %d, time left %f:\n", iter + 1, time_left);
-        }
+        // if (iter % 100 == 0)
+        // {
+        //     if (inst->param.ticks)
+        //         printf("[Iteration %d] time left %f ticks\n", iter, time_left);
+        //     else
+        //         printf("[Iteration %d] time left %f seconds\n", iter, time_left);
+        // }
         // allocate two arrays with size ncols
         int *indices = (int *)malloc(inst->cols * sizeof(int));
         double *values = (double *)malloc(inst->cols * sizeof(double));
@@ -154,7 +158,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             indices[k] = k;
             values[k] = 0.0;
             senses[k] = 'L';
-            // random selection a subset of arcs of the best solution found so far
+            // random selection of a subset of arcs of the best solution found so far
             //printf("*** best_sol[%d] = %f\n",k,inst->best_sol[k]);
             if (inst->best_sol[k] > 0.5)
                 if ((rand() % 100) + 1 < fix_ratio * 100)
@@ -173,8 +177,6 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         double current_incumbent, lb_incumbent;
         CPXgetobjval(env, lp, &current_incumbent);
         CPXgetbestobjval(env, lp, &lb_incumbent);
-        if (inst->param.verbose >= DEBUG)
-            printf("*** current_incumbent = %f\n", current_incumbent);
 
         // check if the current solution is better than the best so far
         if (current_incumbent < inst->z_best)
@@ -182,6 +184,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             // update best incumbent
             inst->z_best = current_incumbent;
             inst->best_lb = lb_incumbent;
+            ts_last_impr = ts_current;
             // update arcs' selection
             int status = CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1);
             if (status)
@@ -189,9 +192,9 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             if (inst->param.verbose >= NORMAL)
             {
                 if (!inst->param.ticks)
-                    printf("New incumbent: %f, time left = %f seconds\n", inst->z_best, time_left);
+                    printf("[Iteration %d] New incumbent: %f, time left = %f seconds\n", iter, inst->z_best, time_left);
                 else
-                    printf("New incumbent: %f, time left = %f ticks\n", inst->z_best, time_left);
+                    printf("[Iteration %d] New incumbent: %f, time left = %f ticks\n", iter, inst->z_best, time_left);
             }
             gather_solution(inst, inst->best_sol, 0);
             save_and_plot_solution(inst, iter);
@@ -199,6 +202,17 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             int beg = 0;
             if (CPXaddmipstarts(env, lp, 1, nedges, &beg, indices, values, CPX_MIPSTART_AUTO, NULL))
                 print_error("CPXaddmipstarts error");
+        }
+        else
+        {
+            if (ts_current - ts_last_impr > 10)
+            {
+                if (inst->param.ticks)
+                    printf("[Iteration %d] Incumbent not improved, time left %f ticks\n", iter, time_left);
+                else
+                    printf("[Iteration %d] Incumbent not improved, time left %f seconds\n", iter, time_left);
+                ts_last_impr = ts_current;
+            }
         }
 
         iter++;
@@ -223,8 +237,6 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             return;
         if (time_left < time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
-        if (inst->param.verbose >= DEBUG)
-            printf("*** time left = %f\n", time_left);
 
         double rhs = inst->dimension - k;
         char sense = 'G';
@@ -262,8 +274,7 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         double current_incumbent, lb_incumbent;
         CPXgetobjval(env, lp, &current_incumbent);
         CPXgetbestobjval(env, lp, &lb_incumbent);
-        if (inst->param.verbose >= DEBUG)
-            printf("*** k = %d, current_incumbent = %f\n", k, current_incumbent);
+
         // check if the current solution is better than the best so far
         if (current_incumbent < inst->z_best)
         {
@@ -277,9 +288,9 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             if (inst->param.verbose >= NORMAL)
             {
                 if (!inst->param.ticks)
-                    printf("New incumbent: %f, time left = %f seconds\n", inst->z_best, time_left);
+                    printf("[Iteration %d] New incumbent: %f, k = %d, time left = %f seconds\n", iter, inst->z_best, k, time_left);
                 else
-                    printf("New incumbent: %f, time left = %f ticks\n", inst->z_best, time_left);
+                    printf("[Iteration %d] New incumbent: %f, k = %d, time left = %f ticks\n", iter, inst->z_best, k, time_left);
             }
             gather_solution(inst, inst->best_sol, 0);
             save_and_plot_solution(inst, iter);
@@ -298,6 +309,10 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
                 printf("The procedure has been stopped before the time limit because it was reached the max neighborhood size without improving!\n");
                 return;
             }
+            if (inst->param.ticks)
+                printf("[Iteration %d] Incumbent not improved, k = %d, time left %f ticks\n", iter, k, time_left);
+            else
+                printf("[Iteration %d] Incumbent not improved, k = %d, time left %f seconds\n", iter, k, time_left);
         }
         if (CPXdelrows(env, lp, row, row))
             print_error("CPXdelrows error");
