@@ -77,7 +77,6 @@ int math_solver(instance *inst)
         print_error("CPXgetx() error");
 
     CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
-    CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
     printf("\tIncumbent: %f\n\n", inst->z_best);
     gather_solution(inst, inst->best_sol, 0);
     save_and_plot_solution(inst, 0);
@@ -174,16 +173,14 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             print_error("CPXmipopt() error");
 
         // retrieve the incumbent of the current solution and the best known lower bound
-        double current_incumbent, lb_incumbent;
+        double current_incumbent;
         CPXgetobjval(env, lp, &current_incumbent);
-        CPXgetbestobjval(env, lp, &lb_incumbent);
 
         // check if the current solution is better than the best so far
         if (current_incumbent < inst->z_best)
         {
             // update best incumbent
             inst->z_best = current_incumbent;
-            inst->best_lb = lb_incumbent;
             ts_last_impr = ts_current;
             // update arcs' selection
             int status = CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1);
@@ -271,16 +268,14 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             print_error("CPXmipopt() error");
 
         // retrieve the incumbent of the current solution and the best known lower bound
-        double current_incumbent, lb_incumbent;
+        double current_incumbent;
         CPXgetobjval(env, lp, &current_incumbent);
-        CPXgetbestobjval(env, lp, &lb_incumbent);
 
         // check if the current solution is better than the best so far
         if (current_incumbent < inst->z_best)
         {
             // update best incumbent
             inst->z_best = current_incumbent;
-            inst->best_lb = lb_incumbent;
             // update best sol
             int status = CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1);
             if (status)
