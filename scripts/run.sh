@@ -2,8 +2,8 @@
 
 # Local variable
 #SOLVER=("comp" "iter" "math" "heur" "tabu" "gene")
-GENETIC=("gen0" "gen1" "gen2" "gen3")
-SOLVER=("comp")
+SOLVER=("tabu" "gene")
+GENETIC=("gen00" "gen01" "gen10" "gen11" "gen20" "gen21" "gen30" "gen31")
 
 # Move into build folder
 for solver in "${SOLVER[@]}"; do

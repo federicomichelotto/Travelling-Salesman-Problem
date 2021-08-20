@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name tsp_gen2
-#SBATCH --output tsp_gen2_%j.out
-#SBATCH --error tsp_gen2_%j.err
+#SBATCH --job-name tsp_gen21
+#SBATCH --output tsp_gen21_%j.out
+#SBATCH --error tsp_gen21_%j.err
 
 #SBATCH --mail-type ALL
 #SBATCH --mail-user mikele.milia@studenti.unipd.it
@@ -22,7 +22,6 @@ function run_instances() {
   for file in ../data/tests/meta/*; do
     for i in {105..106}; do
         echo "Submitted the $i-th run of GENETIC 2 for instance $file"
-        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 --popsize 1000 --offsize 100 --parsel 2 --sursel 0  -m 1 -v 4 -s $i -r $i
         srun ./tsp -f "$file" --meta -t 3600 --grasp 3 --popsize 1000 --offsize 100 --parsel 2 --sursel 1  -m 1 -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))"
     done
   done
