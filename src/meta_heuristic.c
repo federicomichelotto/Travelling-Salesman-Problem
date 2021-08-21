@@ -84,7 +84,7 @@ void tabu_search(instance *inst)
             }
         }
 
-        double min_delta;
+        double min_delta = DBL_MAX;
         int a = -1, b = -1;
 
         for (int i = 0; i < inst->dimension; i++)
