@@ -84,8 +84,8 @@ void tabu_search(instance *inst)
             }
         }
 
-        double min_delta = DBL_MAX;
-        int a, b;
+        double min_delta;
+        int a = -1, b = -1;
 
         for (int i = 0; i < inst->dimension; i++)
         {
@@ -113,8 +113,10 @@ void tabu_search(instance *inst)
             }
         }
 
-        if (min_delta == DBL_MAX)
-            print_error("Error in tabu search delta computation");
+        if (a == -1 && b == -1){
+            printf("Exit: all nodes became tabu.\n");
+            break;
+        }
 
         int c = temp_succ[a];
         int d = temp_succ[b];

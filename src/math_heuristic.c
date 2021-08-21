@@ -139,15 +139,6 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
 
     while (1)
     {
-        //printf("\n[ITERATION %d]:\n best tour so far: ", iter);
-        int node = 0;
-        // printf("%d", node);
-        // for (int i = 0; i < inst->dimension; i++)
-        // {
-        //     printf(" -> %d", inst->succ[node]);
-        //     node = inst->succ[node];
-        // }
-        // printf("\n");
         // update time left
         double ts_current;
         inst->param.ticks ? CPXgetdettime(env, &ts_current) : getTimeStamp(&ts_current);
@@ -157,7 +148,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         if (time_left < time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
 
-        // restore the upper bounds previusly modified (additional)
+        // restore the upper bounds previusly modified (SEC)(additional)
         if (iter > 1)
         {
             for (int i = 0; i < k; i++)
@@ -175,12 +166,13 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         char *senses = (char *)malloc(inst->dimension * sizeof(char)); // we only need to change the lower bound of our variables
 
         // the best solution so far is also stored in the successor format in the inst->succ array
-        node = 0;
+        int node = 0;
         int close_node = 0, flag_start = 0;
         int start_node = -1;
         int keep_counter = 0;
         k = 0;
 
+        // edge fixing, and SEC application
         for (int i = 0; i < inst->dimension; i++)
         {
             indices[i] = xpos(node, inst->succ[node], inst);
@@ -203,10 +195,8 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
                         indices_additional[k] = xpos(start_node, node, inst);
                         senses_additional[k] = 'U';
                         values_additional[k++] = 0.0;
-                        //printf("*ub[%d,%d] = 0.0\n", start_node, node);
                     }
                 }
-                //printf("lb[%d,%d] = 0.0\n", node, inst->succ[node]);
             }
             else // keep the edge
             {
@@ -220,7 +210,6 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
                         start_node = node;
                     keep_counter++;
                 }
-                //printf("lb[%d,%d] = 1.0\n", node, inst->succ[node]);
             }
             node = inst->succ[node];
         }
@@ -229,17 +218,15 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             indices_additional[k] = xpos(start_node, close_node, inst);
             senses_additional[k] = 'U';
             values_additional[k++] = 0.0;
-            //printf("**ub[%d,%d] = 0.0\n", start_node, close_node);
         }
 
-        // change the lower bounds
+        // change the lower bounds (edge fixing)
         if (CPXchgbds(env, lp, inst->dimension, indices, senses, values))
             print_error("CPXchgbds hard-fixing lower bound error");
 
-        // change the upper bounds (additional)
+        // change the upper bounds (SEC)
         if (CPXchgbds(env, lp, k, indices_additional, senses_additional, values_additional))
             print_error("CPXchgbds hard-fixing upper bound error");
-        //CPXwriteprob(env, lp, "prova.lp", NULL);
 
         // solve with the new constraints
         if (CPXmipopt(env, lp))
@@ -268,8 +255,6 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             }
             gather_solution(inst, inst->best_sol, 0);
             save_and_plot_solution(inst, iter);
-            // for (int i = 0; i < inst->dimension; i++)
-            //     printf("x[%d,%d] = 1.0\n", i, inst->succ[i]);
 
             int beg = 0;
             if (CPXaddmipstarts(env, lp, 1, inst->dimension, &beg, indices, values, CPX_MIPSTART_AUTO, NULL))
