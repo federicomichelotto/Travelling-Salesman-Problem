@@ -1,5 +1,5 @@
 # $ cmake --version
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8...3.21)
 
 # Setting the project name
 project(tsp)
@@ -14,6 +14,7 @@ set(SOURCE_FILES
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 message(STATUS "You're using ${CMAKE_SYSTEM_NAME}")
+message(STATUS "You're using ${CMAKE_VERSION}")
 
 if (WIN32)
 

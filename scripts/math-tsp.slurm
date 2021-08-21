@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name tsp_math
-#SBATCH --output tsp_math_%A_%a.out
-#SBATCH --error tsp_math_%A_%a.err
+#SBATCH --output tsp_math_%j.out
+#SBATCH --error tsp_math_%j.err
 
 #SBATCH --mail-type ALL
 #SBATCH --mail-user mikele.milia@studenti.unipd.it
@@ -12,18 +12,38 @@
 #SBATCH -p allgroups
 #SBATCH -t 5-00:00:00
 #SBATCH --mem 32G
-#SBATCH --array=0,1
 
 # Setup my personal project folder
 DIRECTORY=/home/miliamikel/tsp
 BUILD=build
 
+job_help() {
+  # Display Help
+  echo "Bash script that submit MAST simulation to SLURM scheduler"
+  echo
+  echo "Syntax: sbatch comp-tsp.slurm [-m|h]"
+  echo "Options:"
+  echo "-p     Set which model to use"
+  echo "-h     Print the help."
+}
+
+# Retrieve custom project path
+while getopts m:h option; do
+  case "${option}" in
+  m) MODEL=${OPTARG} ;;
+  h) job_help
+     exit ;;
+  *) echo "Command not supported"
+     exit ;;
+  esac
+done
+
 function run_instances() {
 
   for file in ../data/tests/math/*; do
     for i in {10..13}; do
-        echo "Submitted the $i-th run of model ${SLURM_ARRAY_TASK_ID} for instance $file"
-        srun ./tsp -f "$file" --math --ticks -t 1020000 -m "${SLURM_ARRAY_TASK_ID}" -v 4 -s $i -r $i
+        echo "Submitted the $i-th run of model $MODEL for instance $file"
+        srun ./tsp -f "$file" --math --ticks -t 1020000 -m "$MODEL" -v 4 -s $i -r $i
     done
   done
 
