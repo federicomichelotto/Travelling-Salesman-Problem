@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name tsp_heur
-#SBATCH --output tsp_heur_%A_%a.out
-#SBATCH --error tsp_heur_%A_%a.err
+#SBATCH --output tsp_heur_%j.out
+#SBATCH --error tsp_heur_%j.err
 
 #SBATCH --mail-type ALL
 #SBATCH --mail-user mikele.milia@studenti.unipd.it
@@ -12,19 +12,49 @@
 #SBATCH -p allgroups
 #SBATCH -t 5-00:00:00
 #SBATCH --mem 16GB
-#SBATCH --array=0,1,2,3
 
 # Setup my personal project folder
 DIRECTORY=/home/miliamikel/tsp
 BUILD=build
 
+job_help() {
+  # Display Help
+  echo "Bash script that submit MAST simulation to SLURM scheduler"
+  echo
+  echo "Syntax: sbatch comp-tsp.slurm [-m|h]"
+  echo "Options:"
+  echo "-m     Set which model to use"
+  echo "-h     Print the help."
+}
+
+# Retrieve custom project path
+while getopts m:h option; do
+  case "${option}" in
+  m) MODEL=${OPTARG} ;;
+  h) job_help
+     exit ;;
+  *) echo "Command not supported"
+     exit ;;
+  esac
+done
+
 function run_instances() {
 
   for file in ../data/tests/heur/*; do
     for i in {21..22}; do
-        echo "Submitted the $i-th run of model ${SLURM_ARRAY_TASK_ID} for instance $file"
-        srun ./tsp -f "$file" --heur -t 3600 -m "${SLURM_ARRAY_TASK_ID}" -v 4 -s $i -r $i
-        srun ./tsp -f "$file" --heur --grasp 3 -t 3600 -m "${SLURM_ARRAY_TASK_ID}" -v 4 -s "$(( i +20 ))" -r "$(( i +20 ))"
+        echo "Submitted the $i-th run of model $MODEL for instance $file"
+        if [ "$MODEL" == 0 ]; then # NN
+          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" -v 4 -s $i -r $i
+          srun ./tsp -f "$file" --heur --grasp 3 -t 3600 -m "$MODEL" -v 4 -s "$(( i +20 ))" -r "$(( i +20 ))"
+        fi
+
+        if [ "$MODEL" == 1 ]; then #NN + GRASP + 2-OPT
+          srun ./tsp -f "$file" --heur --grasp 3 -t 3600 -m "$MODEL" -v 4 -s "$(( i +40 ))" -r "$(( i +40 ))"
+        fi
+
+        if [ "$MODEL" == 2 ] || [ "$MODEL" == 3 ]; then # EXTRA MILEAGE
+          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" -v 4 -s $i -r $i
+        fi
     done
   done
 

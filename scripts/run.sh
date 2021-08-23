@@ -33,7 +33,9 @@ for solver in "${SOLVER[@]}"; do
     done
 
   elif [ "$solver" == "heur" ]; then
-    sbatch "$solver"-tsp.slurm
+    for m in {0,1,2,3}; do
+      sbatch "$solver"-tsp.slurm -m $m
+    done
 
   elif [ "$solver" == "tabu" ]; then
     sbatch "$solver"-tsp.slurm

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name tsp_iter
+#SBATCH --job-name tsp_iter_opt
 #SBATCH --output tsp_iter_%j.out
 #SBATCH --error tsp_iter_%j.err
 

@@ -10,7 +10,9 @@ for solver in "${SOLVER[@]}"; do
     sbatch "$solver"-tsp-opt.slurm
 
   elif [ "$solver" == "heur" ]; then
-    sbatch "$solver"-tsp-opt.slurm
+    for m in {0,1,2,3}; do
+      sbatch "$solver"-tsp-opt.slurm -m $m
+    done
 
   else
     echo "Solver not found"
