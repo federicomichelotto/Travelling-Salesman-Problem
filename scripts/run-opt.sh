@@ -1,17 +1,18 @@
 #!/bin/bash
 
 # Local variable
-SOLVER=("iter" "heur")
+SOLVER=("heur")
+path="/home/michelfede/OR2/travelling-salesman-problem/scripts"
 
 # Move into build folder
 for solver in "${SOLVER[@]}"; do
 
   if [ "$solver" == "iter" ]; then
-    sbatch "$solver"-tsp-opt.slurm
+    sbatch "$path/$solver"-tsp-opt.slurm
 
   elif [ "$solver" == "heur" ]; then
-    for m in {0,1,2,3}; do
-      sbatch "$solver"-tsp-opt.slurm -m $m
+    for m in {0,2,3}; do
+      sbatch "$path/$solver"-tsp-opt.slurm -m "$m"
     done
 
   else
