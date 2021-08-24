@@ -5,7 +5,7 @@
 #SBATCH --error tsp_tabu_%j.err
 
 #SBATCH --mail-type ALL
-#SBATCH --mail-user mikele.milia@studenti.unipd.it
+#SBATCH --mail-user federico.michelotto@studenti.unipd.it
 
 #SBATCH -n 1
 #SBATCH -c 8
@@ -14,15 +14,16 @@
 #SBATCH --mem 16GB
 
 # Setup my personal project folder
-DIRECTORY=/home/miliamikel/tsp
+DIRECTORY=/home/michelfede/OR2/travelling-salesman-problem
 BUILD=build
 
 function run_instances() {
 
   for file in ../data/tests/meta/*; do
-    for i in {70..71}; do
+    for i in {1..2}; do
         echo "Submitted the $i-th run of TABU SEARCH for instance $file"
-        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 -m 0 -v 4 -s $i -r $i
+	srun ./tsp -f "$file" --meta -t 3600 -m 0 -s "$i" -scores "tabu_grasp"
+        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 -m 0 -s "$i" -scores "tabu_grasp"
     done
   done
 

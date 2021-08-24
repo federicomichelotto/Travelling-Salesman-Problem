@@ -5,7 +5,7 @@
 #SBATCH --error tsp_heur_%j.err
 
 #SBATCH --mail-type ALL
-#SBATCH --mail-user mikele.milia@studenti.unipd.it
+#SBATCH --mail-user federico.michelotto@studenti.unipd.it
 
 #SBATCH -n 1
 #SBATCH -c 8
@@ -14,7 +14,7 @@
 #SBATCH --mem 16GB
 
 # Setup my personal project folder
-DIRECTORY=/home/miliamikel/tsp
+DIRECTORY=/home/michelfede/OR2/travelling-salesman-problem
 BUILD=build
 
 job_help() {
@@ -41,16 +41,21 @@ done
 function run_instances() {
 
   for file in ../data/tests/heur/*; do
-    for i in {21..22}; do
+    for i in {1..2}; do
         echo "Submitted the $i-th run of model $MODEL for instance $file"
         if [ "$MODEL" == 0 ]; then # NN
-          srun ./tsp -f "$file" --heur --opt -t 3600 -m "$MODEL" -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))"
-          srun ./tsp -f "$file" --heur --opt --grasp 3 -t 3600 -m "$MODEL" -v 4 -s "$(( i +30 ))" -r "$(( i +30 ))"
+          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" --opt -s "$i" -scores "heur_opt_0"
+          srun ./tsp -f "$file" --heur --grasp 3 -t 3600 -m "$MODEL" --opt -s "$i" -scores "heur_opt_0_grasp"
         fi
 
-        if [ "$MODEL" == 2 ] || [ "$MODEL" == 3 ]; then # EXTRA MILEAGE
-          srun ./tsp -f "$file" --heur --opt -t 3600 -m "$MODEL" -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))"
+        if [ "$MODEL" == 2 ]; then # EXTRA MILEAGE
+          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" -s "$i" --opt -scores "heur_opt_2"
         fi
+
+	if [ "$MODEL" == 3 ]; then # EXTRA MILEAGE with furthest starting nodes
+          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" -s "$i" --opt -scores "heur_opt_3"
+        fi
+
     done
   done
 
