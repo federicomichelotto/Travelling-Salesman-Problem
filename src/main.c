@@ -39,16 +39,16 @@ int main(int argc, char **argv)
     switch (inst.param.solver)
     {
     case 0:
-        generate_csv_record(inst.param.name, inst.param.seed, optimal_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
+        generate_csv_record(inst.param.name, inst.param.seed, optimal_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.scores);
         break;
     case 1:
-        generate_csv_record(inst.param.name, inst.param.seed, math_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
+        generate_csv_record(inst.param.name, inst.param.seed, math_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.scores);
         break;
     case 2:
-        generate_csv_record(inst.param.name, inst.param.seed, heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
+        generate_csv_record(inst.param.name, inst.param.seed, heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.scores);
         break;
     case 3:
-        generate_csv_record(inst.param.name, inst.param.seed, meta_heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.run);
+        generate_csv_record(inst.param.name, inst.param.seed, meta_heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.scores);
         break;
     default:
         print_error("No implemented solver selected");

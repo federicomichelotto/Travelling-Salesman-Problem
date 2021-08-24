@@ -49,9 +49,9 @@ void parse_command_line(int argc, char **argv, instance *inst)
                 continue;
             }
 
-            if (strcmp(argv[i], "-r") == 0)
-            { // run
-                inst->param.run = atoi(argv[++i]);
+            if (strcmp(argv[i], "-scores") == 0)
+            { // name file score
+                strcpy(inst->param.scores, argv[++i]);
                 continue;
             }
 
@@ -338,7 +338,6 @@ void initialize_instance(instance *inst)
     inst->model_type = 0;
     inst->time_limit = CPX_INFBOUND;
     inst->param.seed = 1;
-    inst->param.run = 0;
     inst->param.verbose = NORMAL;
     inst->param.ticks = 0;
     inst->param.solver = 0; // default
@@ -376,6 +375,7 @@ void initialize_instance(instance *inst)
     strcpy(inst->param.weight_type, "NULL");
     strcpy(inst->param.weight_format, "NULL");
     strcpy(inst->param.data_type, "NULL");
+    strcpy(inst->param.scores, "0");
     inst->gnuplotPipe = popen("gnuplot -persistent", "w");
 }
 
@@ -648,24 +648,23 @@ int generate_path(char *path, char *folder, char *type, const char *model, char 
     return 0;
 }
 
-int generate_csv_record(char *instance_name, int seed, const char *model, double z_best, double time_elapsed, int run)
+int generate_csv_record(char *instance_name, int seed, const char *model, double z_best, double time_elapsed, char* scores)
 {
     FILE *csv;
-    char filename[100];
-    printf("run: %d\n", run);
-    sprintf(filename, "../output/scores_%d.csv", run);
+    char filename[120];
+    sprintf(filename, "../output/scores_%s.csv", scores);
 
     if (access(filename, F_OK) == 0)
     {
         print_message("scores.csv exists, adding the results");
         csv = fopen(filename, "a");
-        fprintf(csv, "%s, %d, %s, %f, %f, run-%d\n", instance_name, seed, model, z_best, time_elapsed, run);
+        fprintf(csv, "%s, %d, %s, %f, %f\n", instance_name, seed, model, z_best, time_elapsed);
     }
     else
     {
         print_message("scores.csv does not exists yet, creating file and adding the results");
         csv = fopen(filename, "w");
-        fprintf(csv, "%s, %d, %s, %f, %f, run-%d\n", instance_name, seed, model, z_best, time_elapsed, run);
+        fprintf(csv, "%s, %d, %s, %f, %f\n", instance_name, seed, model, z_best, time_elapsed);
     }
 
     if (fclose(csv))

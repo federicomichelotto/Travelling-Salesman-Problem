@@ -37,7 +37,7 @@ int heuristic_solver(instance *inst)
         if (inst->param.opt)
             printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
         break;
-    case 1: // GRASP Nearest Neighbours + 2-opt
+    case 1: // GRASP Nearest Neighbours + 2-opt (random starting node)
         min_obj = nearest_neighbours(inst, rand() % inst->dimension, succ_i, inst->param.grasp_choices);
         for (int j = 0; j < inst->dimension; j++)
             inst->succ[j] = succ_i[j];
