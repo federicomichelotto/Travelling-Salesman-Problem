@@ -43,7 +43,7 @@ function run_instances() {
   for file in ../data/tests/math/*; do
     for i in {10..13}; do
         echo "Submitted the $i-th run of model $MODEL for instance $file"
-        srun ./tsp -f "$file" --math --ticks -t 1020000 -m "$MODEL" -v 4 -s $i -r $i
+        srun ./tsp -f "$file" --math --ticks -t 1020000 -m "$MODEL" -v 4 -s $i -r $i -scores "math_$MODEL"
     done
   done
 

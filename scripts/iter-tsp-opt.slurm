@@ -23,7 +23,7 @@ function run_instances() {
     for i in {6..9}; do
 
         echo "Submitted the $i-th run of model 11 for instance $file with 2-OPT"
-        srun ./tsp -f "$file" --ticks --opt -t 1020000 -m 11 -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))"
+        srun ./tsp -f "$file" --ticks --opt -t 1020000 -m 11 -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))" -scores "iter_opt_$MODEL"
 
     done
   done

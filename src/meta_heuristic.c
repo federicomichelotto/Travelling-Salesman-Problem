@@ -184,7 +184,8 @@ int genetic(instance *inst)
         // }
 
         // Generate random individuals
-        printf("\n\tINDIVIDUAL #%5d FITNESS -> ", i + 1);
+//        if (inst->param.verbose >= DEBUG)
+            printf("\n\tINDIVIDUAL #%5d FITNESS -> ", i + 1);
 
         if (i < size * 0.15)
             random_individual(inst, &individuals[i], i, 1);
@@ -214,7 +215,7 @@ int genetic(instance *inst)
     while (time_left > 0.5)
     {
 
-        printf("\nEPOCH #%d [%.2f sec]\n", epochs - 1, time_left);
+        printf("\nEPOCH #%d [%.2f sec]", epochs - 1, time_left);
 
         population *offsprings = (population *)calloc(children_size, sizeof(population));
         for (int i = 0; i < children_size; i++)
@@ -225,7 +226,8 @@ int genetic(instance *inst)
         }
 
         // Offspring generation
-        printf("\t- Generation of %d offspring ... \n", children_size);
+        if (inst->param.verbose >= DEBUG)
+            printf("\n\t- Generation of %d offspring ... \n", children_size);
         for (int k = 0; k < children_size; k++)
         {
             // Parent selection
@@ -255,7 +257,8 @@ int genetic(instance *inst)
             free(parent);
         }
 
-        printf("\n\t- Survivor selection ... \n");
+        if (inst->param.verbose >= DEBUG)
+            printf("\n\t- Survivor selection ... \n");
 
         switch (inst->param.sur_sel)
         {
@@ -272,7 +275,9 @@ int genetic(instance *inst)
         // Mutate population
         // How much population is stressed
         double stress = (rand() % (60 - 20 + 1)) + 20;
-        printf("\n\t- Mutation occur on %4.2f%% of individuals ... \n", stress);
+
+        if (inst->param.verbose >= DEBUG)
+            printf("\n\t- Mutation occur on %4.2f%% of individuals ... \n", stress);
         int mutation_size = floor(size * stress / 100);
 
         for (int k = 0; k < mutation_size; k++)
@@ -285,22 +290,26 @@ int genetic(instance *inst)
 
         if (epochs % 50 == 0)
         {
-            printf("\n\t- Random individual full optimization ... \n");
+            if (inst->param.verbose >= DEBUG)
+                printf("\n\t- Random individual full optimization ... \n");
             int m = 1 + rand() % (size - 1); // pick randomly an individual (not the champion)
-            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
+//            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
             individuals[m].fitness += two_opt_v2(inst, individuals[m].chromosome, 0);
-            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
+//            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
             no_improvement = 0;
         }
 
-        printf("\n\t- Summary .. \n");
+        if (inst->param.verbose >= DEBUG)
+            printf("\n\t- Summary .. \n");
         epoch_champion_and_average(inst, individuals, size, &champion[epochs - 1], &average[epochs - 1]); // put the champion in individuals[0]
 
         // Print champion solution inside current epoch
         save_and_plot_solution_general(inst, champion[epochs - 1].chromosome, epochs - 1);
 
-        printf("\t\t- Champion's fitness : %f\n", champion[epochs - 1].fitness);
-        printf("\t\t- Average fitness : %f\n", average[epochs - 1]);
+        if (inst->param.verbose >= DEBUG) {
+            printf("\t\t- Champion's fitness : %f\n", champion[epochs - 1].fitness);
+            printf("\t\t- Average fitness : %f\n", average[epochs - 1]);
+        }
 
         if (epochs > 1 && champion[epochs - 1].fitness == champion[epochs - 2].fitness)
             no_improvement++;
@@ -309,11 +318,11 @@ int genetic(instance *inst)
 
         if (no_improvement == 20)
         {
-            printf("\tWARNING : No improvement were found in the last %d epochs.\n", no_improvement);
-            printf("\tStarting quick optimization... ");
-            fflush(stdout);
+            printf("\n\tWARNING : No improvement were found in the last %d epochs.", no_improvement);
+//            printf("\tStarting quick optimization... ");
+//            fflush(stdout);
             fast_population_refinement(inst, individuals, size, 30);
-            printf("\tComplete\n");
+//            printf("\tComplete\n");
 
             no_improvement = 0;
         }
@@ -655,12 +664,16 @@ void random_individual(instance *inst, population *individual, int seed, int opt
 
     individual->fitness = nearest_neighbours(inst, seed % inst->dimension, individual->chromosome, inst->param.grasp_choices);
 
-    printf("BASE [%f]", individual->fitness);
-    fflush(stdout);
+    if (inst->param.verbose >= DEBUG) {
+            printf("BASE [%f]", individual->fitness);
+        fflush(stdout);
+    }
+
     if (optimize == 1)
     {
-        individual->fitness += two_opt_v2(inst, individual->chromosome, 30);
-        printf(" | OPTIMIZED [%f]", individual->fitness);
+        individual->fitness += two_opt(inst, individual->chromosome, 30);
+        if (inst->param.verbose >= DEBUG)
+            printf(" | OPTIMIZED [%f]", individual->fitness);
         save_and_plot_solution_general(inst, individual->chromosome, seed);
     }
 }
