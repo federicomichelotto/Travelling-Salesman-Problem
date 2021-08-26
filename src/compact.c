@@ -57,8 +57,11 @@ int optimal_solver(instance *inst)
             print_error("CPXcallbacksetfunc() error");
     }
 
-    if (CPXmipopt(env, lp))
-        print_error("CPXmipopt() error");
+    if (CPXmipopt(env, lp)){
+        char err[200];
+        sprintf(err, "CPXmipopt() error [%s]", inst->param.name);
+        print_error(err);
+    }
 
     // solution status of the problem
     int lpstat = CPXgetstat(env, lp);
@@ -927,8 +930,11 @@ void benders(CPXENVptr env, CPXLPptr lp, instance *inst)
             }
 
             // solve with the new constraints
-            if (CPXmipopt(env, lp))
-                print_error("CPXmipopt() error");
+            if (CPXmipopt(env, lp)){
+                char err[200];
+                sprintf(err, "CPXmipopt() error [%s]", inst->param.name);
+                print_error(err);
+            }
             free(rname[0]);
             free(rname);
         }
