@@ -5,7 +5,7 @@
 #SBATCH --error tsp_gen01_%j.err
 
 #SBATCH --mail-type ALL
-#SBATCH --mail-user mikele.milia@studenti.unipd.it
+#SBATCH --mail-user federico.michelotto@studenti.unipd.it
 
 #SBATCH -n 1
 #SBATCH -c 8
@@ -14,16 +14,14 @@
 #SBATCH --mem 16GB
 
 # Setup my personal project folder
-DIRECTORY=/home/miliamikel/tsp
+DIRECTORY=/home/michelfede/OR2/travelling-salesman-problem
 BUILD=build
 
 function run_instances() {
 
   for file in ../data/tests/meta/*; do
-    for i in {101..102}; do
-        echo "Submitted the $i-th run of GENETIC 0 for instance $file"
-        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 --popsize 1000 --offsize 100 --parsel 0 --sursel 1  -m 1 -v 2 -s "$(( i +10 ))" -r "$(( i +10 ))" -scores "gene_01"
-    done
+        echo "Submitted the run of GENETIC 0 for instance $file"
+        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 --popsize 1000 --offsize 100 --parsel 0 --sursel 1 -m 1 -v 2 -scores "gene_01"
   done
 
 }

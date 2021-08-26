@@ -41,22 +41,15 @@ done
 function run_instances() {
 
   for file in ../data/tests/heur/*; do
-    for i in {1..2}; do
-        echo "Submitted the $i-th run of model $MODEL for instance $file"
+        echo "Submitted the run of model $MODEL for instance $file"
         if [ "$MODEL" == 0 ]; then # NN
-          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" --opt -s "$i" -scores "heur_opt_0"
-          srun ./tsp -f "$file" --heur --grasp 3 -t 3600 -m "$MODEL" --opt -s "$i" -scores "heur_opt_0_grasp"
-        fi
-
-        if [ "$MODEL" == 2 ]; then # EXTRA MILEAGE
-          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" -s "$i" --opt -scores "heur_opt_2"
+          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" --opt -scores "heur_opt_0"
+          srun ./tsp -f "$file" --heur --grasp 3 -t 3600 -m "$MODEL" --opt -scores "heur_opt_0_grasp"
         fi
 
 	if [ "$MODEL" == 3 ]; then # EXTRA MILEAGE with furthest starting nodes
-          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" -s "$i" --opt -scores "heur_opt_3"
+          srun ./tsp -f "$file" --heur -t 3600 -m "$MODEL" --opt -scores "heur_opt_3"
         fi
-
-    done
   done
 
 }

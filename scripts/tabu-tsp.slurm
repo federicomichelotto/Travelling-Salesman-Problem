@@ -20,11 +20,9 @@ BUILD=build
 function run_instances() {
 
   for file in ../data/tests/meta/*; do
-    for i in {1..2}; do
-        echo "Submitted the $i-th run of TABU SEARCH for instance $file"
-	      srun ./tsp -f "$file" --meta -t 3600 -m 0 -s "$i" -scores "tabu"
-        srun ./tsp -f "$file" --meta -t 3600 --grasp 3 -m 0 -s "$i" -scores "tabu_grasp"
-    done
+        echo "Submitted the run of TABU SEARCH for instance $file"
+	srun ./tsp -f "$file" --meta -t 3600 -m 0 -s "$i" -scores "tabu"
+	srun ./tsp -f "$file" --meta -t 3600 --grasp 3 -m 0 -s "$i" -scores "tabu_grasp"
   done
 
 }
