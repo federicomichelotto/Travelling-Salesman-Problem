@@ -144,7 +144,7 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         inst->param.ticks ? CPXgetdettime(env, &ts_current) : getTimeStamp(&ts_current);
         double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
         if (time_left < inst->param.time_threshold)
-            return;
+            break;
         if (time_left < time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
 
