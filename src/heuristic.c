@@ -114,7 +114,7 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ, int opti
     int current = starting_node; // Index of the current node
 
     if (inst->param.verbose >= DEBUG && options > 1)
-        printf("GRASP approach selected, available option for each node %d\n", options);
+        printf("\nGRASP approach selected, available option for each node %d\n", options);
 
     // Build the circuit adding inst->dimension - 1 edges
     for (int count = 0; count < inst->dimension - 1; count++)
@@ -123,16 +123,7 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ, int opti
         // Check available nodes (remember to ignore the current one)
         if (inst->dimension - count - 1 < options)
         {
-            if (inst->param.verbose >= DEBUG)
-                printf("Too many choices (%d) w.r.t. available nodes (%d). Available choices are now (%d)\n", options, inst->dimension - count - 1, inst->dimension - count - 1);
-
             options = inst->dimension - count - 1;
-            int not_selected = -1;
-            for (int i = 0; i < inst->dimension; i++)
-                if (succ[i] == -1)
-                    not_selected++;
-            if (inst->param.verbose >= DEBUG)
-                printf("Nodes not yet selected are %d\n", not_selected);
         }
 
         double min_dist[options]; // Minimum distances
@@ -140,39 +131,35 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ, int opti
 
         for (int i = 0; i < options; ++i)
         {
-            min_dist[i] = CPX_INFBOUND;
+            min_dist[i] = DBL_MAX;
             min_node[i] = -1;
         }
-
-        int *chosen = (int *)calloc(inst->dimension, sizeof(int));
-        int k = 0;
-
-        // While a choice can be made, select the closest node
-        while (k < options)
+       
+        // select the closest (options) nodes w.r.t. to the current node
+        for (int i = 0; i < inst->dimension; i++)
         {
-            // select the closest node w.r.t. to the current node
-            for (int i = 0; i < inst->dimension; i++)
+            if (selected[i] == 0) // i has not been selected yet
             {
-                if (i != current && selected[i] == 0 && chosen[i] == 0) // i has not been selected yet
+                double distance = dist(current, i, inst);
+                if (distance < min_dist[options-1])
                 {
-                    double distance = dist(current, i, inst);
-                    if (distance < min_dist[k])
-                    {
-                        min_dist[k] = distance;
-                        min_node[k] = i;
+                    int k;
+                    for (k = options - 2; k >= 0 ; k--){ // if options == 1 => it does not enter in the loop => k+1 = 0: OK
+                        if (distance >= min_dist[k])
+                            break; // node i is the (k+1)-th nearest node (currently)
                     }
+                    
+                    // shift elements right by one 
+                    for (int j = options-2; j>k; j--){ // if options == 1 => k=-1, j=-1 => it does not enter in the loop 
+                        min_dist[j+1] = min_dist[j];
+                        min_node[j+1] = min_node[j];
+                    }
+                    min_dist[k+1] = distance;
+                    min_node[k+1] = i;
                 }
             }
-
-            chosen[min_node[k]] = 1; // i-th node was chosen as closest
-            k++;
         }
-
-        //        for (int j = 0; j < options; ++j) {
-        //            printf("%d : %f\n", min_node[j], min_dist[j]);
-        //        }
-        //        printf("------------\n");
-
+        
         // Minimum node random selection
         int h = rand() % options;
 
@@ -189,7 +176,6 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ, int opti
         // Update current incumbent
         obj += min_dist[h];
 
-        free(chosen);
     }
 
     // Close circuit
@@ -347,7 +333,7 @@ double extra_mileage_furthest_starting_nodes(instance *inst, int *succ)
     // add inst->dimension - 2 nodes
     for (int iter = 0; iter < inst->dimension - 2; iter++)
     {
-        double min_value = CPX_INFBOUND; // Insertion of node selected_node in the circuit
+        double min_value = DBL_MAX; // Insertion of node selected_node in the circuit
         int idx_edge;                    // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
         int selected_node;               // node to add in the circuit
 
