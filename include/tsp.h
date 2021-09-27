@@ -149,7 +149,7 @@ static const char *math_model_name[] = {
 
 static const char *heuristic_model_name[] = {
     "NEAREST NEIGHBOURS",
-    "GRASP NEAREST NEIGHBOURS + 2-OPT (RANDOM STARTING NODE)",
+    "NEAREST NEIGHBOURS (RANDOM STARTING NODE)",
     "EXTRA-MILEAGE",
     "EXTRA-MILEAGE FURTHEST STARTING NODES",
 };
@@ -179,8 +179,8 @@ static const char *math_model_full_name[] = {
     "Soft fixing heuristic"};
 
 static const char *heuristic_model_full_name[] = {
-    "Nearest Neighbours (Greedy)",
-    "GRASP Nearest Neighbours (Greedy) + 2-opt (random starting node)",
+    "Nearest Neighbours",
+    "Nearest Neighbours (random starting node) ",
     "Extra-mileage",
     "Extra-mileage furthest starting nodes",
 };

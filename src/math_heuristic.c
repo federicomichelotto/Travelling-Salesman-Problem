@@ -3,7 +3,7 @@ int math_solver(instance *inst)
     // Open CPLEX model
     int error;
     CPXENVptr env = CPXopenCPLEX(&error);
-    CPXLPptr lp = CPXcreateprob(env, &error, "MATH TSP");
+        CPXLPptr lp = CPXcreateprob(env, &error, "MATH TSP");
 
     // get timestamp
     inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : getTimeStamp(&inst->timestamp_start);
@@ -61,11 +61,8 @@ int math_solver(instance *inst)
         printf("First iteration: time limit = %f ticks\n", time_limit_first_it);
 
     // initial solution
-    if (CPXmipopt(env, lp)){
-        char err[200];
-        sprintf(err, "CPXmipopt() error [%s]", inst->param.name);
-        print_error(err);
-    }
+    if (CPXmipopt(env, lp))
+        print_error("CPXmipopt() error");
 
     // solution status of the problem
     int lpstat = CPXgetstat(env, lp);
@@ -232,11 +229,8 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             print_error("CPXchgbds hard-fixing upper bound error");
 
         // solve with the new constraints
-        if (CPXmipopt(env, lp)){
-            char err[200];
-            sprintf(err, "CPXmipopt() error [%s]", inst->param.name);
-            print_error(err);
-        }
+        if (CPXmipopt(env, lp))
+            print_error("CPXmipopt() error");
 
         // retrieve the incumbent of the current solution and the best known lower bound
         double current_incumbent;
@@ -293,7 +287,6 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         free(senses);
         free(values);
     }
-
     free(indices_additional);
     free(senses_additional);
     free(values_additional);
@@ -312,7 +305,7 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         inst->param.ticks ? CPXgetdettime(env, &ts_current) : getTimeStamp(&ts_current);
         double time_left = inst->time_limit - (ts_current - inst->timestamp_start);
         if (time_left < inst->param.time_threshold)
-            break;
+            return;
         if (time_left < time_limit_iter)
             CPXsetdblparam(env, CPX_PARAM_TILIM, time_left);
 
@@ -345,11 +338,8 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
             print_error("wrong CPXchgcoeflist");
 
         // solve with the new constraint
-        if (CPXmipopt(env, lp)){
-            char err[200];
-            sprintf(err, "CPXmipopt() error [%s]", inst->param.name);
-            print_error(err);
-        }
+        if (CPXmipopt(env, lp))
+            print_error("CPXmipopt() error");
 
         // retrieve the incumbent of the current solution and the best known lower bound
         double current_incumbent;

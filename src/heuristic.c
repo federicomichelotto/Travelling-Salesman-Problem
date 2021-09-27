@@ -8,7 +8,7 @@ int heuristic_solver(instance *inst)
     double obj_opt = 0;
 
     printf("\nSOLUTION -----------------------------------------------\n");
-    printf("\nRUNNING : %s\n", heuristic_model_full_name[inst->model_type]);
+    printf("\nRUNNING : %s (grasp choices = %d)\n", heuristic_model_full_name[inst->model_type], inst->param.grasp_choices);
     int *succ_i = (int *)calloc(inst->dimension, sizeof(int));
 
     switch (inst->model_type)
@@ -37,15 +37,16 @@ int heuristic_solver(instance *inst)
         if (inst->param.opt)
             printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
         break;
-    case 1: // GRASP Nearest Neighbours + 2-opt (random starting node)
+    case 1: // Nearest Neighbours (random starting node)
         min_obj = nearest_neighbours(inst, rand() % inst->dimension, succ_i, inst->param.grasp_choices);
         for (int j = 0; j < inst->dimension; j++)
             inst->succ[j] = succ_i[j];
         inst->z_best = min_obj;
-        inst->z_best += two_opt_v2(inst, inst->succ, 0);
+        if (inst->param.opt)
+            inst->z_best += two_opt_v2(inst, inst->succ, 0);
 
         save_and_plot_solution(inst, -1);
-        
+
         printf("\nBest objective value: %f\n", min_obj);
         if (inst->param.opt)
             printf("Best objective value (optimized by 2-opt): %f\n", inst->z_best);
@@ -134,32 +135,34 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ, int opti
             min_dist[i] = DBL_MAX;
             min_node[i] = -1;
         }
-       
+
         // select the closest (options) nodes w.r.t. to the current node
         for (int i = 0; i < inst->dimension; i++)
         {
             if (selected[i] == 0) // i has not been selected yet
             {
                 double distance = dist(current, i, inst);
-                if (distance < min_dist[options-1])
+                if (distance < min_dist[options - 1])
                 {
                     int k;
-                    for (k = options - 2; k >= 0 ; k--){ // if options == 1 => it does not enter in the loop => k+1 = 0: OK
+                    for (k = options - 2; k >= 0; k--)
+                    { // if options == 1 => it does not enter in the loop => k+1 = 0: OK
                         if (distance >= min_dist[k])
                             break; // node i is the (k+1)-th nearest node (currently)
                     }
-                    
-                    // shift elements right by one 
-                    for (int j = options-2; j>k; j--){ // if options == 1 => k=-1, j=-1 => it does not enter in the loop 
-                        min_dist[j+1] = min_dist[j];
-                        min_node[j+1] = min_node[j];
+
+                    // shift elements right by one
+                    for (int j = options - 2; j > k; j--)
+                    { // if options == 1 => k=-1, j=-1 => it does not enter in the loop
+                        min_dist[j + 1] = min_dist[j];
+                        min_node[j + 1] = min_node[j];
                     }
-                    min_dist[k+1] = distance;
-                    min_node[k+1] = i;
+                    min_dist[k + 1] = distance;
+                    min_node[k + 1] = i;
                 }
             }
         }
-        
+
         // Minimum node random selection
         int h = rand() % options;
 
@@ -175,7 +178,6 @@ double nearest_neighbours(instance *inst, int starting_node, int *succ, int opti
 
         // Update current incumbent
         obj += min_dist[h];
-
     }
 
     // Close circuit
@@ -334,8 +336,8 @@ double extra_mileage_furthest_starting_nodes(instance *inst, int *succ)
     for (int iter = 0; iter < inst->dimension - 2; iter++)
     {
         double min_value = DBL_MAX; // Insertion of node selected_node in the circuit
-        int idx_edge;                    // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
-        int selected_node;               // node to add in the circuit
+        int idx_edge;               // (idx_edge, succ[idx_edge]): edge edge that corresponds to the smallest extra mileage to add the node selected_node to the circuit
+        int selected_node;          // node to add in the circuit
 
         // for each uncovered node and for each edge in the circuit, compute the extra mileage
         for (int k = 0; k < inst->dimension; k++)

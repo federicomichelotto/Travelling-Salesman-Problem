@@ -8,13 +8,13 @@ int meta_heuristic_solver(instance *inst)
     double obj_opt = 0;
 
     printf("\nSOLUTION -----------------------------------------------\n");
-    printf("\nRUNNING : %s\n", meta_heuristic_model_full_name[inst->model_type]);
+    printf("\nRUNNING : %s (grasp choices = %d)\n", meta_heuristic_model_full_name[inst->model_type], inst->param.grasp_choices);
 
     switch (inst->model_type)
     {
     case 0: // Tabu Search
 
-        min_obj = nearest_neighbours(inst, 0, inst->succ, inst->param.grasp_choices);
+        min_obj = nearest_neighbours(inst, 1, inst->succ, inst->param.grasp_choices);
         save_and_plot_solution(inst, 1);
         inst->z_best = min_obj;
         tabu_search(inst);
@@ -113,7 +113,8 @@ void tabu_search(instance *inst)
             }
         }
 
-        if (a == -1 && b == -1){
+        if (a == -1 && b == -1)
+        {
             printf("Exit: all nodes became tabu.\n");
             break;
         }
@@ -184,8 +185,8 @@ int genetic(instance *inst)
         // }
 
         // Generate random individuals
-//        if (inst->param.verbose >= DEBUG)
-            printf("\n\tINDIVIDUAL #%5d FITNESS -> ", i + 1);
+        //        if (inst->param.verbose >= DEBUG)
+        printf("\n\tINDIVIDUAL #%5d FITNESS -> ", i + 1);
 
         if (i < size * 0.15)
             random_individual(inst, &individuals[i], i, 1);
@@ -293,9 +294,9 @@ int genetic(instance *inst)
             if (inst->param.verbose >= DEBUG)
                 printf("\n\t- Random individual full optimization ... \n");
             int m = 1 + rand() % (size - 1); // pick randomly an individual (not the champion)
-//            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
+                                             //            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
             individuals[m].fitness += two_opt_v2(inst, individuals[m].chromosome, 0);
-//            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
+            //            printf("individuals[m].fitness = %f \n", individuals[m].fitness);
             no_improvement = 0;
         }
 
@@ -306,7 +307,8 @@ int genetic(instance *inst)
         // Print champion solution inside current epoch
         save_and_plot_solution_general(inst, champion[epochs - 1].chromosome, epochs - 1);
 
-        if (inst->param.verbose >= DEBUG) {
+        if (inst->param.verbose >= DEBUG)
+        {
             printf("\t\t- Champion's fitness : %f\n", champion[epochs - 1].fitness);
             printf("\t\t- Average fitness : %f\n", average[epochs - 1]);
         }
@@ -319,10 +321,10 @@ int genetic(instance *inst)
         if (no_improvement == 20)
         {
             printf("\n\tWARNING : No improvement were found in the last %d epochs.", no_improvement);
-//            printf("\tStarting quick optimization... ");
-//            fflush(stdout);
+            //            printf("\tStarting quick optimization... ");
+            //            fflush(stdout);
             fast_population_refinement(inst, individuals, size, 30);
-//            printf("\tComplete\n");
+            //            printf("\tComplete\n");
 
             no_improvement = 0;
         }
@@ -664,8 +666,9 @@ void random_individual(instance *inst, population *individual, int seed, int opt
 
     individual->fitness = nearest_neighbours(inst, seed % inst->dimension, individual->chromosome, inst->param.grasp_choices);
 
-    if (inst->param.verbose >= DEBUG) {
-            printf("BASE [%f]", individual->fitness);
+    if (inst->param.verbose >= DEBUG)
+    {
+        printf("BASE [%f]", individual->fitness);
         fflush(stdout);
     }
 

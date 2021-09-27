@@ -36,6 +36,7 @@ int main(int argc, char **argv)
     if (inst.param.verbose >= QUIET)
         inst.param.ticks ? printf("TSP solved in %f ticks\n", time_elapsed) : printf("TSP solved in %f seconds\n", time_elapsed);
 
+    char model[200];
     switch (inst.param.solver)
     {
     case 0:
@@ -45,10 +46,18 @@ int main(int argc, char **argv)
         generate_csv_record(inst.param.name, inst.param.seed, math_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.scores);
         break;
     case 2:
-        generate_csv_record(inst.param.name, inst.param.seed, heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.scores);
+        if (inst.model_type == 0 || inst.model_type == 1) // NN
+            snprintf(model, 200, "%s (optimize = %d grasp choices = %d)", heuristic_model_name[inst.model_type], inst.param.opt, inst.param.grasp_choices);
+        else // EM
+            snprintf(model, 200, "%s (optimize = %d)", heuristic_model_name[inst.model_type], inst.param.opt);
+        generate_csv_record(inst.param.name, inst.param.seed, model, inst.z_best, time_elapsed, inst.param.scores);
         break;
     case 3:
-        generate_csv_record(inst.param.name, inst.param.seed, meta_heuristic_model_name[inst.model_type], inst.z_best, time_elapsed, inst.param.scores);
+        if (inst.model_type == 0) // tabu
+            snprintf(model, 200, "%s (grasp choices = %d)", meta_heuristic_model_full_name[inst.model_type], inst.param.grasp_choices);
+        else // genetic
+            snprintf(model, 200, "%s", meta_heuristic_model_full_name[inst.model_type]);
+        generate_csv_record(inst.param.name, inst.param.seed, model, inst.z_best, time_elapsed, inst.param.scores);
         break;
     default:
         print_error("No implemented solver selected");
