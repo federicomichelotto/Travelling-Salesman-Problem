@@ -3,7 +3,7 @@ int math_solver(instance *inst)
     // Open CPLEX model
     int error;
     CPXENVptr env = CPXopenCPLEX(&error);
-        CPXLPptr lp = CPXcreateprob(env, &error, "MATH TSP");
+    CPXLPptr lp = CPXcreateprob(env, &error, "MATH TSP");
 
     // get timestamp
     inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : getTimeStamp(&inst->timestamp_start);
@@ -56,9 +56,9 @@ int math_solver(instance *inst)
             print_error("CPX_PARAM_TILIM error");
     }
     if (!inst->param.ticks)
-        printf("First iteration: time limit = %f seconds\n", time_limit_first_it);
+        printf("First iteration: callbacks method, time limit = %f seconds\n", time_limit_first_it);
     else
-        printf("First iteration: time limit = %f ticks\n", time_limit_first_it);
+        printf("First iteration: callbacks method, time limit = %f ticks\n", time_limit_first_it);
 
     // initial solution
     if (CPXmipopt(env, lp))
@@ -128,15 +128,14 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
     int iter = 1;
     double gap;
     CPXgetdblparam(env, CPX_PARAM_EPGAP, &gap);
-    double ts_last_impr; // timestamp last improvment
-    inst->param.ticks ? CPXgetdettime(env, &ts_last_impr) : getTimeStamp(&ts_last_impr);
-    int not_improved = 0; // #consecutive iterations in which the incumbent does not improve
+    int not_improved = 0; // #consecutive iterations in which the incumbent did not improve
 
     int *indices_additional = (int *)malloc(inst->dimension * sizeof(int));
     double *values_additional = (double *)malloc(inst->dimension * sizeof(double));
     char *senses_additional = (char *)malloc(inst->dimension * sizeof(char)); // we only need to change the lower bound of our variables
     int k = 0;
 
+    printf("Initial fix ratio = %f\n\n", fix_ratio);
     while (1)
     {
         // update time left
@@ -241,7 +240,6 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         {
             // update best incumbent
             inst->z_best = current_incumbent;
-            ts_last_impr = ts_current;
             // update arcs' selection
             int status = CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1);
             if (status)
@@ -263,15 +261,12 @@ void hard_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         }
         else
         {
-            if (ts_current - ts_last_impr > 10)
-            {
-                if (inst->param.ticks)
-                    printf("[Iteration %d] Incumbent not improved, time left = %f ticks\n", iter, time_left);
-                else
-                    printf("[Iteration %d] Incumbent not improved, time left = %f seconds\n", iter, time_left);
-                ts_last_impr = ts_current;
-            }
-            if (not_improved++ > 10)
+            if (inst->param.ticks)
+                printf("[Iteration %d] Incumbent not improved, time left = %f ticks\n", iter, time_left);
+            else
+                printf("[Iteration %d] Incumbent not improved, time left = %f seconds\n", iter, time_left);
+
+            if (not_improved++ == 10)
             {
                 if (fix_ratio >= 0.55)
                 {
@@ -370,14 +365,7 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         }
         else
         {
-            if (k < inst->dimension && k < 20)
-                k++;
-            else
-            {
-                // reached the max neighborhood size without improving! STOP
-                printf("The procedure has been stopped before the time limit because it was reached the max neighborhood size without improving!\n");
-                return;
-            }
+            k++;
             if (inst->param.ticks)
                 printf("[Iteration %d] Incumbent not improved, k = %d, time left = %f ticks\n", iter, k, time_left);
             else
@@ -390,5 +378,11 @@ void soft_fixing_heuristic(CPXENVptr env, CPXLPptr lp, instance *inst, int time_
         free(rname);
         free(indices);
         free(coeffs);
+        if (k == inst->dimension || k == 16)
+        {
+            // reached the max neighborhood size without improving! STOP
+            printf("The procedure has been stopped before the time limit because it was reached the max neighborhood size without improving!\n");
+            return;
+        }
     }
 }
