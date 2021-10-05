@@ -1,26 +1,28 @@
-# # !/usr/bin/env python2
+#!/usr/bin/env python2
 
 from __future__ import print_function
 import numpy as np
 import matplotlib
+matplotlib.use('PDF')
 import matplotlib.pyplot as plt
+import sys
 
 from optparse import OptionParser
 
-matplotlib.use('PDF')
-
 # parameters
-defLW = 1.2  # default line width
-defMS = 7  # default marker size
+defLW = 1.1  # default line width
+defMS = 6  # default marker size
 dashes = ['-',  # solid line
-	'--',  # dashed line
-	'-.',  # dash-dot line
-	':',  # dotted line
-	'-',
-	'--']
+		  '--',  # dashed line
+		  '-.',  # dash-dot line
+		  ':',  # dotted line
+		  '-',
+		  '--',
+		  '-.',
+		  ':']
 
-markers = ['+', 'x', 's', '^', 'o', 'd']
-colors = ['r', 'b', 'y', 'g', 'm', 'c']
+markers = ['+', 'x', 's', '^', 'o', 'd', '*', 'v']
+colors = ['r', 'b', 'y', 'g', 'm', 'c', 'k', 'orange']
 
 
 class CmdLineParser(object):
@@ -28,7 +30,7 @@ class CmdLineParser(object):
 		self.parser = OptionParser(usage='usage: python2 perfprof.py [options] cvsfile.csv outputfile.pdf')
 		# default options
 		self.parser.add_option("-D", "--delimiter", dest="delimiter", default=None, help="delimiter for input files")
-		self.parser.add_option("-M", "--maxratio", dest="maxratio", default=4, type=int, help="maxratio for perf. profile")
+		self.parser.add_option("-M", "--maxratio", dest="maxratio", default=4, type=float, help="maxratio for perf. profile")
 		self.parser.add_option("-S", "--shift", dest="shift", default=0, type=float, help="shift for data")
 		self.parser.add_option("-L", "--logplot", dest="logplot", action="store_true", default=False, help="log scale for x")
 		self.parser.add_option("-T", "--timelimit", dest="timelimit", default=1e99, type=float, help="time limit for runs")
@@ -99,8 +101,8 @@ def main():
 	y = np.arange(nrows, dtype=np.float64) / nrows
 	for j in range(ncols):
 		options = dict(label=cnames[j],
-				linewidth=defLW, linestyle='steps-post' + dashes[j],
-				marker=markers[j], markeredgewidth=defLW, markersize=defMS)
+					   linewidth=defLW, linestyle='steps-post' + dashes[j],
+					   marker=markers[j], markeredgewidth=defLW, markersize=defMS)
 		# plt.step(ratio[:,j], y, label=cnames[j], linewidth=defLW, marker=markers[j], markersize=defMS)
 		if opt.bw:
 			options['markerfacecolor'] = 'w'
@@ -118,7 +120,6 @@ def main():
 		plt.title(opt.plottitle)
 	plt.xlabel(opt.xlabel)
 	plt.savefig(opt.output)
-
 
 if __name__ == '__main__':
 	main()
