@@ -1,0 +1,7 @@
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324510.50 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-08: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324510.54 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-08: task 0: Out Of Memory
+slurmstepd: error: slurm_get_node_energy: No route to host
+slurmstepd: error: _get_joules_task: can't get info from slurmd
+slurmstepd: error: Detected 2 oom-kill event(s) in StepId=324510.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.

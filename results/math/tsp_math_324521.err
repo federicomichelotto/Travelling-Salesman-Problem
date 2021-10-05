@@ -1,0 +1,113 @@
+
+ERROR: CPXmipopt() error [d493] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [d657] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.20 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.21 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.22 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.23 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+
+ERROR: CPXmipopt() error [gr666] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [lin318] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [lin318] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [lin318] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [lin318] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.44 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.45 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.46 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.47 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+
+ERROR: (EDGE_WEIGHT_FORMAT) only FULL_MATRIX and FUNCTION implemented so far 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: (EDGE_WEIGHT_FORMAT) only FULL_MATRIX and FUNCTION implemented so far 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: (EDGE_WEIGHT_FORMAT) only FULL_MATRIX and FUNCTION implemented so far 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: (EDGE_WEIGHT_FORMAT) only FULL_MATRIX and FUNCTION implemented so far 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXgetx() error 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [pr1002] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.60 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.61 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.62 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=324521.63 cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+srun: error: runner-06: task 0: Out Of Memory
+
+ERROR: CPXmipopt() error [pr439] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [pr439] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [rat783] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [rd400] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [u1060] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXmipopt() error [u724] 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXgetx() error 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXgetx() error 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+
+ERROR: CPXgetx() error 
+
+srun: error: runner-06: task 0: Exited with exit code 1
+slurmstepd: error: Detected 12 oom-kill event(s) in StepId=324521.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.

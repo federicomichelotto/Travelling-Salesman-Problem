@@ -11,7 +11,7 @@
 #SBATCH -c 8
 #SBATCH -p allgroups
 #SBATCH -t 5-00:00:00
-#SBATCH --mem 32G
+#SBATCH --mem 200G
 
 # Setup my personal project folder
 DIRECTORY=/home/miliamikel/tsp

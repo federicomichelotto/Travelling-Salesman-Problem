@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Local variable
-SOLVER=("heur")
-path="/home/michelfede/OR2/travelling-salesman-problem/scripts"
+SOLVER=("iter")
+path="/home/miliamikel/tsp/scripts"
 
 # Move into build folder
 for solver in "${SOLVER[@]}"; do

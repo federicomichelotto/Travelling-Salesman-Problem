@@ -5,7 +5,7 @@
 #SBATCH --error tsp_tabu_%j.err
 
 #SBATCH --mail-type ALL
-#SBATCH --mail-user federico.michelotto@studenti.unipd.it
+#SBATCH --mail-user mikele.milia@studenti.unipd.it
 
 #SBATCH -n 1
 #SBATCH -c 8
@@ -14,7 +14,7 @@
 #SBATCH --mem 16GB
 
 # Setup my personal project folder
-DIRECTORY=/home/michelfede/OR2/travelling-salesman-problem
+DIRECTORY=/home/miliamikel/tsp
 BUILD=build
 
 function run_instances() {

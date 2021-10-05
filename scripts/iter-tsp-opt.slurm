@@ -11,7 +11,7 @@
 #SBATCH -c 8
 #SBATCH -p allgroups
 #SBATCH -t 5-00:00:00
-#SBATCH --mem 32G
+#SBATCH --mem 200G
 
 # Setup my personal project folder
 DIRECTORY=/home/miliamikel/tsp
@@ -19,11 +19,11 @@ BUILD=build
 
 function run_instances() {
 
-  for file in ../data/tests/iter/*; do
+  for file in ../data/tests/iter2/*; do
     for i in {6..9}; do
 
         echo "Submitted the $i-th run of model 11 for instance $file with 2-OPT"
-        srun ./tsp -f "$file" --ticks --opt -t 1020000 -m 11 -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))" -scores "iter_opt_$MODEL"
+        srun ./tsp -f "$file" --ticks --opt -t 1020000 -m 11 -v 4 -s "$(( i +10 ))" -r "$(( i +10 ))" -scores "iter_opt_11"
 
     done
   done

@@ -3,8 +3,8 @@
 # Local variable
 #SOLVER=("comp" "iter" "math" "heur" "tabu" "gene")
 #GENETIC=("gen00" "gen01" "gen10" "gen11" "gen20" "gen21" "gen30" "gen31")
-SOLVER=("heur")
-path="/home/michelfede/OR2/travelling-salesman-problem/scripts"
+SOLVER=("comp")
+path="/home/miliamikel/tsp/scripts"
 
 for solver in "${SOLVER[@]}"; do
 
