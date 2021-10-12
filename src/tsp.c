@@ -455,7 +455,7 @@ static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG c
 static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
 {
     //printf("*** Inside callback_relaxation\n");
-    int node_depth = 0;
+    int node_depth;
     CPXcallbackgetinfoint(context, CPXCALLBACKINFO_NODEDEPTH, &node_depth);
     if (!node_depth)
         return 0;
@@ -480,7 +480,7 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
     {
         for (int j = i + 1; j < inst->dimension; j++)
         {
-            if (xstar[xpos(i, j, inst)] > eps) // just save the selected (also partially) edges
+            if (xstar[xpos(i, j, inst)] > 0.001) // just save the selected (also partially) edges
             {
                 elist[loader++] = i;
                 elist[loader++] = j;
@@ -488,6 +488,7 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
             }
         }
     }
+
     // realloc
     x = realloc(x, ecount * sizeof(double));
     elist = realloc(elist, 2 * ecount * sizeof(int));
@@ -505,8 +506,44 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
         in.x = x;
         in.context = context;
         in.inst = inst;
-        if (CCcut_violated_cuts(inst->dimension, ecount, elist, x, 2 - eps, doit_fn_concorde, (void *)&in))
-            print_error("CCcut_violated_cuts error");
+        // if (CCcut_violated_cuts(inst->dimension, ecount, elist, x, 2 - eps, doit_fn_concorde, (void *)&in))
+        //     print_error("CCcut_violated_cuts error");
+    }
+    else if (ncomp > 1)
+    {
+        // add one cut for each connected component
+        for (int mycomp = 0; mycomp < ncomp; mycomp++)
+        {
+            int nnz = 0;
+            int izero = 0;
+            char sense = 'L';
+            double rhs = length_comp[mycomp] - 1.0; // |S|-1
+            int *index = (int *)calloc(inst->cols, sizeof(int));
+            double *value = (double *)calloc(inst->cols, sizeof(double));
+
+            for (int i = 0; i < inst->dimension; i++)
+            {
+                if (comp[i] != mycomp)
+                    continue;
+                for (int j = i + 1; j < inst->dimension; j++)
+                {
+                    if (comp[j] != mycomp)
+                        continue;
+                    index[nnz] = xpos(i, j, inst);
+                    value[nnz++] = 1.0;
+                }
+            }
+            // reject the solution and adds one cut
+            int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
+            int local = 0;                     // Global cut
+            if (CPXcallbackaddusercuts(context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local))
+                print_error("CPXcallbackaddusercuts() error in callback_relaxation()");
+            free(index);
+            free(value);
+        }
+    }
+    else{
+        print_error("Invalip ncomp in callback_relaxation()");
     }
 
     free(comp);
@@ -544,7 +581,7 @@ int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
     int nnz = 0;
     char sense = 'L';
     int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
-    int local = 0;
+    int local = 0;                     // Global cut
     int izero = 0;
 
     for (int i = 0; i < cutcount; i++)
