@@ -506,8 +506,8 @@ static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG 
         in.x = x;
         in.context = context;
         in.inst = inst;
-        // if (CCcut_violated_cuts(inst->dimension, ecount, elist, x, 2 - eps, doit_fn_concorde, (void *)&in))
-        //     print_error("CCcut_violated_cuts error");
+        if (CCcut_violated_cuts(inst->dimension, ecount, elist, x, 2 - eps, doit_fn_concorde, (void *)&in))
+            print_error("CCcut_violated_cuts error");
     }
     else if (ncomp > 1)
     {
