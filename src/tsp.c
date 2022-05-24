@@ -1,240 +1,102 @@
 #include "../include/utils.h"
 
-#include "compact.c"
-#include "math_heuristic.c"
-#include "heuristic.c"
-#include "meta_heuristic.c"
-
-double dist(int i, int j, instance *inst)
+int tsp_solver(instance_TSP *inst)
 {
+    printf("Computing the optimal TSP solution...\n");
+    // Open CPLEX model
+    int error;
+    CPXENVptr env = CPXopenCPLEX(&error);
+    CPXLPptr lp = CPXcreateprob(env, &error, "TSP");
+    // get timestamp
 
-    double distance = INFINITY;
+    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_start) : getTimeStamp(&inst->timestamp_start);
 
-    if (strncmp(inst->param.weight_type, "GEO", 3) == 0)
+    // build the GG model with lazy constraints and static 2-degree constraints
+    GG_lazy_2sec(env, lp, inst);
+    inst->cols = CPXgetnumcols(env, lp);
+    inst->best_sol = (double *)calloc(inst->cols, sizeof(double));
+
+    // CPLEX's parameter setting
+    if (CPXsetintparam(env, CPX_PARAM_RANDOMSEED, inst->param.seed)) // Set seed
+        print_error("CPX_PARAM_RANDOMSEED error");
+
+    if (inst->param.ticks)
     {
-        double deg, min;
-        deg = (int)inst->nodes[i].x;
-        min = inst->nodes[i].x - deg;
-        double lat_i = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
-
-        deg = (int)inst->nodes[i].y;
-        min = inst->nodes[i].y - deg;
-        double long_i = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
-
-        deg = (int)inst->nodes[j].x;
-        min = inst->nodes[j].x - deg;
-        double lat_j = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
-
-        deg = (int)inst->nodes[j].y;
-        min = inst->nodes[j].y - deg;
-        double long_j = M_PI * (deg + 5.0 * min / 3.0) / 180.0;
-
-        double RRR = 6378.388;
-
-        double q1 = cos(long_i - long_j);
-        double q2 = cos(lat_i - lat_j);
-        double q3 = cos(lat_i + lat_j);
-
-        distance = (int)(RRR * acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
+        if (CPXsetdblparam(env, CPX_PARAM_DETTILIM, inst->time_limit))
+            print_error("CPX_PARAM_DETTILIM error");
     }
-    else if (strncmp(inst->param.weight_type, "EUC_2D", 6) == 0)
-    {
-        double dx = inst->nodes[i].x - inst->nodes[j].x;
-        double dy = inst->nodes[i].y - inst->nodes[j].y;
-        if (!inst->integer_costs)
-            return sqrt(dx * dx + dy * dy);
-        int dis = sqrt(dx * dx + dy * dy) + 0.499999999;
-        distance = dis + 0.0;
-    }
-    else if (strncmp(inst->param.weight_type, "ATT", 3) == 0)
-    {
-        double dx = inst->nodes[i].x - inst->nodes[j].x;
-        double dy = inst->nodes[i].y - inst->nodes[j].y;
-        double dis1 = sqrt((dx * dx + dy * dy) / 10.0);
-        int dis2 = (int)(dis1 + 0.5);
-        if (dis2 < dis1)
-            distance = dis2 + 1;
-        else
-            distance = dis2;
-    }
-
-    return distance;
-}
-
-int xpos(int i, int j, instance *inst)
-{
-
-    if (i == j)
-        print_error("Same indices are not valid!");
-    if (i < 0 || j < 0)
-        print_error("Negative indexes are not valid!");
-    if (i > inst->dimension || j > inst->dimension)
-        print_error("Indexes exceeding the dimension are not valid!");
-    if (i > j)
-        return xpos(j, i, inst);
     else
-        return i * inst->dimension + j - (i + 1) * (i + 2) / 2;
-}
-
-int xpos_dir(int i, int j, instance *inst)
-{
-
-    if (i < 0 || j < 0)
-        print_error("Negative indexes are not valid!");
-    if (i > inst->dimension || j > inst->dimension)
-        print_error("Indexes exceeding the dimension are not valid!");
-    return i * inst->dimension + j;
-}
-
-int upos(int i, instance *inst)
-{
-    if (i < 0)
-        print_error("Negative index is not valid!");
-    return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i;
-}
-
-int ypos(int i, int j, instance *inst)
-{
-    if (i < 0)
-        print_error("Negative index is not valid!");
-    return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i * inst->dimension + j;
-}
-
-double gather_solution(instance *inst, const double *xstar, int type)
-{
-    if (type == 0) // undirected graph
     {
-        int n_edges = 0;
-        for (int i = 0; i < inst->dimension; i++)
-        {
-            inst->succ[i] = -1;
-        }
-        int *selected = calloc(inst->dimension, sizeof(int));
-        int init = 0;
-        int node = 0;
-        selected[node] = 1;
-        while (n_edges < inst->dimension)
-        {
-            for (int i = 0; i < inst->dimension; i++)
-            {
-                if (i == node)
-                    continue;
-                if (xstar[xpos(node, i, inst)] > 0.5 && selected[i] == 0) // succ[i] != node ??
-                {
-                    inst->succ[node] = i;
-                    selected[i] = 1;
-                    n_edges++;
-                    node = i;
-                    i = -1; // restart the loop from i=0
-                }
-            }
-            // close the circuit
-            inst->succ[node] = init;
-            if (++n_edges == inst->dimension)
-                break;
-            // look for a new connected component
-            for (int j = 0; j < inst->dimension; j++)
-            {
-                if (selected[j] == 0) // node not visited yet
-                {
-                    node = j;
-                    init = j;
-                    selected[node] = 1;
-                    break;
-                }
-            }
-        }
+        if (CPXsetdblparam(env, CPX_PARAM_TILIM, inst->time_limit))
+            print_error("CPX_PARAM_TILIM error");
     }
-    else if (type == 1) // directed graph
+
+    if (CPXsetintparam(env, CPXPARAM_Parallel, CPX_PARALLEL_OPPORTUNISTIC)) // Set opportunistic mode
+        print_error("CPXPARAM_Parallel error");
+
+    // if (CPXsetintparam(env, CPX_PARAM_THREADS, 1)) // Set one thread
+    //     print_error("CPX_PARAM_THREADS error");
+
+    if (CPXsetintparam(env, CPX_PARAM_CLONELOG, -1)) // CPLEX does not clone log files. (off)
+        print_error("CPXPARAM_Output_CloneLog error");
+
+    // CPLEX's precision setting
+    if (CPXsetdblparam(env, CPX_PARAM_EPINT, 0.0)) // very important if big-M is present
+        print_error("CPX_PARAM_EPINT error");
+    if (CPXsetdblparam(env, CPX_PARAM_EPRHS, 1e-9))
+        print_error("CPX_PARAM_EPRHS error");
+    if (CPXsetdblparam(env, CPX_PARAM_EPGAP, 1e-5)) // abort Cplex when relative gap below this value
+        print_error("CPX_PARAM_EPGAP error");
+
+    if (CPXmipopt(env, lp))
+        print_error("CPXmipopt() error");
+
+    // solution status of the problem
+    int lpstat = CPXgetstat(env, lp);
+    printf("\tCPLEX status: %d\n", lpstat);
+    if (lpstat == 108)
+        print_error("Time limit exceeded; no integer solution");
+
+    // Use the optimal solution found by CPLEX
+    if (CPXgetx(env, lp, inst->best_sol, 0, inst->cols - 1))
+        print_error("CPXgetx() error");
+
+    CPXgetobjval(env, lp, &inst->z_best);      // Best objective value
+    CPXgetbestobjval(env, lp, &inst->best_lb); // Best lower bound
+
+    // directed graph
+    gather_solution_TSP(inst, inst->best_sol, 1);
+
+    printf("\tOPTIMAL TSP SOLUTION: 0");
+    int node = 0;
+    for (int i = 0; i < inst->dimension; i++)
     {
-        int n_edges = 0;
-        for (int i = 0; i < inst->dimension; i++)
-        {
-            for (int j = 0; j < inst->dimension; j++)
-            {
-                if (xstar[xpos_dir(i, j, inst)] > 0.5)
-                {
-                    inst->succ[i] = j;
-                    if (++n_edges > inst->dimension)
-                        print_error("more arcs than nodes, not a hamiltonian tour.");
-                }
-            }
-        }
+        node = inst->succ[node];
+        printf(" -> %d", node);
     }
+
+    printf("\n\tObjective value: %lf\n", inst->z_best);
+    printf("\tLower bound: %lf\n", inst->best_lb);
+
+    // get timestamp
+    inst->param.ticks ? CPXgetdettime(env, &inst->timestamp_finish) : getTimeStamp(&inst->timestamp_finish);
+
+    // Plot optimal solution
+    save_and_plot_solution_TSP(inst);
+
+    // Free and close CPLEX model
+    CPXfreeprob(env, &lp);
+    CPXcloseCPLEX(&env);
+    return inst->z_best;
 }
 
-void build_model(CPXENVptr env, CPXLPptr lp, instance *inst)
+void GG_lazy_2sec(CPXENVptr env, CPXLPptr lp, instance_TSP *inst)
 {
-    char path[1000];
+    basic_model_directed_TSP(env, lp, inst);
 
-    if (inst->param.solver == 0)
-    { // optimal solver involved
-        switch (inst->model_type)
-        {
-        case 0:  // basic model (no SEC)
-        case 9:  // benders model (SEC)
-        case 10: // benders model (SEC) - kruskal
-        case 11: // callback model (SEC)
-            basic_model_no_sec(env, lp, inst);
-            break;
-        case 1: // MTZ with static constraints
-            MTZ_static(env, lp, inst);
-            break;
-        case 2: // MTZ (mod) with static constraints
-            MTZ_static_mod(env, lp, inst);
-            break;
-        case 3: // MTZ with lazy constraints
-            MTZ_lazy(env, lp, inst);
-            break;
-        case 4: // MTZ with lazy constraints and sub-tour elimination constraints of degree 2
-            MTZ_lazy_sec(env, lp, inst);
-            break;
-        case 5: // GG
-            GG(env, lp, inst);
-            break;
-        case 6: // GG with lazy constraints
-            GG_lazy(env, lp, inst);
-            break;
-        case 7: // GG with lazy constraints and sub-tour elimination constraints of degree 2
-            GG_lazy_sec(env, lp, inst);
-            break;
-        case 8: // GG orignal formulation
-            GG_original(env, lp, inst);
-            break;
-        default:
-            fprintf(stderr, "ERROR: Model type %d not available.\n", inst->model_type);
-            break;
-        }
+    char binary = 'B';  // B => binary variable flag
+    char integer = 'I'; // I => integer variable flag
 
-        if (generate_path(path, "output", "model", optimal_model_name[inst->model_type], inst->param.name,
-                          inst->param.seed, "lp"))
-            print_error("Unable to generate path");
-    }
-    else if (inst->param.solver == 1)
-    {
-
-        switch (inst->model_type)
-        {
-        case 0: // hard fixing heuristic
-        case 1: // soft fixing heuristic
-            basic_model_no_sec(env, lp, inst);
-            break;
-        default:
-            fprintf(stderr, "ERROR: Model type %d not available.\n", inst->model_type);
-            break;
-        }
-
-        if (generate_path(path, "output", "model", math_model_name[inst->model_type], inst->param.name,
-                          inst->param.seed, "lp"))
-            print_error("Unable to generate path");
-    }
-
-    CPXwriteprob(env, lp, path, NULL);
-}
-
-void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
-{
-    char binary = 'B'; // B => binary variable flag
     // cname: columns' names (column = variable)
     char **cname = (char **)calloc(1, sizeof(char *)); // array of strings to store the column names
     cname[0] = (char *)calloc(100, sizeof(char));
@@ -242,47 +104,121 @@ void basic_model_no_sec(CPXENVptr env, CPXLPptr lp, instance *inst)
     // rname: rows' names (row = constraint)
     char **rname = (char **)calloc(1, sizeof(char *)); // array of strings to store the row names
     rname[0] = (char *)calloc(100, sizeof(char));
-    // Add binary variables x(i,j) for i < j
+
+    // Add y-variables one for each arc (i,j) with i!=j and i,j > 0
     for (int i = 0; i < inst->dimension; i++)
     {
-        for (int j = i + 1; j < inst->dimension; j++)
+        for (int j = 0; j < inst->dimension; j++)
         {
-            sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
-            double obj = dist(i, j, inst); // cost == distance
+            sprintf(cname[0], "y(%d,%d)", i + 1, j + 1);
+            double obj = 0.0;
             double lb = 0.0;
-            double ub = 1.0;
-            if (CPXnewcols(env, lp, 1, &obj, &lb, &ub, &binary, cname))
-                print_error(" wrong CPXnewcols on x var.s");
-            if (CPXgetnumcols(env, lp) - 1 != xpos(i, j, inst))
-                print_error(" wrong position for x var.s");
+            double ub = inst->dimension - 2;
+            if (i == 0)
+                ub = inst->dimension - 1;
+            if (i == j || j == 0)
+                ub = 0;
+            if (CPXnewcols(env, lp, 1, &obj, &lb, &ub, &integer, cname))
+                print_error(" wrong CPXnewcols on y var.s");
+            if (CPXgetnumcols(env, lp) - 1 != ypos(i, j, inst))
+                print_error("[position_d] wrong position for y var.s");
         }
     }
 
-    // Add the degree constraints
-    for (int h = 0; h < inst->dimension; h++)
+    // Add in-flow out-flow differential constraints for nodes h > 0: sum_i (1.0 * y_ih) + sum_i (- 1.0 * y_hi) = 1
+    for (int h = 1; h < inst->dimension; h++) // exludes node 0
     {
-        int row = CPXgetnumrows(env, lp); // get the maximum number of row inside the model
-        double rhs = 2.0;
-        char sense = 'E'; // E stands for equality constraint
-
-        sprintf(rname[0], "degree(%d)", h + 1);
+        double rhs = 1.0;
+        char sense = 'E';                 // E stands for equal
+        int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
+        sprintf(rname[0], "in_flow out_flow node (%d)", h + 1);
         if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
             print_error("wrong CPXnewrows [degree]");
         for (int i = 0; i < inst->dimension; i++)
         {
-            if (i == h)
+            if (h == i)
                 continue;
-            if (CPXchgcoef(env, lp, row, xpos(i, h, inst), 1.0))
-                print_error("[position_u] wrong CPXchgcoef [degree]");
+            if (CPXchgcoef(env, lp, row, ypos(i, h, inst), 1.0)) // 1.0 * y_ih
+                print_error("wrong CPXchgcoef [degree]");
+            if (CPXchgcoef(env, lp, row, ypos(h, i, inst), -1.0)) // - 1.0 * y_hi
+                print_error("wrong CPXchgcoef [degree]");
         }
     }
+
+    // Add out-flow constraints for node 0: 1 * y_0j - (nnodes -1) * x_0j = 0, for each arc (0,j)
+    for (int j = 1; j < inst->dimension; j++) // exclude  arc (0,0)
+    {
+        double rhs = 0;
+        char sense = 'E';                 // E stands for equal
+        int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
+        sprintf(rname[0], "out_flow(1,%d)", j + 1);
+        if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
+            print_error("wrong CPXnewrows [degree]");
+        if (CPXchgcoef(env, lp, row, ypos(0, j, inst), 1.0)) // 1.0 * y_0j
+            print_error("wrong CPXchgcoef [degree]");
+
+        if (CPXchgcoef(env, lp, row, xpos_dir(0, j, inst), 1 - inst->dimension)) // - (nnodes -1) * x_0j
+            print_error("wrong CPXchgcoef [degree]");
+    }
+
+    int izero = 0;
+    int index[2];
+    double value[2];
+
+    // add lazy linking constraints  y_ij <= (n-2)x_ij for each i,j > 0 and i!=j
+    double rhs = 0.0;
+    char sense = 'L';
+    int nnz = 2;
+    for (int i = 1; i < inst->dimension; i++) // excluding node 0
+    {
+        for (int j = 1; j < inst->dimension; j++) // excluding node 0
+        {
+            if (i == j)
+                continue;
+            sprintf(rname[0], "lazy linking constraints (%d,%d)", i + 1, j + 1);
+            index[0] = ypos(i, j, inst);
+            value[0] = 1.0;
+            index[1] = xpos_dir(i, j, inst);
+            value[1] = 2 - inst->dimension;
+            if (CPXaddlazyconstraints(env, lp, 1, nnz, &rhs, &sense, &izero, index, value, rname))
+                print_error("wrong CPXlazyconstraints() for u-consistency");
+        }
+    }
+
+    // Add static 2-SEC contraints: x(i, j) + x(j, i) <= 1 for every i < j
+    for (int i = 0; i < inst->dimension; i++)
+    {
+        for (int j = i + 1; j < inst->dimension; j++)
+        {
+
+            int lastrow = CPXgetnumrows(env, lp);
+            double rhs = 1.0;
+            char sense = 'L';
+
+            sprintf(cname[0], "2-SEC(%d, %d)", i + 1, j + 1);
+            int *beg = (int *)calloc(2, sizeof(int));
+            int *ind = (int *)calloc(2, sizeof(int));
+            double *val = (double *)calloc(2, sizeof(double));
+
+            int row = CPXgetnumrows(env, lp); // get the number of rows inside the model
+            if (CPXnewrows(env, lp, 1, &rhs, &sense, NULL, rname))
+                print_error("wrong CPXnewrows [degree]");
+            if (CPXchgcoef(env, lp, row, xpos_dir(i, j, inst), 1.0)) // 1.0 * x_ij
+                print_error("wrong CPXchgcoef [degree]");
+            if (CPXchgcoef(env, lp, row, xpos_dir(j, i, inst), 1.0)) // 1.0 * x_ji
+                print_error("wrong CPXchgcoef [degree]");
+            free(beg);
+            free(ind);
+        }
+    }
+
     free(cname[0]);
     free(cname);
     free(rname[0]);
     free(rname);
 }
 
-void basic_model_directed(CPXENVptr env, CPXLPptr lp, instance *inst)
+void basic_model_directed_TSP(CPXENVptr env, CPXLPptr lp, instance_TSP *inst)
 {
     char binary = 'B';  // B => binary variable flag
     char integer = 'I'; // I => integer variable flag
@@ -301,7 +237,7 @@ void basic_model_directed(CPXENVptr env, CPXLPptr lp, instance *inst)
         for (int j = 0; j < inst->dimension; j++)
         {
             sprintf(cname[0], "x(%d,%d)", i + 1, j + 1);
-            double obj = dist(i, j, inst); // cost == distance
+            double obj = inst->weights[i][j]; // cost == time
             double lb = 0.0;
             double ub = 1.0;
             if (i == j)
@@ -350,388 +286,181 @@ void basic_model_directed(CPXENVptr env, CPXLPptr lp, instance *inst)
     free(rname);
 }
 
-static int CPXPUBLIC callback_driver(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
+double gather_solution_TSP(instance_TSP *inst, const double *xstar, int type)
 {
-    if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE)
-        return callback_candidate(context, contextid, userhandle);
-    if (contextid == CPX_CALLBACKCONTEXT_RELAXATION)
-        return callback_relaxation(context, contextid, userhandle);
-    print_error("contextid unknownn in my_callback");
-    return 1;
-}
-
-static int CPXPUBLIC callback_candidate(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
-{
-    instance *inst = (instance *)userhandle;
-    double *xstar = (double *)malloc(inst->cols * sizeof(double));
-    double objval = CPX_INFBOUND;
-    if (CPXcallbackgetcandidatepoint(context, xstar, 0, inst->cols - 1, &objval))
-        print_error("CPXcallbackgetcandidatepoint error");
-
-    int *comp = (int *)calloc(inst->dimension, sizeof(int));
-    int *succ = (int *)calloc(inst->dimension, sizeof(int));
-    int ncomp = 0; // number of connected components
-    int *length_comp;
-
-    // Retrieve the connected components of the current solution
-    findConnectedComponents(xstar, inst, succ, comp, &ncomp, &length_comp);
-
-    if (ncomp > 1)
-    {
-        // add one cut for each connected component
-        for (int mycomp = 0; mycomp < ncomp; mycomp++)
-        {
-            int nnz = 0;
-            int izero = 0;
-            char sense = 'L';
-            double rhs = length_comp[mycomp] - 1.0; // |S|-1
-            int *index = (int *)calloc(inst->cols, sizeof(int));
-            double *value = (double *)calloc(inst->cols, sizeof(double));
-
-            for (int i = 0; i < inst->dimension; i++)
-            {
-                if (comp[i] != mycomp)
-                    continue;
-                for (int j = i + 1; j < inst->dimension; j++)
-                {
-                    if (comp[j] != mycomp)
-                        continue;
-                    index[nnz] = xpos(i, j, inst);
-                    value[nnz++] = 1.0;
-                }
-            }
-            // reject the solution and adds one cut
-            if (CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value))
-                print_error("CPXcallbackrejectcandidate() error");
-            free(index);
-            free(value);
-        }
-    }
-    else if (inst->param.opt)
-    {
-        // the candidate solution has not connected components but could have crossings... let's apply 2-opt
-        double delta = two_opt_v2(inst, succ, 0);
-        if (delta < 0)
-        {
-            objval += delta;
-            // succ -> xstar
-            int nnz = 0;
-            int izero = 0;
-            int *index = (int *)calloc(inst->cols, sizeof(int));
-            double *xstar_succ = (double *)calloc(inst->cols, sizeof(double));
-
-            for (int i = 0; i < inst->dimension; i++)
-            {
-                for (int j = i + 1; j < inst->dimension; j++)
-                {
-                    index[nnz] = xpos(i, j, inst);
-                    if (j == succ[i] || i == succ[j])
-                    {
-                        xstar_succ[nnz++] = 1.0;
-                    }
-                    else
-                        xstar_succ[nnz++] = 0.0;
-                }
-            }
-            // sanity check
-            if (nnz != inst->cols)
-                print_error("Error in applying 2-opt in callback_candidate");
-
-            if (CPXcallbackpostheursoln(context, nnz, index, xstar_succ, objval, CPXCALLBACKSOLUTION_CHECKFEAS))
-                print_error("CPXcallbackpostheursoln() error");
-            if (inst->param.verbose >= DEBUG)
-                printf("[callback_candidate] Posted a new solution to CPLEX with incumbent: %f\n", objval);
-            free(xstar_succ);
-            free(index);
-        }
-    }
-    free(comp);
-    free(succ);
-    free(length_comp);
-    free(xstar);
-    return 0;
-}
-
-static int CPXPUBLIC callback_relaxation(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle)
-{
-    //printf("*** Inside callback_relaxation\n");
-    int node_depth;
-    CPXcallbackgetinfoint(context, CPXCALLBACKINFO_NODEDEPTH, &node_depth);
-    if (!node_depth)
-        return 0;
-    instance *inst = (instance *)userhandle;
-    double *xstar = (double *)malloc(inst->cols * sizeof(double));
-    double objval = CPX_INFBOUND;
-    double const eps = 0.1;
-
-    if (CPXcallbackgetrelaxationpoint(context, xstar, 0, inst->cols - 1, &objval))
-        print_error("CPXcallbackgetrelaxationpoint error");
-
-    int ncomp;
-    int *comp = (int *)calloc(inst->dimension, sizeof(int));
-    int *length_comp = (int *)calloc(inst->dimension, sizeof(int));
-    // list of edges in "node format" [ i_1, j_1 , i_2, j_2, i_3, j_3, ...]
-    int *elist = malloc(2 * inst->cols * sizeof(int));
-
-    int loader = 0;
-    int ecount = 0; // edge count
-    double *x = malloc(inst->cols * sizeof(double));
+    int n_edges = 0;
     for (int i = 0; i < inst->dimension; i++)
     {
-        for (int j = i + 1; j < inst->dimension; j++)
+        for (int j = 0; j < inst->dimension; j++)
         {
-            if (xstar[xpos(i, j, inst)] > 0.001) // just save the selected (also partially) edges
+            if (xstar[xpos_dir(i, j, inst)] > 0.5)
             {
-                elist[loader++] = i;
-                elist[loader++] = j;
-                x[ecount++] = xstar[xpos(i, j, inst)];
+                inst->succ[i] = j;
+                if (++n_edges > inst->dimension)
+                    print_error("more arcs than nodes, not a hamiltonian tour.");
             }
         }
     }
-
-    // realloc
-    x = realloc(x, ecount * sizeof(double));
-    elist = realloc(elist, 2 * ecount * sizeof(int));
-    //printf("*** ecount = %d\n", ecount);
-
-    if (CCcut_connect_components(inst->dimension, ecount, elist, x, &ncomp, &length_comp, &comp))
-        print_error("CCcut_connect_components error");
-
-    //printf("*** ncomp = %d\n", ncomp);
-    if (ncomp == 1) // CCcut_violated_cuts() assumes graph is connected
-    {
-        doit_fn_input in;
-        in.ecount = ecount;
-        in.elist = elist;
-        in.x = x;
-        in.context = context;
-        in.inst = inst;
-        if (CCcut_violated_cuts(inst->dimension, ecount, elist, x, 2 - eps, doit_fn_concorde, (void *)&in))
-            print_error("CCcut_violated_cuts error");
-    }
-    else if (ncomp > 1)
-    {
-        // add one cut for each connected component
-        for (int mycomp = 0; mycomp < ncomp; mycomp++)
-        {
-            int nnz = 0;
-            int izero = 0;
-            char sense = 'L';
-            double rhs = length_comp[mycomp] - 1.0; // |S|-1
-            int *index = (int *)calloc(inst->cols, sizeof(int));
-            double *value = (double *)calloc(inst->cols, sizeof(double));
-
-            for (int i = 0; i < inst->dimension; i++)
-            {
-                if (comp[i] != mycomp)
-                    continue;
-                for (int j = i + 1; j < inst->dimension; j++)
-                {
-                    if (comp[j] != mycomp)
-                        continue;
-                    index[nnz] = xpos(i, j, inst);
-                    value[nnz++] = 1.0;
-                }
-            }
-            // reject the solution and adds one cut
-            int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
-            int local = 0;                     // Global cut
-            if (CPXcallbackaddusercuts(context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local))
-                print_error("CPXcallbackaddusercuts() error in callback_relaxation()");
-            free(index);
-            free(value);
-        }
-    }
-    else{
-        print_error("Invalip ncomp in callback_relaxation()");
-    }
-
-    free(comp);
-    free(length_comp);
-    free(xstar);
-    return 0;
 }
 
-// double cutval = value of the cut
-// int cutcount = number of nodes in the cut
-// int ∗cut = the array of the members of the cut (indices of the nodes in the cut) =>
-// => the nodes of one of the two connected components (look cut_st.c of the concorde library)
-int doit_fn_concorde(double cutval, int cutcount, int *cut, void *in)
+int xpos_dir(int i, int j, instance_TSP *inst)
 {
 
-    doit_fn_input *input = (doit_fn_input *)in;
+    if (i < 0 || j < 0)
+        print_error("Negative indexes are not valid!");
+    if (i > inst->dimension || j > inst->dimension)
+        print_error("Indexes exceeding the dimension are not valid!");
+    return i * inst->dimension + j;
+}
 
-    // DEBUG
-    // printf("*** Inside doit_fn_concorde\n");
-    // printf("#### cutval: %f ", cutval);
-    // printf("#### cutcount: %d \n", cutcount);
-    // for (int i = 0; i < cutcount; i++)
-    //     printf("%d,", cut[i]);
-    // printf("\n");
-    // for (int i = 0; i < input->ecount; i++)
+int upos(int i, instance_TSP *inst)
+{
+    if (i < 0)
+        print_error("Negative index is not valid!");
+    return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i;
+}
+
+int ypos(int i, int j, instance_TSP *inst)
+{
+    if (i < 0)
+        print_error("Negative index is not valid!");
+    return xpos_dir(inst->dimension - 1, inst->dimension - 1, inst) + 1 + i * inst->dimension + j;
+}
+
+int generate_TSP_instance(instance *inst, instance_TSP *inst_tsp)
+{
+    inst_tsp->dimension = inst->dimension - 1;
+    inst_tsp->time_limit = inst->time_limit * 0.1; // assign 1/10 of the time available for the FSTSP problem
+    inst_tsp->succ = (int *)calloc(inst_tsp->dimension, sizeof(int));
+    inst_tsp->weights = inst->truck_times;
+    inst_tsp->z_best = -1.0;
+    inst_tsp->best_lb = -1.0;
+    inst_tsp->timestamp_start = 0.0;
+    inst_tsp->timestamp_finish = 0.0;
+    inst_tsp->gnuplotPipe = inst->gnuplotPipe;
+
+    inst_tsp->nodes = (node_TSP *)calloc(inst_tsp->dimension, sizeof(node_TSP));
+    // copy nodes
+    for (int i = 0; i < inst_tsp->dimension; i++)
+    {
+        inst_tsp->nodes[i].id = inst->nodes[i].id;
+        inst_tsp->nodes[i].x = inst->nodes[i].x;
+        inst_tsp->nodes[i].y = inst->nodes[i].y;
+    }
+
+    strcpy(inst_tsp->instance_path, inst->instance_path);
+
+    inst_tsp->param.ticks = inst->param.ticks;
+    inst_tsp->param.seed = inst->param.seed;
+    inst_tsp->param.verbose = inst->param.verbose;
+    inst_tsp->param.interactive = inst->param.interactive;
+    inst_tsp->param.saveplots = inst->param.saveplots;
+}
+
+void post_tsp_sol(CPXENVptr env, CPXLPptr lp, instance_TSP *inst_tsp, instance *inst)
+{
+    //int nedges = inst_tsp->dimension * inst_tsp->dimension;
+    int array_size = 3 * inst_tsp->dimension + 1;
+    int *indices = (int *)malloc(array_size * sizeof(int));
+    double *coeffs = (double *)malloc(array_size * sizeof(double));
+    int count = 0; // counter: 0 -> nnodes-1
+    // for (int i = 0; i < nedges; i++)
     // {
-    //     printf("x[%d,%d] = %f\n", input->elist[2 * i], input->elist[2 * i + 1], input->x[i]);
+    //     if (inst_tsp->best_sol[i] > 0.5)
+    //     {
+    //         printf(" %d->%d\n", i / inst_tsp->dimension, i % inst_tsp->dimension);
+    //         indices[j] = i;
+    //         coeffs[j] = 1.0;
+    //         j++;
+    //     }
     // }
 
-    // SEC for the current connected component
-    double *value = (double *)calloc(cutcount * (cutcount - 1) / 2, sizeof(double));
-    int *index = (int *)calloc(cutcount * (cutcount - 1) / 2, sizeof(int));
-
-    double rhs = cutcount - 1.0;
-    int nnz = 0;
-    char sense = 'L';
-    int purgeable = CPX_USECUT_FILTER; // Let CPLEX decide whether to keep the cut or not
-    int local = 0;                     // Global cut
-    int izero = 0;
-
-    for (int i = 0; i < cutcount; i++)
+    // truck and drone variables
+    for (int i = 0; i < inst_tsp->dimension; i++)
     {
-        for (int j = 0; j < cutcount; j++)
+        for (int j = 0; j < inst_tsp->dimension; j++)
         {
-            if (i == j)
-                continue;
-            if (cut[i] < cut[j])
+            if (inst_tsp->best_sol[xpos_dir(i, j, inst_tsp)] > 0.5)
             {
-                index[nnz] = xpos(cut[i], cut[j], input->inst);
-                value[nnz++] = 1.0;
-            }
-        }
-    }
-    // SANITY CHECK
-    if (nnz != cutcount * (cutcount - 1) / 2)
-        print_error("nnz != cutcount*(cutcount-1)/2");
-
-    if (CPXcallbackaddusercuts(input->context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local))
-        print_error("CPXcallbackaddusercuts() error"); // add user cut
-
-    free(index);
-    free(value);
-    return 0;
-}
-
-void findConnectedComponents(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp,
-                             int **length_comp)
-{
-    // build succ[] and comp[] wrt xstar()...
-
-    // initialization
-    *ncomp = 0;
-    for (int i = 0; i < inst->dimension; i++)
-    {
-        succ[i] = -1;
-        comp[i] = -1;
-    }
-
-    for (int start = 0; start < inst->dimension; start++)
-    {
-        if (comp[start] >= 0)
-            continue; // node "start" was already visited, just skip it
-
-        // a new component is found
-        (*ncomp)++;
-        if ((*ncomp) == 1)
-            (*length_comp) = (int *)calloc(1, sizeof(int));
-        else
-            (*length_comp) = (int *)realloc(*length_comp, (*ncomp) * sizeof(int));
-        int i = start;
-        int length = 1;
-        int done = 0;
-        while (!done) // go and visit the current component
-        {
-            comp[i] = (*ncomp) - 1;
-            done = 1;
-            for (int j = 0; j < inst->dimension; j++)
-            {
-                if (i == j)
-                    continue;
-                if (xstar[xpos(i, j, inst)] > 0.5 &&
-                    comp[j] == -1) // the edge [i,j] is selected in xstar and j was not visited before
+                //printf(" %d->%d\n", i, j);
+                if (j == 0)
                 {
-                    succ[i] = j;
-                    length++;
-                    i = j;
-                    done = 0;
-                    break;
+                    indices[count] = xTruck_pos(i, inst->dimension - 1, inst);
+                    coeffs[count++] = 1.0;
+                    indices[count] = xDrone_pos(i, inst->dimension - 1, inst);
+                    coeffs[count++] = 1.0;
                 }
-            }
-        }
-        succ[i] = start;                       // last arc to close the cycle
-        (*length_comp)[(*ncomp) - 1] = length; // save length of the cycle
-
-        // go to the next component...
-    }
-}
-
-// Kruskal algorithm to find connected components
-void findConnectedComponents_kruskal(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp,
-                                     int **length_comp)
-{
-
-    // Some initialization
-    for (int i = 0; i < inst->dimension; i++)
-    {
-        comp[i] = i;
-        succ[i] = -1;
-    }
-
-    // There are no components so far
-    *ncomp = 0;
-
-    // Found connected components
-    for (int i = 0; i < inst->dimension; i++)
-    {
-        for (int j = i + 1; j < inst->dimension; j++)
-        {
-            if (xstar[xpos(i, j, inst)] == 1)
-            {
-                int c1 = comp[i];
-                int c2 = comp[j];
-                if (c1 != c2)
+                else
                 {
-                    for (int k = 0; k < inst->dimension; k++)
-                        if (comp[k] == c2)
-                            comp[k] = c1;
+                    indices[count] = xTruck_pos(i, j, inst);
+                    coeffs[count++] = 1.0;
+                    indices[count] = xDrone_pos(i, j, inst);
+                    coeffs[count++] = 1.0;
                 }
             }
         }
     }
+    //printf("count= %d\n", count);
+    if (count != 2 * inst_tsp->dimension)
+        print_error("Error in post_tsp_sol");
 
-    // Count how many components are present
+    // set all nodes as combined customers
     for (int i = 0; i < inst->dimension; i++)
     {
-
-        int inside = 0;
-
-        for (int j = 0; j < (*ncomp) + 1; j++)
-        {
-            if (succ[j] == comp[i])
-            {
-                inside = 1;
-                break;
-            }
-        }
-
-        if (!inside)
-        {
-            succ[(*ncomp)] = comp[i];
-            (*ncomp)++;
-        }
+        indices[count] = yC_pos(i, inst);
+        coeffs[count] = 1.0;
+        count++;
     }
+    //printf("count= %d\n", count);
+    if (count != 3 * inst_tsp->dimension + 1)
+        print_error("Error in post_tsp_sol");
 
-    (*length_comp) = (int *)calloc((*ncomp), sizeof(int));
+    int beg = 0;
+    int effort_level = CPX_MIPSTART_AUTO;
+    if (CPXaddmipstarts(env, lp, 1, array_size, &beg, indices, coeffs, &effort_level, NULL))
+        print_error("CPXaddmipstarts error");
+}
 
-    for (int k = 0; k < (*ncomp); k++)
+void save_and_plot_solution_TSP(instance_TSP *inst)
+{
+    if (inst->param.interactive) // plot solution
     {
-        int length = 0;
-        for (int h = 0; h < inst->dimension; h++)
-        {
+        // write solution to file
 
-            if (comp[h] != succ[k])
-                continue;
-            else
-                length++;
+        char data_points_filename[200];
+        sprintf(data_points_filename, "data_temp/data_points");
+        FILE *data_points = fopen(data_points_filename, "w");
+
+        char data_filename[100];
+        sprintf(data_filename, "data_temp/tsp_opt");
+        FILE *temp = fopen(data_filename, "w");
+        for (int i = 0; i < inst->dimension; i++)
+        {
+            //Write the coordinates of the two nodes inside a temporary file
+            fprintf(temp, "%lf %lf \n%lf %lf \n\n", inst->nodes[i].x, inst->nodes[i].y, inst->nodes[inst->succ[i]].x, inst->nodes[inst->succ[i]].y);
+            // double '\n' to create a new edge (block of coordinates)
+            fprintf(data_points, "%lf %lf %d \n", inst->nodes[i].x, inst->nodes[i].y, inst->nodes[i].id);
         }
 
-        (*length_comp)[k] = length;
+        char plot_str[1000];
+
+        sprintf(plot_str, "plot '%s' with linespoints pt 7 lc rgb 'blue' lw 1,\
+                         '%s' using 1:2:3 with labels offset (1,1) font 'Arial'",
+                data_filename, data_points_filename);
+        char *commandsForGnuplot[] = {"set title 'Optimal TSP solution'",
+                                      "set term wxt noraise",
+                                      "unset key",
+                                      "set autoscale",
+                                      "set ylabel 'Y'",
+                                      "set xlabel 'X'",
+                                      plot_str};
+
+        int commands = sizeof(commandsForGnuplot) / sizeof(commandsForGnuplot[0]);
+        for (int i = 0; i < commands; i++)
+            fprintf(inst->gnuplotPipe, "%s \n", commandsForGnuplot[i]);
+        fflush(inst->gnuplotPipe); // execute the commands
+
+        fclose(temp);
+        fclose(data_points);
     }
 }
